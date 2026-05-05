@@ -185,7 +185,6 @@
     <ClInclude Include="World.h" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="CMakeLists.txt" />
     <Content Include="Shaders\world.frag" />
     <Content Include="Shaders\world.vert" />
   </ItemGroup>
