@@ -3,13 +3,13 @@
 // ============================================================
 
 #include "EditorUI.h"
-#include "engine/Engine.h"
-#include "engine/Timer.h"
-#include "engine/Window.h"
-#include "renderer/Renderer.h"
-#include "renderer/PostProcess.h"
-#include "world/World.h"
-#include "gameplay/Player.h"
+#include "Engine.h"
+#include "Timer.h"
+#include "Window.h"
+#include "Renderer.h"
+#include "PostProcess.h"
+#include "World.h"
+#include "Player.h"
 
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>

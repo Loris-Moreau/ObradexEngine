@@ -3,7 +3,7 @@
 // ============================================================
 
 #include "Interaction.h"
-#include "world/World.h"
+#include "World.h"
 #include <iostream>
 
 namespace Interaction
@@ -25,8 +25,11 @@ EntityID SpawnDoor(World&            world,
     m->albedoColour = {0.30f, 0.22f, 0.10f};  // Dark wood
     m->roughness    = 0.85f;
 
-    // Mutable door state captured by the lambda
-    auto state = std::make_shared<struct { bool open = false; bool locked; }>();
+    // Mutable door state captured by the lambda.
+    // Note: MSVC does not allow anonymous structs as template arguments,
+    // so we define a named struct here instead.
+    struct DoorState { bool open = false; bool locked = false; };
+    auto state = std::make_shared<DoorState>();
     state->locked = locked;
 
     auto* ia = world.AddInteractable(e);

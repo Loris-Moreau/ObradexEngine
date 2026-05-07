@@ -6,10 +6,10 @@
 #include "Window.h"
 #include "Input.h"
 #include "Timer.h"
-#include "renderer/Renderer.h"
-#include "world/World.h"
-#include "gameplay/Player.h"
-#include "ui/EditorUI.h"
+#include "Renderer.h"
+#include "World.h"
+#include "Player.h"
+#include "EditorUI.h"
 
 #include <iostream>
 #include <stdexcept>

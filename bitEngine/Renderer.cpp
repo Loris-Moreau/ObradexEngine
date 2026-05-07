@@ -7,7 +7,7 @@
 #include "Mesh.h"
 #include "Camera.h"
 #include "PostProcess.h"
-#include "world/World.h"
+#include "World.h"
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
@@ -28,8 +28,8 @@ bool Renderer::Init(int renderW, int renderH)
 
     // ── World shader ──────────────────────────────────────────
     m_worldShader = std::make_unique<Shader>();
-    if (!m_worldShader->Load("assets/shaders/world.vert",
-                              "assets/shaders/world.frag"))
+    if (!m_worldShader->Load("Shaders/world.vert",
+                              "Shaders/world.frag"))
     {
         std::cerr << "[Renderer] Failed to load world shader.\n";
         return false;

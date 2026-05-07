@@ -26,8 +26,8 @@
 
 class World;
 class Camera;
-class Shader;
-class PostProcess;
+#include "Shader.h"      // full type needed: unique_ptr<Shader> member
+#include "PostProcess.h"  // full type needed: unique_ptr<PostProcess> member
 
 // ── Point light POD ──────────────────────────────────────────
 struct PointLight

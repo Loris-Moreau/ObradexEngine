@@ -12,7 +12,8 @@
 //    3. Extend Player::Update() or add new systems as needed.
 // ============================================================
 
-#include "engine/Engine.h"
+#include "Engine.h"
+#include "Window.h"   // needed to call methods on the Window returned by GetWindow()
 #include <iostream>
 
 int main()

@@ -1,890 +1,601 @@
-# ObradexEngine — Developer Documentation
+# ObradexEngine — Technical Documentation
 
-> **Version 0.1.0 — Pre-Alpha**
-> A first-person immersive-sim engine with an 8-bit / *Return of the Obra Dinn* aesthetic, built in C++17 with OpenGL 4.1 and Dear ImGui.
+> **Version:** 0.1.0 (Pre-Alpha)  
+> **Engine style:** 8-bit pixel-art meets *Return of the Obra Dinn*  
+> **Gameplay reference:** *Deus Ex* + *Assassin's Creed Syndicate* (first-person)
 
 ---
 
 ## Table of Contents
 
-1. [Overview & Design Goals](#1-overview--design-goals)
-2. [Architecture Diagram](#2-architecture-diagram)
-3. [Directory Structure](#3-directory-structure)
-4. [Dependencies](#4-dependencies)
-5. [Building the Engine](#5-building-the-engine)
-6. [System Reference](#6-system-reference)
-   - 6.1 [Engine (Core Loop)](#61-engine-core-loop)
-   - 6.2 [Window](#62-window)
-   - 6.3 [Input](#63-input)
-   - 6.4 [Timer](#64-timer)
-   - 6.5 [Renderer](#65-renderer)
-   - 6.6 [Shader](#66-shader)
-   - 6.7 [Mesh](#67-mesh)
-   - 6.8 [Camera](#68-camera)
-   - 6.9 [PostProcess](#69-postprocess)
-   - 6.10 [World & ECS-lite](#610-world--ecs-lite)
-   - 6.11 [Player Controller](#611-player-controller)
-   - 6.12 [Interaction System](#612-interaction-system)
-   - 6.13 [EditorUI (ImGui)](#613-editorui-imgui)
-7. [GLSL Shader Reference](#7-glsl-shader-reference)
-8. [Gameplay Systems](#8-gameplay-systems)
-9. [Aesthetic Pipeline](#9-aesthetic-pipeline)
+1. [Project Overview](#1-project-overview)
+2. [Directory Layout](#2-directory-layout)
+3. [Quick-Start Build Guide](#3-quick-start-build-guide)
+4. [Third-Party Dependencies](#4-third-party-dependencies)
+5. [Architecture Overview](#5-architecture-overview)
+6. [Subsystem Reference](#6-subsystem-reference)
+   - 6.1 Engine (core loop)
+   - 6.2 Window
+   - 6.3 Input
+   - 6.4 Timer
+   - 6.5 Renderer
+   - 6.6 Shader
+   - 6.7 Mesh
+   - 6.8 Camera
+   - 6.9 PostProcess
+   - 6.10 World (scene graph)
+   - 6.11 Player
+   - 6.12 Interaction system
+   - 6.13 EditorUI (Dear ImGui)
+7. [Rendering Pipeline](#7-rendering-pipeline)
+8. [Shader Reference](#8-shader-reference)
+9. [Controls](#9-controls)
 10. [Extending the Engine](#10-extending-the-engine)
 11. [Known Limitations & Roadmap](#11-known-limitations--roadmap)
-12. [Coding Conventions](#12-coding-conventions)
 
 ---
 
-## 1. Overview & Design Goals
+## 1. Project Overview
 
-ObradexEngine is a deliberately minimal, single-file-per-system C++ game engine targeting a specific aesthetic and gameplay feel:
+ObradexEngine is a small, self-contained C++17 game engine built around the aesthetic of *Return of the Obra Dinn* (limited palette, heavy dithering) crossed with classic 8-bit pixel art. The gameplay layer targets immersive-sim first-person interactions in the spirit of *Deus Ex* and *Assassin's Creed Syndicate*.
 
-| Goal | Implementation |
-|---|---|
-| **"Return of the Obra Dinn" look** | Low-res FBO (320×180), Bayer ordered dithering, palette quantisation, vignette |
-| **"8-bit game" feel** | Nearest-neighbour upscale, 2–32 colour palette, scanline overlay |
-| **Deus Ex movement** | Lean, crouch, crouch-slide, interaction prompts, interactable objects |
-| **Assassin's Creed Syndicate movement** | Sprint, jump, trigger zones, kinematic controller |
-| **Runtime editor** | Dear ImGui panel (F1): post-process tweaking, entity inspector, player stats |
-| **Simple codebase** | ~2 500 lines, no external frameworks beyond OpenGL/GLFW/ImGui/GLM |
-
-The engine is intentionally small enough to read in a day and modify without fighting an abstraction wall.
+**Key aesthetic properties:**
+- Renders to a low-resolution internal framebuffer (default 320 × 180 — a 4 : 1 scale on 1280 × 720).
+- A post-process pass applies Bayer ordered dithering, palette quantisation, scanline overlay, and vignette.
+- "Obra Dinn mode" forces greyscale + 1-bit dithering for the classic woodcut look.
+- All UI (crosshair, interact prompts, editor) is drawn at native resolution on top, staying crisp.
 
 ---
 
-## 2. Architecture Diagram
+## 2. Directory Layout
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                      main.cpp                           │
-│            EngineConfig → Engine::Init() → Run()        │
-└───────────────────────┬─────────────────────────────────┘
-                        │ owns
-        ┌───────────────▼────────────────────────────────┐
-        │                  Engine (Singleton)             │
-        │  ProcessInput() → Update(dt) → Render()        │
-        │                                                 │
-        │  ┌──────┐ ┌───────┐ ┌──────┐ ┌──────────────┐ │
-        │  │Timer │ │ Input │ │Window│ │   Renderer   │ │
-        │  └──────┘ └───────┘ └──────┘ │  ┌─────────┐ │ │
-        │                              │  │ Shader  │ │ │
-        │  ┌───────────────────┐       │  │ PostFX  │ │ │
-        │  │       World       │       │  └─────────┘ │ │
-        │  │  EntityRecord[]   │       └──────────────┘ │
-        │  │  Component pools  │                        │
-        │  └───────────────────┘                        │
-        │                                               │
-        │  ┌──────────────────┐  ┌───────────────────┐  │
-        │  │  Player          │  │     EditorUI      │  │
-        │  │  Camera          │  │  (ImGui panels)   │  │
-        │  │  MoveState FSM   │  └───────────────────┘  │
-        │  └──────────────────┘                         │
-        └────────────────────────────────────────────────┘
-
-Render pipeline:
-  World geometry ──► low-res FBO (320×180)
-                        │
-                        ▼
-               Dither + Palette pass
-                        │
-                        ▼
-             Nearest-neighbour blit to window (1280×720)
-                        │
-                        ▼
-               ImGui overlay (native resolution)
-```
-
----
-
-## 3. Directory Structure
-
-```
-engine/
-├── CMakeLists.txt          Build system
-├── setup.sh                Dependency bootstrapper
-├── src/
-│   ├── main.cpp            Entry point + EngineConfig
-│   ├── engine/
-│   │   ├── Engine.h/.cpp   Core loop, singleton, subsystem ownership
-│   │   ├── Window.h/.cpp   GLFW window + OpenGL context
-│   │   ├── Input.h/.cpp    Keyboard/mouse polling (frame-delta based)
-│   │   └── Timer.h/.cpp    High-resolution frame timing + FPS smoothing
-│   ├── renderer/
-│   │   ├── Renderer.h/.cpp Main render coordinator
-│   │   ├── Shader.h/.cpp   GLSL compile/link + uniform setters
-│   │   ├── Mesh.h/.cpp     VAO/VBO/EBO + primitive factories
-│   │   ├── Camera.h/.cpp   First-person camera (yaw/pitch, lean, head-bob)
-│   │   └── PostProcess.h/.cpp Dither + palette FBO pass
-│   ├── world/
-│   │   └── World.h/.cpp    Entity registry + component pools
-│   ├── gameplay/
-│   │   ├── Player.h/.cpp   FPS controller (movement FSM, interaction)
-│   │   └── Interaction.h/.cpp World-interaction factories (door, pickup…)
-│   └── ui/
-│       └── EditorUI.h/.cpp ImGui editor overlay
+ObradexEngine/
+├── CMakeLists.txt          — CMake build definition
+├── setup.sh                — One-time dependency bootstrapper (run first!)
+├── README.md
+├── docs/
+│   └── DOCUMENTATION.md    — This file
 ├── assets/
 │   └── shaders/
-│       ├── world.vert      Geometry vertex shader
-│       └── world.frag      Blinn-Phong lighting fragment shader
-└── third_party/
-    ├── glad/               OpenGL function loader (generate from glad.dav1d.de)
-    ├── imgui/              Dear ImGui v1.90.1 (cloned by setup.sh)
-    └── stb/                stb_image.h (fetched by setup.sh)
+│       ├── world.vert      — Vertex shader (Blinn-Phong, 8 point lights)
+│       └── world.frag      — Fragment shader (lighting + normal mapping stub)
+├── src/
+│   ├── main.cpp            — Entry point: EngineConfig + Engine::Init/Run
+│   ├── engine/
+│   │   ├── Engine.h/.cpp   — Singleton core: owns all subsystems, drives the loop
+│   │   ├── Window.h/.cpp   — GLFW window + OpenGL 4.1 context
+│   │   ├── Input.h/.cpp    — Frame-snapshot keyboard/mouse/scroll polling
+│   │   └── Timer.h/.cpp    — High-resolution frame timer + smoothed FPS
+│   ├── renderer/
+│   │   ├── Renderer.h/.cpp — Top-level render coordinator
+│   │   ├── Shader.h/.cpp   — GLSL compile/link + uniform setters
+│   │   ├── Mesh.h/.cpp     — VAO/VBO/EBO mesh + primitive factories
+│   │   ├── Camera.h/.cpp   — FPS camera: yaw/pitch, lean, head-bob
+│   │   └── PostProcess.h/.cpp — FBO capture, dither, palette, vignette
+│   ├── world/
+│   │   └── World.h/.cpp    — Entity/component scene container
+│   ├── gameplay/
+│   │   ├── Player.h/.cpp   — Movement state machine + interaction
+│   │   └── Interaction.h/.cpp — Spawn helpers: doors, containers, pickups, alarms
+│   └── ui/
+│       └── EditorUI.h/.cpp — Dear ImGui runtime editor + HUD
+└── third_party/            — Vendored libraries (populated by setup.sh)
+    ├── glad/               — OpenGL 4.1 Core loader (generated by setup.sh)
+    ├── imgui/              — Dear ImGui v1.90.1
+    ├── stb/                — stb_image (header-only)
+    └── glm/                — GLM 0.9.9.8 (header-only math)
 ```
 
 ---
 
-## 4. Dependencies
+## 3. Quick-Start Build Guide
 
-| Library | Version | Purpose | How obtained |
-|---|---|---|---|
-| **OpenGL** | 4.1 Core | GPU rendering | System |
-| **GLFW** | ≥ 3.3 | Window, context, input events | System package or CMake FetchContent |
-| **GLAD** | gl 4.1 core | OpenGL function pointer loader | Generate at glad.dav1d.de, copy to `third_party/glad/` |
-| **GLM** | 0.9.9.8 | Math (vec3, mat4, quat) | System package or CMake FetchContent |
-| **Dear ImGui** | 1.90.1 | In-game editor & HUD | Cloned by `setup.sh` |
-| **stb_image** | latest | PNG/JPEG texture loading | Fetched by `setup.sh` |
+### Prerequisites
 
-### Installing system packages
+| Tool | Min version | Notes |
+|------|------------|-------|
+| C++ compiler | GCC 11 / Clang 13 / MSVC 2022 | C++17 required |
+| CMake | 3.20 | |
+| Python 3 + pip | 3.8 | For GLAD generation in setup.sh |
+| git | any | For ImGui clone |
+| curl or wget | any | For stb / GLM download |
+| OpenGL drivers | 4.1 Core | macOS capped at 4.1; Linux/Win support up to 4.6 |
 
-**Ubuntu / Debian:**
-```bash
-sudo apt update
-sudo apt install libglfw3-dev libglm-dev cmake build-essential
-```
-
-**macOS (Homebrew):**
-```bash
-brew install glfw glm cmake
-```
-
-**Windows (vcpkg):**
-```powershell
-vcpkg install glfw3 glm
-cmake .. -DCMAKE_TOOLCHAIN_FILE=path/to/vcpkg/scripts/buildsystems/vcpkg.cmake
-```
-
-### GLAD (mandatory manual step)
-
-1. Go to <https://glad.dav1d.de/>
-2. Set **Language** = C/C++, **API / gl** = 4.1, **Profile** = Core, tick **Generate a loader**
-3. Click **Generate** → download the zip
-4. Copy `glad/include/glad/glad.h` → `third_party/glad/include/glad/glad.h`
-5. Copy `glad/src/glad.c`          → `third_party/glad/src/glad.c`
-
----
-
-## 5. Building the Engine
+### Step-by-step
 
 ```bash
-# 1. Clone / place the engine source
-cd engine
+# 1. Fetch all third-party dependencies
+bash setup.sh
 
-# 2. Bootstrap third-party dependencies
-chmod +x setup.sh && ./setup.sh
-
-# 3. Generate GLAD (see Section 4 above) and copy files
-
-# 4. Configure with CMake
+# 2. Configure the build (Debug recommended while developing)
 mkdir build && cd build
-cmake .. -DCMAKE_BUILD_TYPE=Debug   # or Release
+cmake .. -DCMAKE_BUILD_TYPE=Debug
 
-# 5. Build
-cmake --build . -j$(nproc)          # Linux / macOS
-# cmake --build . --config Debug    # Windows
+# 3. Compile (use all CPU cores)
+cmake --build . -j$(nproc)
 
-# 6. Run
-./bin/ObradexEngine                  # Linux / macOS
-# bin\Debug\ObradexEngine.exe       # Windows
+# 4. Run — from inside the build/ directory so relative asset paths work
+./bin/ObradexEngine
 ```
 
-### Build types
+#### Release build
+```bash
+cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake --build . -j$(nproc)
+```
 
-| Type | Defines | Optimisation |
-|---|---|---|
-| `Debug` | `OBRADEX_DEBUG` | Off — full debug info |
-| `Release` | `OBRADEX_RELEASE` | `-O3` / `/O2` |
-
-Assets are automatically copied to `build/bin/assets/` post-build.
+#### Windows (Visual Studio)
+```powershell
+# Run setup.sh in Git Bash first, then:
+cmake -B build -G "Visual Studio 17 2022" -A x64
+cmake --build build --config Debug
+```
 
 ---
 
-## 6. System Reference
+## 4. Third-Party Dependencies
 
-### 6.1 Engine (Core Loop)
+| Library | Version | License | How obtained |
+|---------|---------|---------|--------------|
+| **GLAD** | generated | MIT | `pip install glad2` + `python3 -m glad --api gl:core=4.1 c` |
+| **Dear ImGui** | 1.90.1 | MIT | Git clone (depth 1) by setup.sh |
+| **stb_image** | latest | Public domain | curl download by setup.sh |
+| **GLM** | 0.9.9.8 | MIT | Zip download + extract by setup.sh |
+| **GLFW** | ≥ 3.3 | Zlib | System package **or** CMake FetchContent (automatic) |
+| **OpenGL** | 4.1 Core | — | System / GPU driver |
 
-**File:** `src/engine/Engine.h/.cpp`
+All libraries except GLFW are vendored inside `third_party/` after setup.sh runs. GLFW is either found via `pkg-config` or auto-fetched by CMake at configure time.
 
-The `Engine` singleton owns every subsystem and runs the game loop.
+---
 
-#### Lifecycle
+## 5. Architecture Overview
+
+```
+main()
+  └── Engine::Init()
+        ├── Timer          (no deps)
+        ├── Window         (GLFW init, OpenGL context)
+        ├── Input          (GLFW callbacks)
+        ├── Renderer       (shaders, FBO, post-process)
+        ├── World          (scene entities, mesh cache)
+        ├── Player         (movement, camera)
+        └── EditorUI       (Dear ImGui context)
+  └── Engine::Run()        ← fixed-timestep game loop
+        ├── ProcessInput() — Input::Update(), hotkey handling
+        ├── Update(dt)     — World::Update(), Player::Update()
+        └── Render()       — BeginFrame → RenderWorld → PostProcess → Present → ImGui
+```
+
+**Design principles:**
+- **Singleton engine** (`Engine::Get()`) owns all subsystems as `unique_ptr`; destruction is automatic RAII in reverse order.
+- **Fixed-timestep physics** with uncapped rendering. The accumulator pattern avoids spiral-of-death on slow machines.
+- **No ECS framework** — a simple `vector<EntityRecord>` with optional component pointers is fast enough at the target entity count (~500) and far easier to read and debug.
+- **Low-res FBO → nearest-neighbour upscale** is the entire "pixel art" trick: render at 320 × 180, blit to 1280 × 720 without interpolation.
+
+---
+
+## 6. Subsystem Reference
+
+### 6.1 Engine (`src/engine/Engine.h`)
+
+The root singleton. Use `Engine::Get()` everywhere.
 
 ```cpp
-Engine::Get().Init(config);   // Allocates all systems in dependency order
-Engine::Get().Run();          // Blocking game loop (returns when window closes)
-// Shutdown() is called automatically by Run()
+Engine& engine = Engine::Get();
+engine.Init(config);   // Allocate all subsystems
+engine.Run();          // Blocking game loop
+engine.RequestShutdown(); // Signal clean exit
 ```
 
-#### Fixed-timestep loop
-
-The game loop uses a **fixed-timestep physics accumulator** pattern:
-
-```
-real frame time → accumulator
-while accumulator >= fixedDt:
-    Update(fixedDt)          ← game logic at stable 60 Hz
-    accumulator -= fixedDt
-Render()                     ← as fast as possible (vsync-limited)
-```
-
-This keeps physics deterministic regardless of frame rate spikes.
-
-#### EngineConfig fields
+**EngineConfig** fields:
 
 | Field | Default | Description |
-|---|---|---|
-| `windowTitle` | `"Obradex"` | Window title bar |
-| `windowWidth/Height` | 1280 × 720 | OS window pixel dimensions |
-| `fullscreen` | `false` | Borderless fullscreen |
-| `vsync` | `true` | Swap interval |
-| `targetFPS` | 60 | Fixed-update rate |
-| `renderWidth/Height` | 320 × 180 | Internal low-res FBO |
+|-------|---------|-------------|
+| `windowTitle` | `"Obradex"` | Window title bar text |
+| `windowWidth/Height` | 1280 × 720 | OS window size in pixels |
+| `fullscreen` | false | Borderless fullscreen on primary monitor |
+| `vsync` | true | Enable vertical sync |
+| `targetFPS` | 60 | Fixed-step frequency (physics tick rate) |
+| `renderWidth/Height` | 320 × 180 | Internal low-res buffer size |
 
-#### Engine states
-
+**EngineState** transitions:
 ```
-Uninitialized → Running → Paused → Running
-                       ↓
-                    Shutdown
+Uninitialized → Running → Paused → Running → Shutdown
+                       ↘          ↗
+                        (Escape key toggles)
 ```
-
-Press **Escape** in-game to toggle pause.  
-Call `Engine::Get().RequestShutdown()` from anywhere to exit cleanly.
 
 ---
 
-### 6.2 Window
+### 6.2 Window (`src/engine/Window.h`)
 
-**File:** `src/engine/Window.h/.cpp`
-
-Wraps GLFW. Creates an **OpenGL 4.1 Core** context.
+Wraps GLFW. The destructor calls `glfwTerminate()` automatically.
 
 ```cpp
-engine.GetWindow().SetCursorLocked(true);   // FPS mouse capture
-engine.GetWindow().GetWidth();              // Current pixel width
-engine.GetWindow().GetAspect();             // width / height
-engine.GetWindow().GetGLFWWindow();         // Raw GLFWwindow* for ImGui
+// Typically accessed via engine.GetWindow()
+Window& win = engine.GetWindow();
+win.SetCursorLocked(true);   // Capture mouse (FPS mode)
+win.GetWidth();              // Current framebuffer width
+win.GetAspect();             // width / height
 ```
 
-A `FramebufferSizeCallback` automatically resizes the viewport when the OS window is resized.
+GLFW window hints: OpenGL 4.1 Core, forward-compatible on macOS, resizable.
 
 ---
 
-### 6.3 Input
+### 6.3 Input (`src/engine/Input.h`)
 
-**File:** `src/engine/Input.h/.cpp`
-
-Frame-based polling with **double-buffered state** — no raw GLFW callbacks needed in gameplay code.
+Frame-snapshot polling — no raw callbacks exposed to game code.
 
 ```cpp
-const Input& input = engine.GetInput();
+// Call once per frame in ProcessInput()
+input.Update();
 
 // Keyboard
-input.IsKeyHeld(Key::W);             // true every frame key is held
-input.IsKeyJustPressed(Key::Space);  // true only the frame it went down
-input.IsKeyJustReleased(Key::LShift);
+input.IsKeyHeld(Key::W);           // Held this frame
+input.IsKeyJustPressed(Key::E);    // Went down this frame only
+input.IsKeyJustReleased(Key::F1);  // Went up this frame only
 
 // Mouse
-input.GetMouseDelta();   // glm::vec2 — pixels moved since last frame
-input.GetScrollDelta();  // float — scroll wheel detents this frame
-input.IsButtonJustPressed(MouseButton::Left);
+input.GetMouseDelta();  // vec2: pixels moved since last frame
+input.GetScrollDelta(); // float: scroll wheel detents
 ```
 
-#### Key enum
-
-Values match `GLFW_KEY_*` constants directly (cast to `int`), so there is zero overhead from a lookup table.  See `Input.h` for the full list.
-
-#### Adding new keys
-
-Add an entry to the `Key` enum in `Input.h` using the matching `GLFW_KEY_*` integer value.
+`Key` enum values mirror `GLFW_KEY_*` constants directly (cast to `int` = zero overhead).
 
 ---
 
-### 6.4 Timer
+### 6.4 Timer (`src/engine/Timer.h`)
 
-**File:** `src/engine/Timer.h/.cpp`
-
-Uses `std::chrono::steady_clock` — monotonic, immune to wall-clock adjustments.
+Uses `std::chrono::steady_clock` for monotonic, OS-agnostic timing.
 
 ```cpp
-const Timer& t = engine.GetTimer();
-t.GetDeltaTime();   // float seconds — last frame
-t.GetTotalTime();   // float seconds — since Reset()
-t.GetFPS();         // float — rolling average over 60 frames
-t.GetFrameCount();  // int
+timer.Reset();       // Call before the game loop
+float dt = timer.Tick(); // Returns delta-time in seconds
+timer.GetFPS();      // 60-frame rolling average
+timer.GetTotalTime(); // Elapsed since Reset (seconds)
 ```
 
 ---
 
-### 6.5 Renderer
+### 6.5 Renderer (`src/renderer/Renderer.h`)
 
-**File:** `src/renderer/Renderer.h/.cpp`
-
-Coordinates the render pipeline:
+Orchestrates the rendering pipeline. Each frame:
 
 ```cpp
-Renderer& r = engine.GetRenderer();
-
-// Add lights before RenderWorld
-r.ClearLights();
-r.AddPointLight({ .position={3,2,0}, .colour={1,.8,.5}, .radius=8, .intensity=1.5 });
-r.SetSunDirection(glm::normalize({-1,-2,-1}));
-r.SetSunColour({0.7f, 0.75f, 0.85f});   // Cool moonlight
-
-// Normally called by Engine automatically — shown for clarity
-r.BeginFrame();
-r.RenderWorld(world, camera);
-r.ApplyPostProcess();
-r.Present(windowW, windowH);
+renderer.BeginFrame();                        // Bind low-res FBO
+renderer.RenderWorld(world, camera);          // Draw entities
+renderer.ApplyPostProcess();                  // Unbind FBO
+renderer.Present(winW, winH);                 // Dither + blit
 ```
 
-**Lighting model:** Blinn-Phong with one directional light + up to **8 point lights** per frame.  The count limit is enforced in both C++ (`kMaxPointLights`) and GLSL (`u_PointLights[8]`).
+**Lighting:** one directional "sun/moon" + up to 8 point lights.
+
+```cpp
+renderer.SetSunDirection({-0.4f, -0.8f, -0.3f});
+renderer.SetSunColour({0.7f, 0.75f, 0.85f});  // Cool moonlight
+renderer.AddPointLight({ position, colour, radius, intensity });
+renderer.ClearLights();
+```
 
 ---
 
-### 6.6 Shader
+### 6.6 Shader (`src/renderer/Shader.h`)
 
-**File:** `src/renderer/Shader.h/.cpp`
-
-Compiles GLSL vertex + fragment stages, links them, and exposes type-safe uniform setters.
+Thin RAII wrapper around an OpenGL program object.
 
 ```cpp
 Shader sh;
 sh.Load("assets/shaders/world.vert", "assets/shaders/world.frag");
-// — or from embedded strings —
+// or from in-memory strings:
 sh.LoadFromSource(vertSrc, fragSrc);
 
 sh.Bind();
 sh.SetMat4("u_MVP", mvp);
-sh.SetVec3("u_SunColour", {0.7f, 0.75f, 0.85f});
-sh.SetFloat("u_Roughness", 0.8f);
-sh.SetInt("u_HasTexture", 0);
+sh.SetVec3("u_Colour", {1, 0, 0});
 sh.Unbind();
 ```
 
-Errors are logged to `stderr` with the GLSL compile log.  The `Shader` destructor calls `glDeleteProgram` automatically.
+Move-only (no copy) — GPU resource ownership follows the object.
 
 ---
 
-### 6.7 Mesh
+### 6.7 Mesh (`src/renderer/Mesh.h`)
 
-**File:** `src/renderer/Mesh.h/.cpp`
-
-Uploads interleaved `Vertex` data (position + normal + UV) to a VAO/VBO/EBO on the GPU.
+Interleaved vertex buffer: `position (vec3) | normal (vec3) | texCoord (vec2)` = 32 bytes/vertex.
 
 ```cpp
-// Use a built-in primitive
+// Upload custom geometry
+Mesh m;
+m.Upload(vertices, indices);  // GPU upload; static draw
+m.Draw();                     // glDrawElements(GL_TRIANGLES, ...)
+
+// Built-in primitives
 Mesh cube   = Mesh::MakeCube();
-Mesh plane  = Mesh::MakePlane(10.f, 4);   // 10m × 10m, 4 subdivisions
-Mesh sphere = Mesh::MakeSphere(0.5f, 16); // r=0.5m, 16 segments
-
-// Or upload custom geometry
-std::vector<Vertex>   verts = { ... };
-std::vector<unsigned> idx   = { ... };
-Mesh custom;
-custom.Upload(verts, idx);
-
-// Draw (shader must be bound by caller)
-shader.Bind();
-shader.SetMat4("u_Model", model);
-cube.Draw();
+Mesh plane  = Mesh::MakePlane(10.f, 4);  // 10m, 4 subdivisions
+Mesh sphere = Mesh::MakeSphere(1.f, 16); // r=1, 16 segments
 ```
-
-**Vertex layout** (32 bytes, interleaved):
-```
-offset  0 : vec3 position
-offset 12 : vec3 normal
-offset 24 : vec2 texCoord
-```
-Attribute locations: 0 = position, 1 = normal, 2 = texCoord.
 
 ---
 
-### 6.8 Camera
+### 6.8 Camera (`src/renderer/Camera.h`)
 
-**File:** `src/renderer/Camera.h/.cpp`
-
-First-person camera with Euler-angle orientation, lean, and head-bob.
+First-person Euler-angle camera with extras:
 
 ```cpp
-Camera cam({0, 1.7, 0});  // eye position
+camera.Rotate(dx, dy, sensitivity);  // Mouse look
+camera.SetLean(angle);               // ±15° peek (Thief-style)
+camera.UpdateHeadBob(speed, dt);     // Lissajous walking bob
 
-// Per-frame
-cam.Rotate(mouseDx, mouseDy, sensitivity);
-cam.SetLean(-12.f);            // Lean left 12°
-cam.UpdateHeadBob(speed, dt);
-
-// Matrices
-glm::mat4 view = cam.GetView();
-glm::mat4 proj = cam.GetProjection(aspectRatio);
-
-// Direction vectors (recalculated after every Rotate call)
-cam.GetForward();   // Normalised look direction
-cam.GetRight();
-cam.GetUp();
+camera.GetView();                    // mat4
+camera.GetProjection(aspect);        // mat4, perspective
+camera.GetForward();                 // normalised vec3
 ```
 
-**Head-bob** uses a Lissajous figure-8 pattern (vertical + horizontal sine at different frequencies) for a natural walking feel.  It automatically damps out when the player's speed drops below 0.5 m/s.
-
-**Lean** smoothly interpolates with `kLeanSpeed = 8 rad/s`.  The lean is applied as a roll rotation around the view Z-axis in `GetView()`.
+Yaw wraps to `[-180, 180]` to prevent float drift. Pitch clamps to `[-89, 89]`.
 
 ---
 
-### 6.9 PostProcess
+### 6.9 PostProcess (`src/renderer/PostProcess.h`)
 
-**File:** `src/renderer/PostProcess.h/.cpp`
-
-The most visually significant system — entirely implemented in a single GLSL fragment shader.
-
-#### Pipeline (per frame)
-
-```
-3D scene → low-res FBO texture (GL_NEAREST)
-           │
-           ▼
-  1. Contrast / Brightness
-  2. Obra Dinn greyscale (optional)
-  3. Bayer 8×8 ordered dithering
-  4. Nearest palette colour lookup (brute-force, 32 entries)
-  5. Vignette (radial darkening)
-  6. Scanline overlay (every 2 pixels)
-           │
-           ▼
-  Blit to window (nearest-neighbour → crisp pixels)
-```
-
-#### PostProcessSettings (live-editable via EditorUI)
+Manages the low-res FBO and the full-screen dither/palette shader.
 
 ```cpp
-PostProcessSettings& pp = engine.GetRenderer().GetPostProcess().Settings();
+PostProcessSettings& pp = renderer.GetPostProcess().Settings();
 
-pp.obraDinnMode   = true;   // Force monochrome + aggressive dither
-pp.ditherStrength = 1.6f;   // 0 = off, 1 = standard, 2 = heavy
-pp.paletteSize    = 16;     // Active palette entries (2–32)
-pp.contrast       = 1.2f;
-pp.brightness     = 0.0f;   // [-1 .. 1]
-pp.vignetteRadius = 0.7f;
-pp.scanlines      = true;
-pp.scanlineAlpha  = 0.15f;
-```
-
-#### Built-in palette
-
-The default 32-colour palette is defined in `PostProcess.cpp` as `kDefaultPalette`.  The first 16 entries are the standard "Obra Dinn inspired" set:
-
-- Near-black to white (7 greyscale ramps)
-- Parchment / aged-paper / amber / mahogany (warm ink tones)
-- Deep teal / teal / cyan-teal / navy (cool atmospheric tones)
-
-Entries 17–32 extend with reds, golds, mossy greens, purples, and earth tones for colour levels.
-
-#### Adding a custom palette
-
-Edit the `kDefaultPalette` array in `PostProcess.cpp` — it is a plain `glm::vec3[32]` in linear colour space (0..1).  The palette is uploaded to a 1D GPU texture via `BuildPalette()`.
-
-#### Obra Dinn preset (code)
-
-```cpp
-pp.obraDinnMode   = true;
-pp.ditherStrength = 1.6f;
-pp.paletteSize    = 2;      // Black and white only
+// Obra Dinn look
+pp.obraDinnMode   = true;   // Greyscale conversion
+pp.ditherStrength = 1.6f;   // 0 = off, 2 = heavy
+pp.paletteSize    = 2;      // Use only 2 palette entries (black + white)
 pp.contrast       = 1.8f;
 pp.scanlines      = false;
-pp.vignetteRadius = 0.6f;
+
+// 8-bit color look
+pp.obraDinnMode   = false;
+pp.paletteSize    = 16;
+pp.ditherStrength = 1.0f;
+pp.scanlines      = true;
+pp.scanlineAlpha  = 0.18f;
 ```
+
+The built-in 32-colour palette blends near-blacks, off-whites, ambers, and teals — tuned to complement both modes.
+
+**Dithering:** 8 × 8 Bayer ordered dithering applied in screen-space on the low-res buffer. This produces the characteristic halftone / stipple look at the pixel grid.
 
 ---
 
-### 6.10 World & ECS-lite
+### 6.10 World (`src/world/World.h`)
 
-**File:** `src/world/World.h/.cpp`
-
-The `World` is a minimalist entity-component system.  An **Entity** is just a `uint32_t` handle.  Components are plain structs stored in `std::vector` pools.
-
-#### Creating entities & attaching components
+Scene container with a simple entity/component system.
 
 ```cpp
-World& world = engine.GetWorld();
+// Create an entity
+EntityID e = world.CreateEntity("Crate");
 
-EntityID e = world.CreateEntity("MyObject");
-
-TransformComponent* t = world.AddTransform(e);
+// Attach components (returns pointer to new component)
+auto* t = world.AddTransform(e);
 t->position = {3.f, 0.5f, 5.f};
-t->scale    = {1.f, 1.f, 1.f};
 
-MeshComponent* m = world.AddMesh(e);
-m->mesh         = &myMesh;          // non-owning pointer
-m->albedoColour = {0.4f, 0.3f, 0.2f};
-m->roughness    = 0.9f;
+auto* m = world.AddMesh(e);
+m->mesh         = &cubeMesh;
+m->albedoColour = {0.45f, 0.35f, 0.22f};
 
-InteractableComponent* ia = world.AddInteractable(e);
-ia->promptText  = "[E] Open hatch";
-ia->range       = 2.f;
-ia->onInteract  = []() { std::cout << "Hatch opened!\n"; };
+auto* ia = world.AddInteractable(e);
+ia->promptText = "[E] Open crate";
+ia->onInteract = []() { /* … */ };
+
+// Query
+auto* rec = world.GetRecord(e);   // EntityRecord*
+world.DestroyEntity(e);           // Marks as inactive; safe during iteration
 ```
 
-#### Component types
+**Component types:**
 
-| Component | Fields | Purpose |
-|---|---|---|
-| `TransformComponent` | `position`, `rotation` (quat), `scale` | World-space placement |
-| `MeshComponent` | `mesh*`, `albedoColour`, `specular`, `roughness` | Visual representation |
-| `InteractableComponent` | `promptText`, `range`, `enabled`, `onInteract` | E-key interactions |
-| `LightComponent` | `colour`, `radius`, `intensity`, `flicker` | Point light source |
-| `TriggerComponent` | `halfExtents`, `onEnter`, `onExit` | AABB trigger zone |
+| Component | Purpose |
+|-----------|---------|
+| `TransformComponent` | Position, rotation (quat), scale → model matrix |
+| `MeshComponent` | Mesh pointer + material (albedo, specular, roughness) |
+| `InteractableComponent` | Prompt text, reach range, `onInteract` callback |
+| `LightComponent` | Point light (colour, radius, intensity, candle flicker) |
+| `TriggerComponent` | AABB trigger with `onEnter` / `onExit` callbacks |
 
-#### Querying the scene
+---
 
+### 6.11 Player (`src/gameplay/Player.h`)
+
+First-person controller with a movement state machine.
+
+**States:**
+
+| State | Trigger | Speed |
+|-------|---------|-------|
+| `Standing` | Default | `walkSpeed` (4 m/s) |
+| `Sprinting` | Shift + WASD | `sprintSpeed` (8 m/s) |
+| `Crouching` | Ctrl | `crouchSpeed` (1.8 m/s) |
+| `Sliding` | Sprint + Ctrl | `slideSpeed` (10 m/s, 0.6 s) |
+| `InAir` | Jump / fall | Carries horizontal velocity |
+| `Vaulting` | *(stub)* | Auto-climb low ledges |
+
+**Lean:** Q leans left, E leans right (when stationary). Max ±12°, lerped smoothly.
+
+**Gravity:** Simple kinematic (`velocity.y += gravity * dt`). Floor-plane collision at y = 0 (replace with ray-cast for real levels).
+
+**Tuning at runtime** via the editor's Player tab:
 ```cpp
-// Find the nearest interactable within 3m of a point
-EntityID id = world.FindNearestInteractable(playerPos, 3.f);
-
-// Get a specific component
-TransformComponent* t = world.GetTransform(id);
-InteractableComponent* ia = world.GetInteractable(id);
-
-// Iterate all records (for editor, AI, etc.)
-for (const auto& rec : world.GetAllRecords())
-{
-    if (!rec.active) continue;
-    // rec.transform, rec.mesh, rec.light, etc.
-}
+PlayerStats& s = engine.GetPlayer().GetStats();
+s.walkSpeed        = 4.f;
+s.mouseSensitivity = 0.12f;
 ```
 
 ---
 
-### 6.11 Player Controller
+### 6.12 Interaction System (`src/gameplay/Interaction.h`)
 
-**File:** `src/gameplay/Player.h/.cpp`
-
-Implements the character controller as a state machine.
-
-#### Movement state machine
-
-```
-┌─────────────────────────────────────────────────┐
-│                                                 │
-│  Standing ──LShift+move──► Sprinting            │
-│     │                          │                │
-│  LCtrl                    LCtrl+move            │
-│     │                          │                │
-│     ▼                          ▼                │
-│  Crouching         Sliding ◄───┘                │
-│                    (0.6s)                       │
-│                       │                         │
-│     Space (jump)       └──► Standing/Crouching  │
-│        ▼                                        │
-│     InAir ──land──► Standing                   │
-│                                                 │
-└─────────────────────────────────────────────────┘
-```
-
-#### Controls
-
-| Key | Action |
-|---|---|
-| `W/A/S/D` | Move |
-| `LShift` | Sprint |
-| `LCtrl` | Crouch (hold) |
-| `LCtrl` while sprinting + moving | Slide |
-| `Space` | Jump |
-| `Q` | Lean left |
-| `E` (stationary) | Lean right |
-| `E` (near object) | Interact |
-| `F1` | Toggle editor |
-| `Escape` | Pause / unpause |
-
-#### Tweaking movement feel
-
-All movement parameters are in `PlayerStats` and live-editable via the **Player** tab in the editor (F1):
+Factory functions that spawn pre-configured interactable entities:
 
 ```cpp
-PlayerStats& stats = engine.GetPlayer().GetStats();
-stats.walkSpeed    = 4.0f;   // m/s
-stats.sprintSpeed  = 8.0f;   // m/s
-stats.crouchSpeed  = 1.8f;   // m/s
-stats.slideSpeed   = 10.0f;  // m/s (initial burst)
-stats.jumpHeight   = 1.2f;   // metres
-stats.gravity      = -15.f;  // m/s²
-```
+// Door (with optional lock)
+EntityID door = Interaction::SpawnDoor(world, {5.f, 0.f, 3.f},
+    /*locked=*/false,
+    []() { std::cout << "Door opened!\n"; });
 
-#### Physics note
-
-The current collision system is a **simple Y=0 ground plane**.  For real levels, replace `ResolveCollision()` with ray-casts against scene geometry (e.g., using a BVH of AABB/triangle tests).
-
----
-
-### 6.12 Interaction System
-
-**File:** `src/gameplay/Interaction.h/.cpp`
-
-Factory functions that create pre-wired entities:
-
-```cpp
-#include "gameplay/Interaction.h"
-
-// Door (locked)
-Interaction::SpawnDoor(world, {5.f, 0.f, 0.f}, /*locked=*/true,
-    []{ std::cout << "Door opened!\n"; });
-
-// Chest with loot
-Interaction::SpawnContainer(world, {2.f, 0.5f, 3.f},
-    { {"Key",   "A rusty iron key", 1},
-      {"Coins", "A handful of coins", 12} },
-    [](const std::vector<Item>& items){
-        // Add to player inventory here
-    });
+// Loot container
+Interaction::SpawnContainer(world, {2.f, 0.5f, 1.f},
+    { {"Lockpick", "A steel lockpick", 3}, {"Medkit", "", 1} },
+    [](const auto& items) { /* add to inventory */ });
 
 // Pickup item
-Interaction::SpawnPickup(world, {1.f, 0.f, 2.f},
-    {"Lockpick", "A slender pick", 1},
-    [](const Item& i){ /* add to inventory */ });
+Interaction::SpawnPickup(world, {1.f, 0.f, 4.f},
+    {"Ammo", "9mm rounds", 12},
+    [](const Item& it) { /* add it.quantity to ammo count */ });
 
-// Alarm
-Interaction::SpawnAlarm(world, {-3.f, 1.f, 0.f},
-    []{ /* alarm triggered */ },
-    []{ /* alarm defused  */ });
+// Alarm box
+Interaction::SpawnAlarm(world, {-3.f, 1.5f, 0.f},
+    []() { /* alarm triggered */ },
+    []() { /* alarm defused */ });
 ```
+
+All spawn functions return the `EntityID` so you can query or modify the entity later.
 
 ---
 
-### 6.13 EditorUI (ImGui)
+### 6.13 EditorUI (`src/ui/EditorUI.h`)
 
-**File:** `src/ui/EditorUI.h/.cpp`
+Dear ImGui runtime editor, toggled with **F1**.
 
-Press **F1** to toggle.  The panel has four tabs:
+**Tabs:**
 
 | Tab | Contents |
-|---|---|
-| **Perf** | FPS, frame-time, frame count, FPS sparkline |
-| **Renderer** | All `PostProcessSettings` sliders, preset buttons |
-| **World** | Entity list with component inspector (position, albedo, lights) |
-| **Player** | Movement state, position, all `PlayerStats` sliders, FOV |
+|-----|---------|
+| **Perf** | FPS, frame time, total time, 90-frame FPS sparkline, render + window resolution |
+| **Renderer** | All `PostProcessSettings` sliders, preset buttons (Obra Dinn / 8-bit Color / Reset) |
+| **World** | Scrollable entity list + component inspector (transform drag, material colour, light sliders) |
+| **Player** | Move state readout, position/speed, all `PlayerStats` sliders, camera FOV + yaw/pitch |
 
-The **HUD** (crosshair + interact prompt + movement-state badge) always renders, regardless of the F1 toggle.
-
-#### Changing the ImGui theme
-
-Edit the `ImGuiStyle` block inside `EditorUI::Init()`.  The defaults use near-black backgrounds with amber accent colours to match the Obra Dinn palette.
+The **HUD** (crosshair + interact prompt + movement state badge) is always drawn, even when the editor panel is closed.
 
 ---
 
-## 7. GLSL Shader Reference
+## 7. Rendering Pipeline
 
-### `world.vert`
-
-| Attribute | Location | Type | Description |
-|---|---|---|---|
-| `a_Position` | 0 | `vec3` | Object-space vertex position |
-| `a_Normal` | 1 | `vec3` | Object-space vertex normal |
-| `a_TexCoord` | 2 | `vec2` | UV coordinates |
-
-| Uniform | Type | Description |
-|---|---|---|
-| `u_Model` | `mat4` | Object → world transform |
-| `u_View` | `mat4` | World → camera transform |
-| `u_Proj` | `mat4` | Perspective projection |
-
-### `world.frag`
-
-| Uniform | Type | Description |
-|---|---|---|
-| `u_AlbedoColour` | `vec3` | Base colour tint |
-| `u_HasTexture` | `int` | 1 = sample `u_AlbedoTex`, 0 = flat colour |
-| `u_AlbedoTex` | `sampler2D` | Diffuse texture (unit 0) |
-| `u_Specular` | `float` | Specular intensity 0–1 |
-| `u_Roughness` | `float` | Roughness 0 (mirror) – 1 (matte) |
-| `u_CamPos` | `vec3` | World-space camera position |
-| `u_SunDir` | `vec3` | Directional light direction (normalised) |
-| `u_SunColour` | `vec3` | Directional light colour |
-| `u_Ambient` | `vec3` | Ambient fill colour |
-| `u_PointLightCount` | `int` | Active point lights (0–8) |
-| `u_PointLights[i].position` | `vec3` | Point light world position |
-| `u_PointLights[i].colour` | `vec3` | Point light colour |
-| `u_PointLights[i].radius` | `float` | Attenuation radius (m) |
-| `u_PointLights[i].intensity` | `float` | Multiplier |
-
-### Post-process pass (embedded in `PostProcess.cpp`)
-
-Uses a fullscreen quad with a dedicated fragment shader.  See source comments for the `BayerMatrix()` and `NearestPalette()` functions.
-
----
-
-## 8. Gameplay Systems
-
-### Inventory (stub — integrate your own)
-
-The `Interaction` system fires `onPickup(item)` / `onOpen(items)` callbacks.  Wire these into your own inventory container:
-
-```cpp
-struct Inventory {
-    std::vector<Item> items;
-    void Add(const Item& i) { items.push_back(i); }
-};
-
-Inventory playerInventory;
-Interaction::SpawnPickup(world, pos, {"Key","Iron key",1},
-    [&](const Item& i){ playerInventory.Add(i); });
+```
+  ┌──────────────────────────────────────────────────────────────┐
+  │  1. BeginCapture()                                           │
+  │     Bind low-res FBO (e.g. 320 × 180)                       │
+  │     glClear(COLOR | DEPTH)                                   │
+  ├──────────────────────────────────────────────────────────────┤
+  │  2. RenderWorld()                                            │
+  │     world shader: Blinn-Phong + 1 directional + 8 points     │
+  │     For each active entity with Mesh + Transform:            │
+  │       Upload u_Model, u_AlbedoColour, u_Specular, u_Roughness│
+  │       mesh->Draw()  (glDrawElements)                         │
+  ├──────────────────────────────────────────────────────────────┤
+  │  3. EndCapture()  — unbind FBO                               │
+  ├──────────────────────────────────────────────────────────────┤
+  │  4. Present(winW, winH)                                      │
+  │     Bind default FBO; viewport = full window                 │
+  │     Post-process shader (fullscreen quad):                   │
+  │       a. Sample low-res texture                              │
+  │       b. Contrast / brightness                               │
+  │       c. Greyscale (Obra Dinn mode only)                     │
+  │       d. Bayer 8×8 ordered dither                            │
+  │       e. Palette quantise (nearest colour, 2–32 entries)     │
+  │       f. Vignette (radial darkening)                         │
+  │       g. Scanline overlay (every 2 px, optional)             │
+  ├──────────────────────────────────────────────────────────────┤
+  │  5. EditorUI::Render()                                       │
+  │     ImGui at native resolution (sharp, no pixel scaling)     │
+  │     HUD always drawn; editor panel only if F1 active         │
+  └──────────────────────────────────────────────────────────────┘
 ```
 
-### AI / Stealth (stub)
-
-`Player::IsHidden()` returns `true` when the player is crouching — use this to control NPC awareness.  A full stealth system would also factor in:
-- Ambient light level at the player position (ray-cast to the sun + each point light)
-- NPC line-of-sight ray-cast
-- Sound radius (footstep sound scales with movement state)
-
-### Hacking mini-game (stub)
-
-`Interaction::SpawnAlarm` is designed to be the entry point.  Replace the `onInteract` lambda body in `SpawnAlarm` (or add a new `SpawnTerminal` factory) with a call that pushes a hacking UI state — e.g., a pipeline-puzzle screen rendered via ImGui in a fullscreen window.
+The nearest-neighbour upscale from 320 × 180 → 1280 × 720 is handled automatically by OpenGL when the FBO colour texture uses `GL_NEAREST` filtering and is drawn on a fullscreen quad that covers the window.
 
 ---
 
-## 9. Aesthetic Pipeline
+## 8. Shader Reference
 
-### Choosing your look
+### world.vert
+**Inputs:** `location 0` = position (vec3), `location 1` = normal (vec3), `location 2` = texCoord (vec2)
 
-| Setting combination | Result |
-|---|---|
-| `obraDinnMode=true, paletteSize=2, dither=1.6` | Pure monochrome Obra Dinn |
-| `obraDinnMode=false, paletteSize=4, dither=1.0` | 4-tone Gameboy-style |
-| `obraDinnMode=false, paletteSize=16, dither=0.8, scanlines=true` | CRT 8-bit colour |
-| `obraDinnMode=false, paletteSize=32, dither=0.3` | Colour but painterly |
+**Uniforms:** `u_Model`, `u_View`, `u_Proj` (mat4), `u_NormalMat` (mat3)
 
-### Changing render resolution
+**Outputs:** world-space `v_FragPos`, `v_Normal`, `v_TexCoord`
 
-Edit `EngineConfig::renderWidth/renderHeight` in `main.cpp`:
+### world.frag
+**Uniforms:**
 
-| Resolution | Scale @1280×720 | Character |
-|---|---|---|
-| 160 × 90 | 8× | Extreme chunky pixels |
-| 320 × 180 | 4× | Sweet spot (default) |
-| 426 × 240 | ~3× | Softer retro |
-| 640 × 360 | 2× | Subtle pixelation |
+| Name | Type | Description |
+|------|------|-------------|
+| `u_AlbedoColour` | vec3 | Base colour (no texture) |
+| `u_Specular` | float | Specular intensity |
+| `u_Roughness` | float | Inverts shininess |
+| `u_SunDir` | vec3 | World-space direction *toward* the light |
+| `u_SunColour` | vec3 | Directional light colour |
+| `u_Ambient` | vec3 | Constant fill light |
+| `u_PointLights[i].position` | vec3 | Point light position |
+| `u_PointLights[i].colour` | vec3 | Point light colour |
+| `u_PointLights[i].radius` | float | Attenuation distance (m) |
+| `u_PointLights[i].intensity` | float | Brightness scalar |
+| `u_PointLightCount` | int | Active lights (0–8) |
+| `u_CamPos` | vec3 | Camera position (for specular) |
 
-### Adding a custom palette
+### Post-process shader (embedded in PostProcess.cpp)
+Key uniforms: `u_Scene` (sampler2D), `u_Palette` (sampler1D), `u_PaletteSize`, `u_Dither`, `u_ObraDinn`, `u_Resolution`, `u_Contrast`, `u_Brightness`, `u_VigRadius`, `u_VigFeather`, `u_Scanlines`, `u_ScanAlpha`.
 
-In `PostProcess.cpp`, replace entries in `kDefaultPalette[]`:
+---
 
-```cpp
-// Each entry is a linear-space RGB glm::vec3 (0..1)
-static const glm::vec3 kDefaultPalette[32] = {
-    {0.f,   0.f,   0.f  },   // [0] Black
-    {1.f,   1.f,   1.f  },   // [1] White
-    {0.5f,  0.2f,  0.1f },   // [2] Warm mid-tone
-    // ...
-};
-```
+## 9. Controls
 
-Set `pp.paletteSize` to however many entries you defined.
+| Key / Input | Action |
+|------------|--------|
+| W / A / S / D | Move forward / left / back / right |
+| Mouse X / Y | Camera yaw / pitch |
+| Left Shift | Sprint (cannot crouch-slide if not sprinting) |
+| Left Ctrl | Crouch; if sprinting → slide |
+| Space | Jump (only from ground, not while crouching) |
+| Q | Lean left (only when not sprinting) |
+| E | Lean right *or* interact (E lean only when stationary) |
+| F1 | Toggle editor panel |
+| Escape | Toggle pause (freezes Update; editor still ticks) |
 
 ---
 
 ## 10. Extending the Engine
 
 ### Adding a new component type
+1. Define a `struct MyComponent { … };` in `World.h`.
+2. Add `std::vector<MyComponent> m_myComponents;` to `World`.
+3. Add a pointer `MyComponent* myComponent = nullptr;` to `EntityRecord`.
+4. Implement `AddMyComponent()` and `GetMyComponent()` following the existing pattern.
+5. Call `UpdateMyComponents(dt)` from `World::Update()`.
 
-1. Declare the struct in `World.h`:
-   ```cpp
-   struct AudioComponent {
-       std::string clipPath;
-       float volume = 1.f;
-       bool  looping = false;
-   };
-   ```
-2. Add a pool in `World` private members:  
-   `std::vector<AudioComponent> m_audioComponents;`
-3. Add `AddAudio()` / `GetAudio()` methods (pattern mirrors existing ones).
-4. Update `EntityRecord` with `AudioComponent* audio = nullptr;`
-5. Update `World::Render()` or add a new `World::UpdateAudio()` if needed.
+### Adding a new system
+Create a `.h/.cpp` pair under `src/` in the appropriate subdirectory, add a `unique_ptr<MySystem>` to `Engine`, initialise it in `Engine::Init()`, and call its `Update()` / `Render()` in the appropriate engine phase.
 
-### Adding a new gameplay system
+### Loading levels from files
+Replace `World::LoadTestLevel()` with a JSON or binary loader. The component API is already in place — you just need to read position / colour / etc. from disk and call `AddTransform`, `AddMesh`, etc.
 
-Create a new class in `src/gameplay/`, initialise it in `Engine::Init()`, store it as a `unique_ptr` member, and call its `Update()` from `Engine::Update()`.
-
-### Adding a shader
-
-1. Place `.vert` / `.frag` files in `assets/shaders/`.
-2. Load with `Shader::Load()`.
-3. Set uniforms matching the layout expected by your GLSL source.
-
-### Adding texture loading (stb_image)
-
-`stb_image.h` is already downloaded by `setup.sh`. To load a texture:
-
-```cpp
-#define STB_IMAGE_IMPLEMENTATION  // once, in stb_image_impl.cpp
-#include "stb_image.h"
-
-int w, h, ch;
-stbi_set_flip_vertically_on_load(true);
-unsigned char* data = stbi_load("assets/textures/stone.png", &w, &h, &ch, 4);
-
-unsigned texID;
-glGenTextures(1, &texID);
-glBindTexture(GL_TEXTURE_2D, texID);
-glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-glGenerateMipmap(GL_TEXTURE_2D);
-stbi_image_free(data);
-```
-
-Bind to texture unit 0, set `u_HasTexture = 1` on the world shader.
+### Adding textures
+1. Use `stb_image` (`#include "stb_image.h"`) to load PNG/JPG.
+2. Create a GL texture object and upload with `glTexImage2D`.
+3. Bind to texture unit 2, set `u_HasTexture = 1` in the world shader, and sample `u_DiffuseMap` in the fragment shader (stub uniform already declared in world.frag).
 
 ---
 
 ## 11. Known Limitations & Roadmap
 
-### Current limitations
+| Area | Current State | Planned |
+|------|--------------|---------|
+| Collision | Floor-plane only (y = 0) | Ray-cast vs mesh AABB tree |
+| Shadows | None | Single directional shadow map |
+| Audio | Not implemented | OpenAL-Soft or miniaudio integration |
+| Level loading | Hardcoded test level | JSON / binary scene format |
+| Animation | None | Skeletal animation via Assimp |
+| Vaulting | State stub only | Auto-climb ledges ≤ 1 m high |
+| Texture system | Stub uniforms | Full material system with normal maps |
+| Inventory | Print to console | Diegetic UI (Deus Ex style) |
+| AI / stealth | Not implemented | Visibility cones + noise detection |
+| Networking | Not planned | — |
 
-| Limitation | Impact | Planned fix |
-|---|---|---|
-| No mesh ray-cast collision | Player falls through geometry | BVH + triangle test in `ResolveCollision()` |
-| No texture loading in World | All geometry is flat-colour | Texture cache + stb_image integration |
-| No shadow maps | Ambient shadows only | PCF shadow map on the directional light |
-| Single FBO (no HDR) | Post-process on LDR data | HDR FBO → tonemap → dither |
-| No audio | Silent world | OpenAL-Soft or miniaudio integration |
-| No serialisation | Levels are hardcoded in C++ | JSON (nlohmann) or binary level format |
-| No animation | Static geometry only | Skeletal animation with GLM quaternion blending |
-| Point light count capped at 8 | Limited dynamic lighting | Clustered forward shading or light grid |
-| AABB trigger only | No convex/mesh triggers | GJK / convex hull overlap |
-
-### Suggested next steps (in priority order)
-
-1. **GLAD integration** — replace the stubs with real generated files (10 minutes, critical)
-2. **Mesh collision** — ray-cast the scene to fix the player falling through geometry
-3. **Texture loading** — stb_image is already fetched; wire it into `MeshComponent`
-4. **Audio** — integrate [miniaudio](https://miniaud.io) (single-header, no deps)
-5. **Level serialisation** — JSON with [nlohmann/json](https://github.com/nlohmann/json)
-6. **Shadow maps** — depth-only pass from sun direction, PCF in `world.frag`
-7. **Inventory UI** — ImGui window showing collected items
-8. **AI awareness system** — NPC sight/sound cones feeding a detection meter
-
----
-
-## 12. Coding Conventions
-
-| Convention | Rule |
-|---|---|
-| **Naming** | `PascalCase` for classes/types, `camelCase` for locals, `m_camelCase` for members, `k_UPPER` for constants |
-| **File headers** | Every `.h` and `.cpp` opens with the banner comment block |
-| **Comments** | Use `///` for Doxygen-style, `//` for inline notes, `// ──` for section dividers |
-| **Smart pointers** | `unique_ptr` for owned resources, raw pointers for non-owning references |
-| **RAII** | Every GPU resource (VBO, shader, FBO) is owned by a class with a destructor |
-| **Error handling** | Return `bool` from Init functions; log to `stderr`; throw only in Init chains |
-| **No global state** | All state lives inside subsystem classes owned by `Engine` |
-| **C++17** | Structured bindings, `if constexpr`, inline variables allowed |
-| **No exceptions** | Except in `Engine::Init()` (wrapped in try/catch) |
-
----
-
-*Documentation generated for ObradexEngine v0.1.0 — May 2026*

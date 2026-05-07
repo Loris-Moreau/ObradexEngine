@@ -3,8 +3,8 @@
 // ============================================================
 
 #include "Player.h"
-#include "engine/Input.h"
-#include "world/World.h"
+#include "Input.h"
+#include "World.h"
 #include <glm/glm.hpp>
 #include <algorithm>
 #include <cmath>

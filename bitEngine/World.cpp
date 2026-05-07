@@ -3,8 +3,8 @@
 // ============================================================
 
 #include "World.h"
-#include "renderer/Shader.h"
-#include "renderer/Mesh.h"
+#include "Shader.h"
+#include "Mesh.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <cmath>

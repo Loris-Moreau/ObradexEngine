@@ -25,6 +25,8 @@
 #include <vector>
 #include <string>
 #include <functional>
+#include <memory>      // std::unique_ptr
+#include "Mesh.h"       // full type needed for unique_ptr<Mesh> dtor
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 

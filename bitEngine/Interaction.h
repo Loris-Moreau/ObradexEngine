@@ -24,7 +24,7 @@
 #include <functional>
 #include <glm/glm.hpp>
 
-#include "world/World.h"
+#include "World.h"
 
 // ── Item (simple inventory POD) ───────────────────────────────
 struct Item

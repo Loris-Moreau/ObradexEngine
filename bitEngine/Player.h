@@ -27,7 +27,7 @@
 #include <glm/glm.hpp>
 #include <string>
 
-#include "renderer/Camera.h"
+#include "Camera.h"
 
 class Input;
 class World;
@@ -90,7 +90,7 @@ private:
     void HandleMovement(const Input& input, float dt);
     void HandleActions(const Input& input, World& world);
     void HandleInteraction(const Input& input, World& world);
-    void UpdateMoveState(const Input& input);
+    void UpdateMoveState(const Input& input, float dt);  ///< Evaluate and transition movement states
     void ApplyGravity(float dt);
     void UpdateCameraHeight(float dt);
     void CheckTriggers(World& world);

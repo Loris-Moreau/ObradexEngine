@@ -2,121 +2,155 @@
 # ============================================================
 #  setup.sh  —  ObradexEngine Dependency Bootstrapper
 # ============================================================
-#  Downloads and installs all third-party libraries into the
-#  third_party/ directory.  Run once before first build.
+#  Fetches ImGui, stb_image, and GLM.
+#  GLAD is already pre-generated and bundled in third_party/glad/
+#  — no Python required.
 #
-#  Requires: git, curl (or wget), unzip
-#  Tested on: Ubuntu 22.04, macOS 13, Windows (Git Bash)
+#  Requirements: git, curl or wget, unzip
+#  Run from the repository root:  bash setup.sh
 # ============================================================
 
-set -e   # Exit immediately on error
+set -e   # Exit on error (but not pipefail — Git Bash has quirks with it)
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TP="$SCRIPT_DIR/third_party"
 mkdir -p "$TP"
 
-echo "============================================"
-echo "  ObradexEngine — Dependency Setup"
-echo "============================================"
+section() { printf "\n\033[1;36m[%s]\033[0m %s\n" "$1" "$2"; }
+ok()      { printf "  \033[0;32mv\033[0m %s\n" "$1"; }
+warn()    { printf "  \033[0;33m!\033[0m %s\n" "$1"; }
 
-# ── 1. GLAD (OpenGL 4.1 Core loader) ─────────────────────────
-# We bundle a pre-generated GLAD for OpenGL 4.1 Core.
-# If you need a different version, regenerate at:
-#   https://glad.dav1d.de/
-echo ""
-echo "[1/4] Setting up GLAD..."
-mkdir -p "$TP/glad/include/glad"
-mkdir -p "$TP/glad/src"
-
-cat > "$TP/glad/include/glad/glad.h" << 'GLAD_HEADER_STUB'
-/*
- * GLAD OpenGL 4.1 Core — stub header.
- *
- * Replace this file with a real GLAD-generated header.
- * Generate one at: https://glad.dav1d.de/
- *   API  : gl
- *   Version: 4.1
- *   Profile: Core
- *   Options: Generate a loader
- *
- * Then copy glad.h → third_party/glad/include/glad/glad.h
- *      and glad.c → third_party/glad/src/glad.c
- */
-#pragma once
-#ifdef __cplusplus
-extern "C" {
-#endif
-typedef void* (* GLADloadproc)(const char* name);
-int gladLoadGLLoader(GLADloadproc);
-#ifdef __cplusplus
+download() {
+    local url="$1" dest="$2"
+    if command -v curl &>/dev/null; then
+        curl -fsSL "$url" -o "$dest"
+    elif command -v wget &>/dev/null; then
+        wget -q "$url" -O "$dest"
+    else
+        echo "ERROR: Neither curl nor wget found. Please install one."
+        exit 1
+    fi
 }
-#endif
-GLAD_HEADER_STUB
 
-cat > "$TP/glad/src/glad.c" << 'GLAD_SRC_STUB'
-/*
- * GLAD stub — replace with the real generated glad.c
- * See the comment in glad.h for generation instructions.
- */
-#include "glad/glad.h"
-int gladLoadGLLoader(GLADloadproc load) { (void)load; return 1; }
-GLAD_SRC_STUB
-
-echo "  → GLAD stub created (replace with generated version!)"
-
-# ── 2. Dear ImGui ─────────────────────────────────────────────
 echo ""
-echo "[2/4] Cloning Dear ImGui v1.90.1..."
-if [ ! -d "$TP/imgui/.git" ]; then
+echo "======================================================"
+echo "   ObradexEngine - Dependency Setup"
+echo "======================================================"
+
+# ── [1/4] GLAD — pre-generated, bundled in the repo ──────────
+section "1/4" "GLAD (OpenGL 4.1 Core loader)"
+
+GLAD_H="$TP/glad/include/glad/glad.h"
+
+# Use grep to detect the real GLAD — "GLAPI" appears thousands
+# of times in a real generated file, never in a stub.
+if grep -q "GLAPI" "$GLAD_H" 2>/dev/null; then
+    ok "Pre-generated GLAD found — no action needed."
+else
+    warn "GLAD not found in third_party/glad/ !"
+    warn "It should have been bundled in the zip."
+    warn "If it is missing, download a pre-generated GLAD from:"
+    warn "   https://glad.dav1d.de/"
+    warn "   Settings: Language=C, Spec=OpenGL, API gl=4.1, Profile=Core"
+    warn "   Tick 'Generate a loader', click Generate, download the zip."
+    warn "   Extract so that glad.h is at:"
+    warn "     third_party/glad/include/glad/glad.h"
+    warn "   and glad.c is at:"
+    warn "     third_party/glad/src/glad.c"
+fi
+
+
+# ── [2/4] Dear ImGui ─────────────────────────────────────────
+section "2/4" "Dear ImGui v1.90.1"
+
+if [ -f "$TP/imgui/imgui.h" ]; then
+    ok "Already present — skipping clone."
+else
+    echo "  Cloning Dear ImGui v1.90.1..."
+    rm -rf "$TP/imgui"
     git clone --depth 1 --branch v1.90.1 \
         https://github.com/ocornut/imgui.git \
         "$TP/imgui"
-else
-    echo "  → Already present, skipping."
+    ok "ImGui cloned."
 fi
 
-# ── 3. stb (header-only image loading) ────────────────────────
-echo ""
-echo "[3/4] Fetching stb_image..."
+
+# ── [3/4] stb_image ──────────────────────────────────────────
+section "3/4" "stb_image"
+
 mkdir -p "$TP/stb"
-if [ ! -f "$TP/stb/stb_image.h" ]; then
-    curl -fsSL \
+
+if [ -f "$TP/stb/stb_image.h" ]; then
+    ok "stb_image.h already present."
+else
+    echo "  Downloading stb_image.h..."
+    download \
         "https://raw.githubusercontent.com/nothings/stb/master/stb_image.h" \
-        -o "$TP/stb/stb_image.h"
-    # Create the implementation file (include once, in a .cpp)
-    cat > "$TP/stb/stb_image_impl.cpp" << 'STB_IMPL'
+        "$TP/stb/stb_image.h"
+    ok "stb_image.h downloaded."
+fi
+
+if [ ! -f "$TP/stb/stb_image_impl.cpp" ]; then
+    cat > "$TP/stb/stb_image_impl.cpp" << 'STB_EOF'
+// stb_image_impl.cpp
+// Defines STB_IMAGE_IMPLEMENTATION in exactly one translation unit.
+// All other files simply #include "stb_image.h" without this define.
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
-STB_IMPL
+STB_EOF
+    ok "stb_image_impl.cpp created."
 else
-    echo "  → Already present, skipping."
+    ok "stb_image_impl.cpp already present."
 fi
 
-# ── 4. GLFW (system install preferred; fallback to source) ─────
-echo ""
-echo "[4/4] Checking for GLFW..."
-if pkg-config --exists glfw3 2>/dev/null; then
-    echo "  → System GLFW found ($(pkg-config --modversion glfw3))."
+
+# ── [4/4] GLM ────────────────────────────────────────────────
+section "4/4" "GLM 0.9.9.8 (math library)"
+
+if [ -f "$TP/glm/glm/glm.hpp" ]; then
+    ok "Already present — skipping download."
 else
-    echo "  → System GLFW not found."
-    echo "     CMake will auto-fetch GLFW via FetchContent on first build."
-    echo "     Or install manually:"
-    echo "       Ubuntu: sudo apt install libglfw3-dev"
-    echo "       macOS : brew install glfw"
+    echo "  Downloading GLM 0.9.9.8..."
+    TMP_GLM="$(mktemp -d)"
+    download \
+        "https://github.com/g-truc/glm/archive/refs/tags/0.9.9.8.zip" \
+        "$TMP_GLM/glm.zip"
+    echo "  Extracting..."
+    unzip -q "$TMP_GLM/glm.zip" -d "$TMP_GLM"
+    mkdir -p "$TP/glm"
+    cp -r "$TMP_GLM/glm-0.9.9.8/glm" "$TP/glm/"
+    rm -rf "$TMP_GLM"
+    ok "GLM installed to third_party/glm/glm/."
 fi
+
 
 # ── Summary ───────────────────────────────────────────────────
 echo ""
-echo "============================================"
-echo "  Setup complete!"
+echo "======================================================"
+echo "   Setup complete!"
+echo "======================================================"
 echo ""
-echo "  IMPORTANT: Replace the GLAD stubs with the"
-echo "  real generated files from:"
-echo "    https://glad.dav1d.de/"
-echo "  (API: gl 4.1, Profile: Core, Generate loader)"
-echo ""
-echo "  To build:"
-echo "    mkdir build && cd build"
+echo "  Build with:"
+echo "    mkdir build"
+echo "    cd build"
 echo "    cmake .. -DCMAKE_BUILD_TYPE=Debug"
-echo "    cmake --build . -j$(nproc 2>/dev/null || sysctl -n hw.logicalcpu)"
-echo "    ./bin/ObradexEngine"
-echo "============================================"
+echo "    cmake --build ."
+echo ""
+echo "  Or open bitEngine.sln directly in Visual Studio."
+echo ""
+echo "  Controls:"
+echo "    WASD / Mouse  - move and look"
+echo "    Shift         - sprint"
+echo "    Ctrl          - crouch / slide"
+echo "    Space         - jump"
+echo "    Q / E         - lean"
+echo "    E (near obj)  - interact"
+echo "    F1            - editor overlay"
+echo "    Escape        - pause"
+echo ""
+
+# Keep terminal open when run by double-clicking on Windows
+if [ -t 1 ]; then
+    printf "Press ENTER to exit..."
+    read -r _
+fi

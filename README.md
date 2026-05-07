@@ -1,75 +1,78 @@
 # ObradexEngine
 
-> A first-person immersive-sim engine with an **8-bit / *Return of the Obra Dinn*** aesthetic.
-> Built in **C++17** with **OpenGL 4.1**, **Dear ImGui**, **GLFW**, and **GLM**.
+> **Pre-Alpha** — 8-bit pixel-art meets *Return of the Obra Dinn*  
+> First-person immersive-sim engine inspired by *Deus Ex* + *Assassin's Creed Syndicate*
 
-```
-┌─────────────────────────────────────────────────┐
-│  ▓▓▒▒░░  OBRADEX ENGINE  ░░▒▒▓▓                │
-│                                                 │
-│  Deus Ex movement · Assassin's Creed parkour   │
-│  Obra Dinn dithering · 8-bit pixel palette     │
-│  First-person · Immersive sim · OpenGL 4.1     │
-└─────────────────────────────────────────────────┘
-```
+---
 
-## Quickstart
+## Features
+
+- **Low-res rendering** — internal 320 × 180 buffer upscaled to window size via nearest-neighbour for a crisp pixel-art look
+- **Obra Dinn post-processing** — Bayer 8 × 8 ordered dithering, 32-entry palette quantisation, vignette, CRT scanlines
+- **FPS movement system** — walk / sprint / crouch / slide / jump / lean (Thief-style peek)
+- **Interaction system** — doors, containers, pickups, alarm boxes with lambda callbacks
+- **Trigger volumes** — AABB enter/exit events
+- **Entity/component scene graph** — lightweight, no external ECS framework
+- **Point light flickering** — multi-sine candle/fire simulation
+- **Dear ImGui editor** — live post-process tuning, entity inspector, player stats, FPS sparkline
+
+## Quick Start
 
 ```bash
-# 1. Bootstrap dependencies (ImGui, stb_image, GLFW check)[DOCUMENTATION.md](DOCUMENTATION.md)
-chmod +x setup.sh && ./setup.sh
+# 1. Fetch all third-party libraries (GLAD, ImGui, stb_image, GLM)
+bash setup.sh
 
-# 2. Generate GLAD for OpenGL 4.1 Core at https://glad.dav1d.de/
-#    Copy glad.h → third_party/glad/include/glad/glad.h
-#    Copy glad.c → third_party/glad/src/glad.c
-
-# 3. Build
+# 2. Build
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Debug
 cmake --build . -j$(nproc)
 
-# 4. Run
+# 3. Run
 ./bin/ObradexEngine
 ```
 
 ## Controls
 
-| Key | Action |
-|---|---|
-| `W/A/S/D` | Move |
-| `Mouse` | Look |
-| `LShift` | Sprint |
-| `LCtrl` | Crouch |
-| `LCtrl` (while sprinting) | Slide |
-| `Space` | Jump |
-| `Q` | Lean left |
-| `E` | Lean right / Interact |
-| `F1` | Toggle editor overlay |
-| `Escape` | Pause |
+| Input | Action |
+|-------|--------|
+| WASD | Move |
+| Mouse | Look |
+| Shift | Sprint |
+| Ctrl | Crouch / Slide |
+| Space | Jump |
+| Q / E | Lean left / right |
+| E (near object) | Interact |
+| F1 | Toggle editor overlay |
+| Escape | Pause |
 
-## Features
+## Project Structure
 
-- **Aesthetic pipeline** — low-res FBO (320×180), Bayer 8×8 ordered dithering, 32-colour palette quantisation, vignette, CRT scanlines
-- **Obra Dinn mode** — one-click monochrome + 1-bit dither preset
-- **Movement FSM** — standing, crouching, sprinting, sliding, in-air states
-- **Lean system** — left/right peek, smoothly interpolated
-- **Head-bob** — Lissajous figure-8 pattern, speed-scaled
-- **Interaction system** — doors, containers, pickups, alarms
-- **AABB trigger zones** — enter/exit callbacks
-- **Point lights with flicker** — candle/fire simulation
-- **Runtime editor** — F1 ImGui panel: post-process tweaking, entity inspector, player stats, FPS graph
-
-## Documentation
-
-See [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md) for the full developer reference.
+```
+src/
+  engine/       — Engine singleton, Window, Input, Timer
+  renderer/     — Renderer, Shader, Mesh, Camera, PostProcess
+  world/        — Entity/component scene container
+  gameplay/     — Player controller, Interaction factories
+  ui/           — Dear ImGui editor + HUD
+assets/shaders/ — world.vert / world.frag (GLSL 4.10)
+third_party/    — GLAD, ImGui, stb, GLM (populated by setup.sh)
+```
 
 ## Dependencies
 
-| Library | Purpose |
-|---|---|
-| OpenGL 4.1 | Rendering |
-| GLFW 3.3+ | Window + input events |
-| GLAD (gl 4.1 core) | OpenGL function loader |
-| GLM 0.9.9.8 | Math |
-| Dear ImGui 1.90.1 | Editor UI + HUD |
-| stb_image | PNG/JPEG loading |
+| Library | Role | How obtained |
+|---------|------|--------------|
+| OpenGL 4.1 | GPU rendering | System / driver |
+| GLFW 3.3+ | Window + input | System pkg or CMake FetchContent |
+| GLM 0.9.9.8 | Math (vectors, matrices, quaternions) | `setup.sh` |
+| GLAD | OpenGL function loader | `setup.sh` (via `glad2` pip package) |
+| Dear ImGui 1.90.1 | Editor UI | `setup.sh` |
+| stb_image | Texture loading | `setup.sh` |
+
+## Full Documentation
+
+See [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md) for the complete subsystem reference, rendering pipeline breakdown, shader uniform tables, and extension guide.
+
+## License
+
+MIT — see [LICENSE](LICENSE).
