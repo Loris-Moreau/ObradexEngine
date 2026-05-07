@@ -4,6 +4,7 @@
   =========================================
   All engine source files live flat in bitEngine/ alongside this .vcxproj.
   Third-party libraries live in ..\third_party\ (one level up, in the solution root).
+
   BEFORE BUILDING: run setup.sh in Git Bash to populate third_party/
     bash setup.sh
 -->
