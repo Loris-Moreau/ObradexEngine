@@ -20,11 +20,10 @@
 
 ```bash
 # 1. Fetch all third-party libraries (GLAD, ImGui, stb_image, GLM)
-./setup.sh
+bash setup.sh
 
 # 2. Build
-mkdir build 
-cd build
+mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=Debug
 cmake --build . -j$(nproc)
 

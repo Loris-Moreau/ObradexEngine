@@ -46,17 +46,21 @@ uniform vec2      u_Resolution;  // Low-res size (for screen-space Bayer)
 // Pre-divided by 65 (max value + 1) for direct threshold use.
 float BayerMatrix(ivec2 p)
 {
-    const float B[8][8] = float[8][8](
-        float[8]( 0,32, 8,40, 2,34,10,42),
-        float[8](48,16,56,24,50,18,58,26),
-        float[8](12,44, 4,36,14,46, 6,38),
-        float[8](60,28,52,20,62,30,54,22),
-        float[8]( 3,35,11,43, 1,33, 9,41),
-        float[8](51,19,59,27,49,17,57,25),
-        float[8](15,47, 7,39,13,45, 5,37),
-        float[8](63,31,55,23,61,29,53,21)
+    // GLSL forbids multi-dimensional arrays; store the 8x8 Bayer matrix
+    // as a flat float[64] and index it as row*8 + col.
+    const float B[64] = float[64](
+         0.0,32.0, 8.0,40.0, 2.0,34.0,10.0,42.0,
+        48.0,16.0,56.0,24.0,50.0,18.0,58.0,26.0,
+        12.0,44.0, 4.0,36.0,14.0,46.0, 6.0,38.0,
+        60.0,28.0,52.0,20.0,62.0,30.0,54.0,22.0,
+         3.0,35.0,11.0,43.0, 1.0,33.0, 9.0,41.0,
+        51.0,19.0,59.0,27.0,49.0,17.0,57.0,25.0,
+        15.0,47.0, 7.0,39.0,13.0,45.0, 5.0,37.0,
+        63.0,31.0,55.0,23.0,61.0,29.0,53.0,21.0
     );
-    return B[p.y & 7][p.x & 7] / 64.0;
+    int row = int(mod(float(p.y), 8.0));
+    int col = int(mod(float(p.x), 8.0));
+    return (B[row * 8 + col] + 0.5) / 64.0;
 }
 
 // ── Find nearest palette colour (brute-force, 32 entries max) ─
