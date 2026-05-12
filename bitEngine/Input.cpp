@@ -24,7 +24,10 @@ void Input::Init(GLFWwindow* window)
 // ── Update ────────────────────────────────────────────────────
 void Input::Update()
 {
-    // Toggle the double-buffer index
+    // Advance the double-buffer index FIRST so that every query
+    // function reading (m_frame & 1) sees the buffer we are about
+    // to fill, not the one we just filled last frame.
+    ++m_frame;
     int cur  = m_frame & 1;
     int prev = 1 - cur;
 
@@ -59,7 +62,6 @@ void Input::Update()
     m_scrollDelta = m_scrollAccum;
     m_scrollAccum = 0.f;
 
-    ++m_frame;
 }
 
 // ── Keyboard queries ──────────────────────────────────────────

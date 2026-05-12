@@ -21,17 +21,29 @@ struct GLFWwindow;
 // Values match GLFW_KEY_* so we can cast without a lookup table.
 enum class Key : int
 {
-    // Movement
-    W = 87, A = 65, S = 83, D = 68,
-    // Actions
-    E      = 69,   // Interact
-    Q      = 81,   // Lean left
+    // ── AZERTY movement keys ─────────────────────────────────
+    // Physical layout (AZERTY):  A Z E R T Y  /  Q S D F G H
+    // Z = forward   (QWERTY W position, GLFW_KEY_Z = 90)
+    // Q = left      (QWERTY A position, GLFW_KEY_Q = 81)
+    // S = backward  (same position on both layouts)
+    // D = right     (same position on both layouts)
+    Z = 90, Q = 81, S = 83, D = 68,
+
+    // ── AZERTY lean / action keys ────────────────────────────
+    // A = lean left   (QWERTY Q position, GLFW_KEY_A = 65)
+    // E = lean right + interact (same position on both layouts)
+    A      = 65,   // Lean left
+    E      = 69,   // Lean right / Interact
+    W      = 87,   // (unused in AZERTY mode, kept for reference)
+
     Space  = 32,   // Jump / vault
     LShift = 340,  // Sprint
     LCtrl  = 341,  // Crouch / slide
-    // UI / debug
-    F1     = 290,  // Toggle editor
+
+    // ── UI / debug ───────────────────────────────────────────
+    F1     = 290,  // Toggle editor overlay
     Escape = 256,
+
     // Misc
     R = 82, F = 70, G = 71, Tab = 258,
     // Digits

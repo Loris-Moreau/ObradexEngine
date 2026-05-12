@@ -46,8 +46,8 @@ void Player::UpdateMoveState(const Input& input, float dt)
 {
     bool sprint = input.IsKeyHeld(Key::LShift);
     bool crouch = input.IsKeyHeld(Key::LCtrl);
-    bool moving = input.IsKeyHeld(Key::W) || input.IsKeyHeld(Key::S)
-               || input.IsKeyHeld(Key::A) || input.IsKeyHeld(Key::D);
+    bool moving = input.IsKeyHeld(Key::Z) || input.IsKeyHeld(Key::S)
+               || input.IsKeyHeld(Key::Q) || input.IsKeyHeld(Key::D);
 
     // Slide: sprinting + crouch while moving on ground
     if (m_state == MoveState::Sprinting && crouch && moving && m_onGround)
@@ -90,17 +90,17 @@ void Player::HandleMovement(const Input& input, float dt)
     if (glm::length(right) > 0.001f) right = glm::normalize(right);
 
     glm::vec3 moveDir = {0.f, 0.f, 0.f};
-    if (input.IsKeyHeld(Key::W)) moveDir += fwd;
+    if (input.IsKeyHeld(Key::Z)) moveDir += fwd;
     if (input.IsKeyHeld(Key::S)) moveDir -= fwd;
     if (input.IsKeyHeld(Key::D)) moveDir += right;
-    if (input.IsKeyHeld(Key::A)) moveDir -= right;
+    if (input.IsKeyHeld(Key::Q)) moveDir -= right;   // Q = strafe left (AZERTY)
     if (glm::length(moveDir) > 0.001f) moveDir = glm::normalize(moveDir);
 
     // Lean: Q = left, E = right (only when stationary to disambiguate from interact)
     float lean = 0.f;
     if (m_state != MoveState::Sprinting)
     {
-        if (input.IsKeyHeld(Key::Q)) lean = -1.f;
+        if (input.IsKeyHeld(Key::A)) lean = -1.f;
         if (input.IsKeyHeld(Key::E) && glm::length(moveDir) < 0.001f) lean = 1.f;
     }
     m_camera.SetLean(lean * 12.f);
