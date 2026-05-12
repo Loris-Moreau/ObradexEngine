@@ -74,13 +74,13 @@
         4. third_party\stb\       — <stb_image.h>
         5. third_party\glm\       — <glm/glm.hpp>   (populated by setup.sh)
     -->
-    <IncludePath>$(ProjectDir);$(SolutionDir)third_party\glad\include;$(SolutionDir)third_party\imgui;$(SolutionDir)third_party\imgui\backends;$(SolutionDir)third_party\imgui\examples\libs\glfw\include;$(SolutionDir)third_party\stb;$(SolutionDir)third_party\glm;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(SolutionDir)glad\include;$(SolutionDir)third_party\imgui;$(SolutionDir)third_party\imgui\backends;$(SolutionDir)third_party\imgui\examples\libs\glfw\include;$(SolutionDir)third_party\stb;$(SolutionDir)third_party\glm;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)build\bin\Release\</OutDir>
     <IntDir>$(SolutionDir)build\obj\Release\bitEngine\</IntDir>
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(ProjectDir);$(SolutionDir)third_party\glad\include;$(SolutionDir)third_party\imgui;$(SolutionDir)third_party\imgui\backends;$(SolutionDir)third_party\imgui\examples\libs\glfw\include;$(SolutionDir)third_party\stb;$(SolutionDir)third_party\glm;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(SolutionDir)glad\include;$(SolutionDir)third_party\imgui;$(SolutionDir)third_party\imgui\backends;$(SolutionDir)third_party\imgui\examples\libs\glfw\include;$(SolutionDir)third_party\stb;$(SolutionDir)third_party\glm;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
   </PropertyGroup>
 
   <!-- ── Compiler settings ────────────────────────────────────── -->
@@ -176,7 +176,7 @@ xcopy /E /Y /I "$(ProjectDir)Shaders" "$(OutDir)Shaders"
     <ClCompile Include="EditorUI.cpp" />
 
     <!-- GLAD — C file, needs C compiler not C++ -->
-    <ClCompile Include="..\third_party\glad\src\glad.c" />
+    <ClCompile Include="..\glad\src\glad.c" />
 
     <!-- Dear ImGui -->
     <ClCompile Include="..\third_party\imgui\imgui.cpp" />
