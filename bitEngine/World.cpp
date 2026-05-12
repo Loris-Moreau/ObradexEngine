@@ -23,10 +23,30 @@ glm::mat4 TransformComponent::GetMatrix() const
 // ── Init ──────────────────────────────────────────────────────
 void World::Init()
 {
-    // Pre-allocate shared primitive meshes (uploaded to GPU once)
-    m_cubeMesh  = std::make_unique<Mesh>(Mesh::MakeCube());
-    m_planeMesh = std::make_unique<Mesh>(Mesh::MakePlane(1.f, 1));
-    m_sphereMesh= std::make_unique<Mesh>(Mesh::MakeSphere(1.f, 16));
+    // ── Reserve component storage BEFORE populating the scene ─────
+    // EntityRecord stores raw pointers into these vectors (rec->mesh,
+    // rec->transform, etc.).  If any vector reallocates during
+    // push_back, every previously stored pointer becomes dangling —
+    // silently corrupting the scene and crashing in Mesh::Draw().
+    //
+    // Reserving upfront prevents reallocation for scenes up to N
+    // entities of each component type.  For a proper fix, replace raw
+    // pointers with indices (m_meshes[rec.meshIdx]) so reallocation
+    // is harmless — but reserve is the safe, simple solution here.
+    constexpr size_t MAX_ENTITIES = 512;
+    m_records.reserve(MAX_ENTITIES);
+    m_transforms.reserve(MAX_ENTITIES);
+    m_meshes.reserve(MAX_ENTITIES);
+    m_lights.reserve(MAX_ENTITIES);
+    m_interactables.reserve(MAX_ENTITIES);
+    m_triggers.reserve(MAX_ENTITIES);
+
+    // Pre-allocate shared primitive meshes (uploaded to GPU once).
+    // All entities that need a cube/plane/sphere share the same Mesh
+    // object — no duplicated GPU memory.
+    m_cubeMesh   = std::make_unique<Mesh>(Mesh::MakeCube());
+    m_planeMesh  = std::make_unique<Mesh>(Mesh::MakePlane(1.f, 1));
+    m_sphereMesh = std::make_unique<Mesh>(Mesh::MakeSphere(1.f, 16));
 
     LoadTestLevel();
 }

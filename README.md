@@ -33,17 +33,17 @@ cmake --build . -j$(nproc)
 
 ## Controls
 
-| Input | Action |
-|-------|--------|
-| WASD | Move |
-| Mouse | Look |
-| Shift | Sprint |
-| Ctrl | Crouch / Slide |
-| Space | Jump |
-| Q / E | Lean left / right |
+| Input           | Action |
+|-----------------|--------|
+| ZQSD            | Move |
+| Mouse           | Look |
+| Shift           | Sprint |
+| Ctrl            | Crouch / Slide |
+| Space           | Jump |
+| A / E           | Lean left / right |
 | E (near object) | Interact |
-| F1 | Toggle editor overlay |
-| Escape | Pause |
+| F1              | Toggle editor overlay |
+| Escape          | Pause |
 
 ## Project Structure
 
