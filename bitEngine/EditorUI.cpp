@@ -195,16 +195,9 @@ void EditorUI::DrawRendererPanel(Engine& engine)
 {
     PostProcessSettings& pp = engine.GetRenderer().GetPostProcess().Settings();
 
-    ImGui::SeparatorText("Aesthetic");
-    ImGui::Checkbox("Obra Dinn Mode (Monochrome)", &pp.obraDinnMode);
-
     ImGui::SeparatorText("Dithering");
     ImGui::SliderFloat("Strength##dith",  &pp.ditherStrength, 0.f, 2.f);
     ImGui::SliderInt  ("Palette size",    &pp.paletteSize,    2,   32);
-
-    ImGui::SeparatorText("Color Grading");
-    ImGui::SliderFloat("Contrast",   &pp.contrast,    0.5f, 3.f);
-    ImGui::SliderFloat("Brightness", &pp.brightness, -0.5f, 0.5f);
 
     ImGui::SeparatorText("Vignette");
     ImGui::SliderFloat("Radius##vig",  &pp.vignetteRadius,  0.f, 1.5f);
@@ -214,29 +207,68 @@ void EditorUI::DrawRendererPanel(Engine& engine)
     ImGui::Checkbox  ("Enable##scan",  &pp.scanlines);
     if (pp.scanlines)
         ImGui::SliderFloat("Alpha##scan", &pp.scanlineAlpha, 0.f, 0.5f);
+    
+    ImGui::SeparatorText("Color Grading");
+    ImGui::SliderFloat("Contrast",   &pp.contrast,    0.5f, 3.f);
+    ImGui::SliderFloat("Brightness", &pp.brightness, -0.5f, 0.5f);
 
+    ImGui::SeparatorText("Aesthetic");
+    ImGui::Checkbox("Obra Dinn Mode (Monochrome)", &pp.obraDinnMode);
+    
     ImGui::SeparatorText("Presets");
     if (ImGui::Button("Obra Dinn"))
     {
-        pp.obraDinnMode   = true;
-        pp.ditherStrength = 1.6f;
-        pp.paletteSize    = 2;
-        pp.contrast       = 1.8f;
-        pp.scanlines      = false;
-        pp.vignetteRadius = 0.6f;
+        pp.ditherStrength  = 1.45f;
+        pp.paletteSize     = 6;
+        pp.vignetteRadius  = 0.885f;
+        pp.vignetteFeather = 0.325f;
+        pp.scanlines       = false;
+        pp.scanlineAlpha   = 0.12f;
+        pp.contrast        = 1.75f;
+        pp.brightness      = 0.32f;
+        pp.obraDinnMode    = true;
     }
     ImGui::SameLine();
-    if (ImGui::Button("8-bit Color"))
+    if (ImGui::Button("8-bit"))
     {
-        pp.obraDinnMode   = false;
-        pp.ditherStrength = 1.0f;
-        pp.paletteSize    = 16;
-        pp.contrast       = 1.2f;
-        pp.scanlines      = true;
-        pp.scanlineAlpha  = 0.18f;
-        pp.vignetteRadius = 0.7f;
+        pp.ditherStrength  = 1.0f;
+        pp.paletteSize     = 16;
+        pp.vignetteRadius  = 0.9f;
+        pp.vignetteFeather = 0.575f;
+        pp.scanlines       = true;
+        pp.scanlineAlpha   = 0.09f;
+        pp.contrast        = 1.1f;
+        pp.brightness      = 0.25f;
+        pp.obraDinnMode    = false;
+    }
+    //ImGui::SameLine();
+    if (ImGui::Button("Bright Colored"))
+    {
+        pp.ditherStrength  = 1.815f;
+        pp.paletteSize     = 32;
+        pp.vignetteRadius  = 1.025f;
+        pp.vignetteFeather = 0.25f;
+        pp.scanlines       = true;
+        pp.scanlineAlpha   = 0.12f;
+        pp.scanlineAlpha   = 0.12f;
+        pp.contrast        = 2.155f;
+        pp.brightness      = 0.5f;
+        pp.obraDinnMode    = false;
     }
     ImGui::SameLine();
+    if (ImGui::Button("Dark Colored"))
+    {
+        pp.ditherStrength  = 0.275f;
+        pp.paletteSize     = 24;
+        pp.vignetteRadius  = 1.025f;
+        pp.vignetteFeather = 0.25f;
+        pp.scanlines       = true;
+        pp.scanlineAlpha   = 0.12f;
+        pp.contrast        = 2.13f;
+        pp.brightness      = 0.45f;
+        pp.obraDinnMode    = false;
+    }
+    //ImGui::SameLine();
     if (ImGui::Button("Reset"))
     {
         pp = PostProcessSettings{};
@@ -283,7 +315,7 @@ void EditorUI::DrawWorldPanel(Engine& engine)
             }
             if (rec->mesh)
             {
-                if (ImGui::CollapsingHeader("Mesh"))
+                if (ImGui::CollapsingHeader("Mesh", ImGuiTreeNodeFlags_DefaultOpen))
                 {
                     ImGui::ColorEdit3("Albedo",    &rec->mesh->albedoColour.x);
                     ImGui::SliderFloat("Specular", &rec->mesh->specular, 0.f, 1.f);
@@ -292,7 +324,7 @@ void EditorUI::DrawWorldPanel(Engine& engine)
             }
             if (rec->light)
             {
-                if (ImGui::CollapsingHeader("Light"))
+                if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen))
                 {
                     ImGui::ColorEdit3("Colour",    &rec->light->colour.x);
                     ImGui::SliderFloat("Radius",   &rec->light->radius,   0.1f, 30.f);
@@ -302,7 +334,7 @@ void EditorUI::DrawWorldPanel(Engine& engine)
             }
             if (rec->interactable)
             {
-                if (ImGui::CollapsingHeader("Interactable"))
+                if (ImGui::CollapsingHeader("Interactable", ImGuiTreeNodeFlags_DefaultOpen))
                 {
                     ImGui::Text("Prompt: %s", rec->interactable->promptText.c_str());
                     ImGui::SliderFloat("Range", &rec->interactable->range, 0.5f, 10.f);
@@ -336,14 +368,16 @@ void EditorUI::DrawPlayerPanel(Engine& engine)
     ImGui::Text("Speed     : %.2f m/s", player.GetSpeed());
 
     ImGui::SeparatorText("Stats");
-    ImGui::SliderFloat("Walk speed",   &stats.walkSpeed,        1.f, 10.f);
-    ImGui::SliderFloat("Sprint speed", &stats.sprintSpeed,      4.f, 20.f);
-    ImGui::SliderFloat("Crouch speed", &stats.crouchSpeed,      0.5f, 5.f);
-    ImGui::SliderFloat("Jump height",  &stats.jumpHeight,       0.3f, 4.f);
+    ImGui::SliderFloat("Walk speed",   &stats.walkSpeed,        1.0f, 10.0f);
+    ImGui::SliderFloat("Sprint speed", &stats.sprintSpeed,      4.0f, 20.0f);
+    ImGui::SliderFloat("Crouch speed", &stats.crouchSpeed,      0.5f, 5.0f);
+    ImGui::SliderFloat("Slide Speed",  &stats.slideSpeed,       0.25f, 20.0f);
+    ImGui::SliderFloat("Jump height",  &stats.jumpHeight,       0.3f, 4.0f);
+    ImGui::SliderFloat("Gravity",      &stats.gravity,          0.2f, -20.0f);
     ImGui::SliderFloat("Mouse sens.",  &stats.mouseSensitivity, 0.02f, 0.5f);
     ImGui::SliderFloat("Eye height",   &stats.eyeHeight,        0.5f, 2.5f);
     ImGui::SliderFloat("Crouch height",&stats.crouchHeight,     0.3f, 1.5f);
-    ImGui::SliderFloat("Interact range",&stats.interactRange,   0.5f, 6.f);
+    ImGui::SliderFloat("Interact range",&stats.interactRange,   0.5f, 6.0f);
 
     ImGui::SeparatorText("Camera");
     Camera& cam = player.GetCamera();
@@ -351,4 +385,38 @@ void EditorUI::DrawPlayerPanel(Engine& engine)
     if (ImGui::SliderFloat("FOV", &fov, 50.f, 110.f))
         cam.SetFOV(fov);
     ImGui::Text("Yaw / Pitch: %.1f° / %.1f°", cam.GetYaw(), cam.GetPitch());
+
+    ImGui::SeparatorText("Presets");
+    if (ImGui::Button("Base"))
+    {
+        stats.walkSpeed = 4.0f;
+        stats.sprintSpeed = 8.0f;
+        stats.crouchSpeed = 1.8f;
+        stats.slideSpeed = 10.0f;
+        stats.jumpHeight = 1.2f;
+        stats.gravity = -15.0f;
+        stats.mouseSensitivity = 0.12f;
+        stats.eyeHeight = 1.75f;
+        stats.crouchHeight = 0.85f;
+        stats.interactRange = 2.5f;
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("SpeedRun"))
+    {
+        stats.walkSpeed = 3.0f;
+        stats.sprintSpeed = 8.0f;
+        stats.crouchSpeed = 1.75f;
+        stats.slideSpeed = 15.0f;
+        stats.jumpHeight = 1.25f;
+        stats.gravity = -12.0f;
+        stats.mouseSensitivity = 0.24f;
+        stats.eyeHeight = 1.9f;
+        stats.crouchHeight = 0.9f;
+        stats.interactRange = 2.75f;
+    }
+    
+    if (ImGui::Button("Reset"))
+    {
+        stats = PlayerStats{};
+    }
 }

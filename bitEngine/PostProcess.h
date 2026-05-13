@@ -30,20 +30,20 @@ class Shader;
 struct PostProcessSettings
 {
     // Dithering
-    float ditherStrength = 1.0f;  ///< 0 = off, 1 = full Bayer dither
-    int   paletteSize    = 16;    ///< Number of palette colours to use (2–32)
+    float ditherStrength = 0.92f;  ///< 0 = off, 1 = full Bayer dither
+    int   paletteSize    = 24;    ///< Number of palette colours to use (2–32)
 
     // Vignette
-    float vignetteRadius  = 0.7f;  ///< Normalised distance from centre
-    float vignetteFeather = 0.4f;  ///< Soft-edge width
+    float vignetteRadius  = 1.025f; ///< Normalised distance from centre (higher = smaller vignette)
+    float vignetteFeather = 0.25f; ///< Soft-edge width (lower = tighter fade)
 
     // Scanlines
     bool  scanlines       = true;
-    float scanlineAlpha   = 0.15f; ///< How dark the scanline bars are
+    float scanlineAlpha   = 0.12f; ///< How dark the scanline bars are
 
     // Colour grading
     float contrast        = 1.1f;
-    float brightness      = 0.0f;  ///< Additive offset [-1..1]
+    float brightness      = 0.1f;  ///< Additive offset [-1..1]
 
     // Obra Dinn mode: forces monochrome + 1-bit dither
     bool  obraDinnMode    = false;

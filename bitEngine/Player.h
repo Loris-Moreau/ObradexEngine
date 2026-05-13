@@ -46,16 +46,16 @@ enum class MoveState
 // ── Player stats (tweak-able from the editor) ─────────────────
 struct PlayerStats
 {
-    float walkSpeed       = 4.0f;   // m/s
+    float walkSpeed       = 2.25f;   // m/s
     float sprintSpeed     = 8.0f;   // m/s
-    float crouchSpeed     = 1.8f;   // m/s
+    float crouchSpeed     = (walkSpeed / 2.0f) - (walkSpeed * 0.10f);   // m/s
     float slideSpeed      = 10.0f;  // m/s initial
     float jumpHeight      = 1.2f;   // metres
-    float gravity         = -15.f;  // m/s²
+    float gravity         = -12.0f;  // m/s²
     float mouseSensitivity= 0.12f;
-    float eyeHeight       = 1.7f;   // Standing eye height (m)
+    float eyeHeight       = 1.8f;   // Standing eye height (m)
     float crouchHeight    = 0.85f;  // Crouching eye height (m)
-    float interactRange   = 2.5f;   // Reach distance (m)
+    float interactRange   = 2.25f;   // Reach distance (m)
 };
 
 // ── Player ───────────────────────────────────────────────────

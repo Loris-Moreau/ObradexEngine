@@ -46,8 +46,8 @@ void Player::UpdateMoveState(const Input& input, float dt)
 {
     bool sprint = input.IsKeyHeld(Key::LShift);
     bool crouch = input.IsKeyHeld(Key::LCtrl);
-    bool moving = input.IsKeyHeld(Key::Z) || input.IsKeyHeld(Key::S)
-               || input.IsKeyHeld(Key::Q) || input.IsKeyHeld(Key::D);
+    bool moving = input.IsKeyHeld(Key::W) || input.IsKeyHeld(Key::S)
+               || input.IsKeyHeld(Key::A) || input.IsKeyHeld(Key::D);
 
     // Slide: sprinting + crouch while moving on ground
     if (m_state == MoveState::Sprinting && crouch && moving && m_onGround)
@@ -93,7 +93,7 @@ void Player::HandleMovement(const Input& input, float dt)
     if (input.IsKeyHeld(Key::Z)) moveDir += fwd;
     if (input.IsKeyHeld(Key::S)) moveDir -= fwd;
     if (input.IsKeyHeld(Key::D)) moveDir += right;
-    if (input.IsKeyHeld(Key::Q)) moveDir -= right;   // Q = strafe left (AZERTY)
+    if (input.IsKeyHeld(Key::Q)) moveDir -= right;
     if (glm::length(moveDir) > 0.001f) moveDir = glm::normalize(moveDir);
 
     // Lean: Q = left, E = right (only when stationary to disambiguate from interact)
@@ -172,7 +172,7 @@ void Player::HandleInteraction(const Input& input, World& world)
     if (glm::dot(toObj, fwd) < 0.4f) return;
 
     m_interactPrompt = ia->promptText;
-    if (input.IsKeyJustPressed(Key::E) && ia->onInteract)
+    if (input.IsKeyJustPressed(Key::F) && ia->onInteract)
         ia->onInteract();
 }
 

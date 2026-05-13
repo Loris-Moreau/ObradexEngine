@@ -66,7 +66,7 @@ void World::LoadTestLevel()
 
         auto* m = AddMesh(e);
         m->mesh         = m_planeMesh.get();
-        m->albedoColour = {0.22f, 0.21f, 0.20f};  // Dark cobblestone
+        m->albedoColour = {0.0f, 0.7f, 0.7f};  // miku
         m->roughness    = 0.95f;
     }
 
@@ -83,7 +83,7 @@ void World::LoadTestLevel()
 
         auto* m = AddMesh(e);
         m->mesh         = m_cubeMesh.get();
-        m->albedoColour = {0.45f, 0.35f, 0.22f};  // Weathered wood
+        m->albedoColour = {0.69f, 0.39f, 0.098f};  // Weathered wood
         m->roughness    = 0.9f;
     }
 
@@ -92,27 +92,27 @@ void World::LoadTestLevel()
         EntityID lamp = CreateEntity("LampPost");
         auto* t = AddTransform(lamp);
         t->position = {6.f, 2.f, 0.f};
-        t->scale    = {0.15f, 4.f, 0.15f};
+        t->scale    = {0.15f, 4.0f, 0.15f};
 
         auto* m = AddMesh(lamp);
         m->mesh         = m_cubeMesh.get();
-        m->albedoColour = {0.15f, 0.14f, 0.13f};  // Dark iron
+        m->albedoColour = {0.45f, 0.44f, 0.43f};  // Dark iron
 
         // Light source at the top of the post
         EntityID lightE = CreateEntity("LampLight");
         auto* lt = AddTransform(lightE);
-        lt->position = {6.f, 4.5f, 0.f};
+        lt->position = {6.f, 4.5f, 0.0f};
 
         auto* lc = AddLight(lightE);
-        lc->colour    = {1.f, 0.85f, 0.5f};
+        lc->colour    = {1.0f, 0.85f, 0.5f};
         lc->radius    = 10.f;
-        lc->intensity = 1.5f;
+        lc->intensity = 3.0f;
         lc->flicker   = true;
 
         // Make the lamp interactable (toggle the light)
         auto* ia = AddInteractable(lamp);
-        ia->promptText = "[E] Toggle lamp";
-        ia->range      = 3.f;
+        ia->promptText = "[F] Toggle lamp";
+        ia->range      = 3.0f;
         ia->onInteract = [this, lightE]()
         {
             auto* lc2 = GetRecord(lightE)->light;
@@ -121,6 +121,17 @@ void World::LoadTestLevel()
         };
     }
 
+    // Box to mark Exit
+    {
+        EntityID e = CreateEntity("Ending Marker Box");
+        auto* t = AddTransform(e);
+        t->position = {0.f, 1.f, -15.f};
+
+        auto* m = AddMesh(e);
+        m->mesh         = m_cubeMesh.get();
+        m->albedoColour = {1.0f, 0.0f, 0.0f};
+        m->roughness    = 0.75f;
+    }
     // ── Exit trigger (demonstrates gameplay-logic hookup) ─────
     {
         EntityID trigger = CreateEntity("ExitZone");

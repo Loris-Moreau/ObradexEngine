@@ -106,8 +106,8 @@ void Engine::Run()
     // Fixed-timestep physics with variable rendering.
     // This decouples physics stability from frame rate.
     const float fixedDt      = 1.0f / static_cast<float>(m_config.targetFPS);
-    float       accumulator   = 0.0f;
-
+    float       accumulator  = 0.0f;
+    
     while (!m_window->ShouldClose() && m_state != EngineState::Shutdown)
     {
         // Measure real elapsed time this frame
@@ -117,7 +117,15 @@ void Engine::Run()
         if (frameDt > 0.25f) frameDt = 0.25f;
         accumulator += frameDt;
 
-        // ── Input (once per real frame) ───────────────────────
+        // ── Poll OS events FIRST ──────────────────────────────
+        // glfwPollEvents() processes the WM_KEYDOWN / WM_KEYUP /
+        // WM_MOUSEMOVE messages that the OS queued since the last
+        // frame.  It must run BEFORE Input::Update() reads
+        // glfwGetKey() — otherwise the keyboard state is always
+        // one frame stale and keys appear unresponsive.
+        m_window->PollEvents();
+
+        // ── Input snapshot (once per real frame) ──────────────
         ProcessInput();
 
         // ── Fixed Update (physics / game logic) ───────────────
@@ -135,7 +143,6 @@ void Engine::Run()
         Render();
 
         m_window->SwapBuffers();
-        m_window->PollEvents();
     }
 
     Shutdown();
@@ -148,15 +155,23 @@ void Engine::ProcessInput()
 
     // Engine-level hotkeys (bypass game-logic layer)
     if (m_input->IsKeyJustPressed(Key::F1))
+    {
         m_editorUI->ToggleEditorPanel();
+    }
 
     if (m_input->IsKeyJustPressed(Key::Escape))
     {
         // Toggle pause or ask for quit confirmation via UI
         if (m_state == EngineState::Running)
+        {
             m_state = EngineState::Paused;
+            m_window->SetCursorLocked(false);
+        }
         else if (m_state == EngineState::Paused)
+        {
             m_state = EngineState::Running;
+            m_window->SetCursorLocked(true);
+        }
     }
 }
 
