@@ -1,10 +1,11 @@
 // ============================================================
-//  World.cpp  —  Scene / Level Container
+//  World.cpp
 // ============================================================
 
 #include "World.h"
 #include "Shader.h"
 #include "Mesh.h"
+#include "Input.h"          // for INTERACT_KEY + Input::GetKeyName
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <cmath>
@@ -14,6 +15,10 @@
 // ── TransformComponent::GetMatrix ────────────────────────────
 glm::mat4 TransformComponent::GetMatrix() const
 {
+    // Build TRS:  T * R * S
+    // mat4_cast(rotation) gives a pure rotation matrix.
+    // glm::scale scales each basis vector in local space.
+    // Column 3 is then overwritten with the world-space position.
     glm::mat4 m = glm::mat4_cast(rotation);
     m = glm::scale(m, scale);
     m[3] = glm::vec4(position, 1.f);
@@ -23,27 +28,18 @@ glm::mat4 TransformComponent::GetMatrix() const
 // ── Init ──────────────────────────────────────────────────────
 void World::Init()
 {
-    // ── Reserve component storage BEFORE populating the scene ─────
-    // EntityRecord stores raw pointers into these vectors (rec->mesh,
-    // rec->transform, etc.).  If any vector reallocates during
-    // push_back, every previously stored pointer becomes dangling —
-    // silently corrupting the scene and crashing in Mesh::Draw().
-    //
-    // Reserving upfront prevents reallocation for scenes up to N
-    // entities of each component type.  For a proper fix, replace raw
-    // pointers with indices (m_meshes[rec.meshIdx]) so reallocation
-    // is harmless — but reserve is the safe, simple solution here.
-    constexpr size_t MAX_ENTITIES = 512;
-    m_records.reserve(MAX_ENTITIES);
-    m_transforms.reserve(MAX_ENTITIES);
-    m_meshes.reserve(MAX_ENTITIES);
-    m_lights.reserve(MAX_ENTITIES);
-    m_interactables.reserve(MAX_ENTITIES);
-    m_triggers.reserve(MAX_ENTITIES);
+    // Reserve ALL component vectors before populating the scene.
+    // EntityRecord stores raw pointers into these vectors — any
+    // reallocation (push_back past capacity) would make them dangle.
+    constexpr size_t MAX = 512;
+    m_records.reserve(MAX);
+    m_transforms.reserve(MAX);
+    m_meshes.reserve(MAX);
+    m_lights.reserve(MAX);
+    m_interactables.reserve(MAX);
+    m_triggers.reserve(MAX);
+    m_collisions.reserve(MAX);
 
-    // Pre-allocate shared primitive meshes (uploaded to GPU once).
-    // All entities that need a cube/plane/sphere share the same Mesh
-    // object — no duplicated GPU memory.
     m_cubeMesh   = std::make_unique<Mesh>(Mesh::MakeCube());
     m_planeMesh  = std::make_unique<Mesh>(Mesh::MakePlane(1.f, 1));
     m_sphereMesh = std::make_unique<Mesh>(Mesh::MakeSphere(1.f, 16));
@@ -52,12 +48,14 @@ void World::Init()
 }
 
 // ── LoadTestLevel ─────────────────────────────────────────────
-// Populates the scene with a simple environment to validate
-// that all subsystems are wired up correctly.
-// Replace this with a proper level-loading system (JSON/binary).
 void World::LoadTestLevel()
 {
-    // ── Ground plane ──────────────────────────────────────────
+    // Helper: build the "[X] " interact prefix from the global key binding
+    auto interactPrefix = []() -> std::string {
+        return std::string("[") + Input::GetKeyName(INTERACT_KEY) + "] ";
+    };
+
+    // ── Ground plane (no collision — floor at y=0 handled in Player) ──
     {
         EntityID e = CreateEntity("Ground");
         auto* t = AddTransform(e);
@@ -66,11 +64,11 @@ void World::LoadTestLevel()
 
         auto* m = AddMesh(e);
         m->mesh         = m_planeMesh.get();
-        m->albedoColour = {0.0f, 0.7f, 0.7f};  // miku
+        m->albedoColour = {0.0f, 0.7f, 0.7f};
         m->roughness    = 0.95f;
     }
 
-    // ── Some crates (world-space objects to navigate around) ──
+    // ── Crates (solid AABB collision) ─────────────────────────
     const glm::vec3 cratePositions[] = {
         {3.f,0.5f,5.f}, {-2.f,0.5f,8.f}, {5.f,0.5f,2.f},
         {-5.f,0.5f,3.f},{0.f,0.5f,10.f}
@@ -80,14 +78,19 @@ void World::LoadTestLevel()
         EntityID e = CreateEntity("Crate");
         auto* t = AddTransform(e);
         t->position = pos;
+        t->scale    = {1.f, 1.f, 1.f};
 
         auto* m = AddMesh(e);
         m->mesh         = m_cubeMesh.get();
-        m->albedoColour = {0.69f, 0.39f, 0.098f};  // Weathered wood
+        m->albedoColour = {0.69f, 0.39f, 0.098f};
         m->roughness    = 0.9f;
+
+        // Solid 1×1×1 box (halfExtents in local space, scaled at runtime)
+        auto* col = AddCollision(e);
+        col->halfExtents = {0.5f, 0.5f, 0.5f};
     }
 
-    // ── A lamp post (interactable — can be toggled) ───────────
+    // ── Lamp post (solid + interactable) ──────────────────────
     {
         EntityID lamp = CreateEntity("LampPost");
         auto* t = AddTransform(lamp);
@@ -96,12 +99,16 @@ void World::LoadTestLevel()
 
         auto* m = AddMesh(lamp);
         m->mesh         = m_cubeMesh.get();
-        m->albedoColour = {0.45f, 0.44f, 0.43f};  // Dark iron
+        m->albedoColour = {0.45f, 0.44f, 0.43f};
 
-        // Light source at the top of the post
+        // Thin post — small collision box
+        auto* col = AddCollision(lamp);
+        col->halfExtents = {0.5f, 0.5f, 0.5f};  // scaled by t->scale at runtime
+
+        // Light at the top
         EntityID lightE = CreateEntity("LampLight");
         auto* lt = AddTransform(lightE);
-        lt->position = {6.f, 4.5f, 0.0f};
+        lt->position = {6.f, 4.5f, 0.f};
 
         auto* lc = AddLight(lightE);
         lc->colour    = {1.0f, 0.85f, 0.5f};
@@ -109,9 +116,9 @@ void World::LoadTestLevel()
         lc->intensity = 3.0f;
         lc->flicker   = true;
 
-        // Make the lamp interactable (toggle the light)
+        // Interact prompt uses the globally configured interact key
         auto* ia = AddInteractable(lamp);
-        ia->promptText = "[F] Toggle lamp";
+        ia->promptText = interactPrefix() + "Toggle lamp";
         ia->range      = 3.0f;
         ia->onInteract = [this, lightE]()
         {
@@ -121,18 +128,23 @@ void World::LoadTestLevel()
         };
     }
 
-    // Box to mark Exit
+    // ── Exit marker box (solid) ───────────────────────────────
     {
-        EntityID e = CreateEntity("Ending Marker Box");
+        EntityID e = CreateEntity("EndMarker");
         auto* t = AddTransform(e);
         t->position = {0.f, 1.f, -15.f};
+        t->scale    = {0.5f, 0.5f, 0.5f};
 
         auto* m = AddMesh(e);
         m->mesh         = m_cubeMesh.get();
         m->albedoColour = {1.0f, 0.0f, 0.0f};
         m->roughness    = 0.75f;
+
+        auto* col = AddCollision(e);
+        col->halfExtents = {0.25f, 0.25f, 0.25f};
     }
-    // ── Exit trigger (demonstrates gameplay-logic hookup) ─────
+
+    // ── Exit trigger zone ─────────────────────────────────────
     {
         EntityID trigger = CreateEntity("ExitZone");
         auto* t = AddTransform(trigger);
@@ -140,8 +152,7 @@ void World::LoadTestLevel()
 
         auto* tri = AddTrigger(trigger);
         tri->halfExtents = {3.f, 2.f, 1.f};
-        tri->onEnter = []()
-        {
+        tri->onEnter     = []() {
             std::cout << "[World] Player reached the exit zone!\n";
         };
     }
@@ -153,7 +164,6 @@ void World::LoadTestLevel()
 void World::Update(float dt)
 {
     UpdateLights(dt);
-    // UpdateTriggers is called by Player after its position update
 }
 
 void World::UpdateLights(float dt)
@@ -164,21 +174,15 @@ void World::UpdateLights(float dt)
         auto& lc = *rec.light;
         if (!lc.flicker || lc.intensity <= 0.f) continue;
 
-        // Perlin-style flicker using multiple sine waves
         lc.flickerAccum += dt;
         float noise = std::sin(lc.flickerAccum * 7.3f)
                     + std::sin(lc.flickerAccum * 17.1f) * 0.3f
                     + std::sin(lc.flickerAccum * 3.7f)  * 0.6f;
-        lc.intensity = 1.5f + noise * 0.15f;  // Varies ±10% around base
+        lc.intensity = 1.5f + noise * 0.15f;
     }
 }
 
-void World::UpdateTriggers(float dt)
-{
-    (void)dt;
-    // NOTE: Trigger checking is done by Player::Update because it
-    // needs the player position. See gameplay/Player.cpp.
-}
+void World::UpdateTriggers(float dt) { (void)dt; }
 
 // ── Render ────────────────────────────────────────────────────
 void World::Render(Shader& sh) const
@@ -186,17 +190,15 @@ void World::Render(Shader& sh) const
     for (const auto& rec : m_records)
     {
         if (!rec.active || !rec.mesh || !rec.transform) continue;
-        const auto& mesh = *rec.mesh;
-        if (!mesh.mesh) continue;
+        const auto& mc = *rec.mesh;
+        if (!mc.mesh) continue;
 
-        glm::mat4 model = rec.transform->GetMatrix();
-        sh.SetMat4("u_Model",        model);
-        sh.SetVec3("u_AlbedoColour", mesh.albedoColour);
-        sh.SetFloat("u_Specular",    mesh.specular);
-        sh.SetFloat("u_Roughness",   mesh.roughness);
-        sh.SetInt  ("u_HasTexture",  0);  // Texture system stub
-
-        mesh.mesh->Draw();
+        sh.SetMat4("u_Model",        rec.transform->GetMatrix());
+        sh.SetVec3("u_AlbedoColour", mc.albedoColour);
+        sh.SetFloat("u_Specular",    mc.specular);
+        sh.SetFloat("u_Roughness",   mc.roughness);
+        sh.SetInt  ("u_HasTexture",  0);
+        mc.mesh->Draw();
     }
 }
 
@@ -212,9 +214,8 @@ EntityID World::CreateEntity(const std::string& name)
 
 void World::DestroyEntity(EntityID id)
 {
-    auto it = std::find_if(m_records.begin(), m_records.end(),
-                           [id](const EntityRecord& r){ return r.id == id; });
-    if (it != m_records.end()) it->active = false;
+    for (auto& r : m_records)
+        if (r.id == id) { r.active = false; return; }
 }
 
 EntityRecord* World::GetRecord(EntityID id)
@@ -225,10 +226,6 @@ EntityRecord* World::GetRecord(EntityID id)
 }
 
 // ── Component attachment ──────────────────────────────────────
-// Each Add* function appends to the relevant pool and stores
-// the pointer in the EntityRecord. Simple and cache-friendly
-// for this entity count.
-
 TransformComponent* World::AddTransform(EntityID id)
 {
     m_transforms.push_back({});
@@ -236,7 +233,6 @@ TransformComponent* World::AddTransform(EntityID id)
     if (auto* r = GetRecord(id)) r->transform = c;
     return c;
 }
-
 MeshComponent* World::AddMesh(EntityID id)
 {
     m_meshes.push_back({});
@@ -244,7 +240,6 @@ MeshComponent* World::AddMesh(EntityID id)
     if (auto* r = GetRecord(id)) r->mesh = c;
     return c;
 }
-
 InteractableComponent* World::AddInteractable(EntityID id)
 {
     m_interactables.push_back({});
@@ -252,7 +247,6 @@ InteractableComponent* World::AddInteractable(EntityID id)
     if (auto* r = GetRecord(id)) r->interactable = c;
     return c;
 }
-
 LightComponent* World::AddLight(EntityID id)
 {
     m_lights.push_back({});
@@ -260,7 +254,6 @@ LightComponent* World::AddLight(EntityID id)
     if (auto* r = GetRecord(id)) r->light = c;
     return c;
 }
-
 TriggerComponent* World::AddTrigger(EntityID id)
 {
     m_triggers.push_back({});
@@ -268,27 +261,31 @@ TriggerComponent* World::AddTrigger(EntityID id)
     if (auto* r = GetRecord(id)) r->trigger = c;
     return c;
 }
+CollisionComponent* World::AddCollision(EntityID id)
+{
+    m_collisions.push_back({});
+    auto* c = &m_collisions.back();
+    if (auto* r = GetRecord(id)) r->collision = c;
+    return c;
+}
 
 // ── Component query ───────────────────────────────────────────
-TransformComponent*    World::GetTransform   (EntityID id) { auto* r = GetRecord(id); return r ? r->transform    : nullptr; }
-MeshComponent*         World::GetMesh        (EntityID id) { auto* r = GetRecord(id); return r ? r->mesh         : nullptr; }
-InteractableComponent* World::GetInteractable(EntityID id) { auto* r = GetRecord(id); return r ? r->interactable : nullptr; }
+TransformComponent*    World::GetTransform   (EntityID id) { auto* r=GetRecord(id); return r?r->transform   :nullptr; }
+MeshComponent*         World::GetMesh        (EntityID id) { auto* r=GetRecord(id); return r?r->mesh        :nullptr; }
+InteractableComponent* World::GetInteractable(EntityID id) { auto* r=GetRecord(id); return r?r->interactable:nullptr; }
 
 // ── FindNearestInteractable ───────────────────────────────────
 EntityID World::FindNearestInteractable(const glm::vec3& point, float range) const
 {
-    EntityID best = kNullEntity;
-    float    bestDist = range * range;  // Work in squared distance
-
+    EntityID best     = kNullEntity;
+    float    bestDist = range * range;
     for (const auto& rec : m_records)
     {
         if (!rec.active || !rec.interactable || !rec.transform) continue;
         if (!rec.interactable->enabled) continue;
-
-        float r     = rec.interactable->range;
-        float limit = std::min(range, r);
-        float d2    = glm::dot(rec.transform->position - point,
-                               rec.transform->position - point);
+        float limit = std::min(range, rec.interactable->range);
+        glm::vec3 diff = rec.transform->position - point;
+        float d2 = glm::dot(diff, diff);
         if (d2 < limit * limit && d2 < bestDist)
         {
             bestDist = d2;

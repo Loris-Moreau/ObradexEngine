@@ -24,6 +24,7 @@
 #include <functional>
 #include <glm/glm.hpp>
 
+#include "Input.h"
 #include "World.h"
 
 // ── Item (simple inventory POD) ───────────────────────────────
@@ -37,6 +38,8 @@ struct Item
 // ── Interaction factory namespace ─────────────────────────────
 namespace Interaction
 {
+    std::string GetInteractionKey();
+
     // ── Door ──────────────────────────────────────────────────
     /// Spawn a door entity.
     /// @param world        Scene to add the entity to.

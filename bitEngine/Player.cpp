@@ -1,140 +1,177 @@
 // ============================================================
-//  Player.cpp  —  First-Person Player Controller
+//  Player.cpp
 // ============================================================
 
 #include "Player.h"
 #include "Input.h"
 #include "World.h"
-#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <algorithm>
 #include <cmath>
 #include <iostream>
 
+// Player AABB dimensions (metres)
+static constexpr float kPlayerHalfW = 0.30f;   // half-width X and Z
+static constexpr float kPlayerHeight = 1.80f;  // total standing height
+
+// ── Init ──────────────────────────────────────────────────────
 void Player::Init()
 {
-    m_position    = {0.f, 0.f, 3.f};
-    m_velocity    = {0.f, 0.f, 0.f};
-    m_currentEyeH = m_stats.eyeHeight;
-    m_state       = MoveState::Standing;
-    m_camera      = Camera(m_position + glm::vec3(0.f, m_currentEyeH, 0.f));
+    m_position      = {0.f, 0.f, 0.f};
+    m_velocity      = {0.f, 0.f, 0.f};
+    m_state         = MoveState::Standing;
+    m_currentEyeH   = m_stats.eyeHeight;
+    m_onGround      = true;
+    m_camera.SetLean(0.f);
 }
 
+// ── Update ────────────────────────────────────────────────────
 void Player::Update(float dt, const Input& input, World& world)
 {
-    m_interactPrompt.clear();
-    HandleMouseLook(input, dt);
     UpdateMoveState(input, dt);
+    HandleMouseLook(input, dt);
     HandleMovement(input, dt);
     ApplyGravity(dt);
-    ResolveCollision(world);
+
+    ResolveCollision(world);   // push out of solid boxes + floor
+
     UpdateCameraHeight(dt);
-    HandleInteraction(input, world);
+    HandleActions(input, world);
     CheckTriggers(world);
-
-    float horizSpeed = glm::length(glm::vec2(m_velocity.x, m_velocity.z));
-    m_speed = horizSpeed;
-    m_camera.UpdateHeadBob(horizSpeed, dt);
 }
 
-void Player::HandleMouseLook(const Input& input, float /*dt*/)
-{
-    glm::vec2 delta = input.GetMouseDelta();
-    m_camera.Rotate(delta.x, delta.y, m_stats.mouseSensitivity);
-}
-
+// ── UpdateMoveState ───────────────────────────────────────────
 void Player::UpdateMoveState(const Input& input, float dt)
 {
     bool sprint = input.IsKeyHeld(Key::LShift);
     bool crouch = input.IsKeyHeld(Key::LCtrl);
-    bool moving = input.IsKeyHeld(Key::W) || input.IsKeyHeld(Key::S)
-               || input.IsKeyHeld(Key::A) || input.IsKeyHeld(Key::D);
 
-    // Slide: sprinting + crouch while moving on ground
+    // AZERTY: Z=forward, Q=left, S=back, D=right
+    bool moving = input.IsKeyHeld(Key::Z) || input.IsKeyHeld(Key::S)
+               || input.IsKeyHeld(Key::Q) || input.IsKeyHeld(Key::D);
+
+    // ── Slide: sprint + crouch while moving on ground ─────────
     if (m_state == MoveState::Sprinting && crouch && moving && m_onGround)
     {
         m_state      = MoveState::Sliding;
         m_slideTimer = 0.6f;
-        glm::vec3 fwd = m_camera.GetForward(); fwd.y = 0.f;
-        if (glm::length(fwd) > 0.001f) fwd = glm::normalize(fwd);
-        m_velocity.x = fwd.x * m_stats.slideSpeed;
-        m_velocity.z = fwd.z * m_stats.slideSpeed;
-        return;
     }
 
-    // Slide countdown
+    // ── Slide timeout ─────────────────────────────────────────
     if (m_state == MoveState::Sliding)
     {
         m_slideTimer -= dt;
         if (m_slideTimer <= 0.f)
             m_state = crouch ? MoveState::Crouching : MoveState::Standing;
-        return;
     }
 
-    if (!m_onGround)      { m_state = MoveState::InAir;    return; }
-    if (crouch)           { m_state = MoveState::Crouching; return; }
-    if (sprint && moving) { m_state = MoveState::Sprinting; return; }
-    m_state = MoveState::Standing;
+    // ── Air state ─────────────────────────────────────────────
+    if (!m_onGround && m_state != MoveState::InAir &&
+        m_state != MoveState::Sliding)
+        m_state = MoveState::InAir;
+
+    if (m_onGround && m_state == MoveState::InAir)
+        m_state = MoveState::Standing;
+
+    // ── Ground transitions ────────────────────────────────────
+    if (m_onGround && m_state != MoveState::Sliding)
+    {
+        if (crouch)
+            m_state = MoveState::Crouching;
+        else if (sprint && moving)
+            m_state = MoveState::Sprinting;
+        else
+            m_state = MoveState::Standing;
+    }
 }
 
+// ── HandleMouseLook ───────────────────────────────────────────
+void Player::HandleMouseLook(const Input& input, float dt)
+{
+    (void)dt;
+    glm::vec2 delta = input.GetMouseDelta();
+    m_camera.Rotate(delta.x, delta.y, m_stats.mouseSensitivity);
+}
+
+// ── HandleMovement ────────────────────────────────────────────
 void Player::HandleMovement(const Input& input, float dt)
 {
-    if (m_state == MoveState::Sliding) return; // velocity already set
-
+    // Choose speed from current state
     float targetSpeed = m_stats.walkSpeed;
-    if (m_state == MoveState::Sprinting) targetSpeed = m_stats.sprintSpeed;
-    if (m_state == MoveState::Crouching) targetSpeed = m_stats.crouchSpeed;
+    switch (m_state)
+    {
+        case MoveState::Sprinting:  targetSpeed = m_stats.sprintSpeed;  break;
+        case MoveState::Crouching:  targetSpeed = m_stats.crouchSpeed;  break;
+        case MoveState::Sliding:    targetSpeed = m_stats.slideSpeed;   break;
+        default: break;
+    }
 
-    glm::vec3 fwd   = m_camera.GetForward();  fwd.y   = 0.f;
-    glm::vec3 right = m_camera.GetRight();    right.y = 0.f;
-    if (glm::length(fwd)   > 0.001f) fwd   = glm::normalize(fwd);
+    // Horizontal input
+    glm::vec3 fwd   = m_camera.GetForward();
+    fwd.y = 0.f;
+    if (glm::length(fwd) > 0.001f) fwd = glm::normalize(fwd);
+
+    glm::vec3 right = m_camera.GetRight();
+    right.y = 0.f;
     if (glm::length(right) > 0.001f) right = glm::normalize(right);
 
     glm::vec3 moveDir = {0.f, 0.f, 0.f};
+    // AZERTY layout
     if (input.IsKeyHeld(Key::Z)) moveDir += fwd;
     if (input.IsKeyHeld(Key::S)) moveDir -= fwd;
     if (input.IsKeyHeld(Key::D)) moveDir += right;
     if (input.IsKeyHeld(Key::Q)) moveDir -= right;
-    if (glm::length(moveDir) > 0.001f) moveDir = glm::normalize(moveDir);
 
-    // Lean: Q = left, E = right (only when stationary to disambiguate from interact)
+    if (glm::length(moveDir) > 0.001f)
+        moveDir = glm::normalize(moveDir);
+
+    // During a slide keep the slide direction, don't let input redirect
+    if (m_state != MoveState::Sliding)
+    {
+        m_velocity.x = moveDir.x * targetSpeed;
+        m_velocity.z = moveDir.z * targetSpeed;
+    }
+    m_speed = glm::length(glm::vec3(m_velocity.x, 0.f, m_velocity.z));
+
+    // Lean (A = left, E = right) — only when not sprinting
     float lean = 0.f;
-    if (m_state != MoveState::Sprinting)
+    if (m_state != MoveState::Sprinting && m_state != MoveState::Sliding)
     {
         if (input.IsKeyHeld(Key::A)) lean = -1.f;
         if (input.IsKeyHeld(Key::E) && glm::length(moveDir) < 0.001f) lean = 1.f;
     }
     m_camera.SetLean(lean * 12.f);
 
-    // Smooth acceleration / deceleration
-    const float accel = 30.f, decel = 20.f;
-    glm::vec3 targetVel = moveDir * targetSpeed;
-    float factor = (glm::length(moveDir) > 0.001f) ? accel : decel;
-    m_velocity.x += (targetVel.x - m_velocity.x) * factor * dt;
-    m_velocity.z += (targetVel.z - m_velocity.z) * factor * dt;
-
     // Jump
     if (input.IsKeyJustPressed(Key::Space) && m_onGround
-        && m_state != MoveState::Crouching)
+        && m_state != MoveState::Crouching
+        && m_state != MoveState::Sliding)
     {
-        m_velocity.y = std::sqrt(2.f * std::abs(m_stats.gravity) * m_stats.jumpHeight);
-        m_onGround   = false;
-        m_state      = MoveState::InAir;
+        float jumpVel  = std::sqrt(2.f * std::abs(m_stats.gravity) * m_stats.jumpHeight);
+        m_velocity.y   = jumpVel;
+        m_onGround     = false;
+        m_state        = MoveState::InAir;
     }
 
-    m_position += m_velocity * dt;
+    // Apply horizontal displacement
+    m_position.x += m_velocity.x * dt;
+    m_position.z += m_velocity.z * dt;
 }
 
+// ── ApplyGravity ──────────────────────────────────────────────
 void Player::ApplyGravity(float dt)
 {
-    if (!m_onGround)
-        m_velocity.y += m_stats.gravity * dt;
-    else
-        m_velocity.y = 0.f;
+    m_velocity.y += m_stats.gravity * dt;
+    m_position.y += m_velocity.y * dt;
 }
 
-void Player::ResolveCollision(World& /*world*/)
+// ── ResolveCollision ──────────────────────────────────────────
+// Two passes:
+//   1. Floor plane at y = 0 (always present).
+//   2. All solid CollisionComponent boxes in the world.
+void Player::ResolveCollision(World& world)
 {
-    // Simple floor plane at y = 0; replace with mesh ray-cast for real levels
+    // ── 1. Floor ──────────────────────────────────────────────
     if (m_position.y < 0.f)
     {
         m_position.y = 0.f;
@@ -143,55 +180,148 @@ void Player::ResolveCollision(World& /*world*/)
     }
     else
     {
-        m_onGround = (m_position.y < 0.02f && m_velocity.y <= 0.f);
+        // Only mark in-air if we are clearly above the ground
+        if (m_position.y > 0.01f) m_onGround = false;
+    }
+
+    // ── 2. AABB boxes ─────────────────────────────────────────
+    // Player capsule approximated as an axis-aligned box:
+    //   feet at m_position.y, head at m_position.y + kPlayerHeight
+    //   XZ centred on m_position.xz with radius kPlayerHalfW.
+    float eyeH = (m_state == MoveState::Crouching)
+                 ? m_stats.crouchHeight : kPlayerHeight;
+
+    glm::vec3 pMin = m_position + glm::vec3(-kPlayerHalfW, 0.f,    -kPlayerHalfW);
+    glm::vec3 pMax = m_position + glm::vec3( kPlayerHalfW, eyeH,    kPlayerHalfW);
+
+    for (auto& rec : world.GetAllRecords())
+    {
+        if (!rec.active || !rec.collision || !rec.transform) continue;
+        if (!rec.collision->solid) continue;
+
+        const glm::vec3& ctr  = rec.transform->position;
+        const glm::vec3  half = rec.collision->halfExtents * rec.transform->scale;
+        glm::vec3 bMin = ctr - half;
+        glm::vec3 bMax = ctr + half;
+
+        // Broad phase: skip if no overlap on any axis
+        if (pMax.x <= bMin.x || pMin.x >= bMax.x) continue;
+        if (pMax.y <= bMin.y || pMin.y >= bMax.y) continue;
+        if (pMax.z <= bMin.z || pMin.z >= bMax.z) continue;
+
+        // Penetration depth on each axis
+        float ox = std::min(pMax.x - bMin.x, bMax.x - pMin.x);
+        float oy = std::min(pMax.y - bMin.y, bMax.y - pMin.y);
+        float oz = std::min(pMax.z - bMin.z, bMax.z - pMin.z);
+
+        // Push out along the axis of least penetration
+        if (ox <= oy && ox <= oz)
+        {
+            // X axis
+            if (pMax.x - bMin.x < bMax.x - pMin.x)
+                m_position.x -= ox;   // push left
+            else
+                m_position.x += ox;   // push right
+            m_velocity.x = 0.f;
+        }
+        else if (oz <= ox && oz <= oy)
+        {
+            // Z axis
+            if (pMax.z - bMin.z < bMax.z - pMin.z)
+                m_position.z -= oz;
+            else
+                m_position.z += oz;
+            m_velocity.z = 0.f;
+        }
+        else
+        {
+            // Y axis — could be landing on top or hitting ceiling
+            if (pMax.y - bMin.y < bMax.y - pMin.y)
+            {
+                m_position.y -= oy;   // push down (ceiling hit)
+                if (m_velocity.y > 0.f) m_velocity.y = 0.f;
+            }
+            else
+            {
+                m_position.y += oy;   // push up (land on top)
+                m_velocity.y  = 0.f;
+                m_onGround    = true;
+            }
+        }
+
+        // Recompute player AABB after each push-out so subsequent
+        // boxes see the corrected position.
+        pMin = m_position + glm::vec3(-kPlayerHalfW, 0.f,  -kPlayerHalfW);
+        pMax = m_position + glm::vec3( kPlayerHalfW, eyeH,  kPlayerHalfW);
     }
 }
 
+// ── UpdateCameraHeight ────────────────────────────────────────
 void Player::UpdateCameraHeight(float dt)
 {
-    bool low = (m_state == MoveState::Crouching || m_state == MoveState::Sliding);
-    float targetH = low ? m_stats.crouchHeight : m_stats.eyeHeight;
-    m_currentEyeH += (targetH - m_currentEyeH) * 12.f * dt;
+    float targetH = (m_state == MoveState::Crouching || m_state == MoveState::Sliding)
+                    ? m_stats.crouchHeight : m_stats.eyeHeight;
+
+    // Smooth lerp towards target eye height
+    m_currentEyeH += (targetH - m_currentEyeH) * std::min(dt * 12.f, 1.f);
+
+    // Head bob while walking / sprinting
+    m_camera.UpdateHeadBob(m_speed, dt);
     m_camera.SetPosition(m_position + glm::vec3(0.f, m_currentEyeH, 0.f));
 }
 
-void Player::HandleInteraction(const Input& input, World& world)
+// ── HandleActions ─────────────────────────────────────────────
+void Player::HandleActions(const Input& input, World& world)
 {
-    glm::vec3 origin = m_camera.GetPosition();
-    glm::vec3 fwd    = m_camera.GetForward();
-
-    EntityID target = world.FindNearestInteractable(origin, m_stats.interactRange);
-    if (target == kNullEntity) return;
-
-    auto* ia = world.GetInteractable(target);
-    auto* tr = world.GetTransform(target);
-    if (!ia || !tr) return;
-
-    // Only interact if the object is roughly in front of the camera
-    glm::vec3 toObj = glm::normalize(tr->position - origin);
-    if (glm::dot(toObj, fwd) < 0.4f) return;
-
-    m_interactPrompt = ia->promptText;
-    if (input.IsKeyJustPressed(Key::F) && ia->onInteract)
-        ia->onInteract();
+    HandleInteraction(input, world);
 }
 
+// ── HandleInteraction ─────────────────────────────────────────
+void Player::HandleInteraction(const Input& input, World& world)
+{
+    glm::vec3 eyePos = m_position + glm::vec3(0.f, m_currentEyeH, 0.f);
+    EntityID  near   = world.FindNearestInteractable(eyePos, m_stats.interactRange);
+
+    if (near != kNullEntity)
+    {
+        auto* ia = world.GetRecord(near)->interactable;
+        m_interactPrompt = ia ? ia->promptText : "";
+
+        // Use INTERACT_KEY from Input.h — single source of truth for the binding
+        if (input.IsKeyJustPressed(INTERACT_KEY) && ia && ia->onInteract)
+            ia->onInteract();
+    }
+    else
+    {
+        m_interactPrompt.clear();
+    }
+}
+
+// ── CheckTriggers ─────────────────────────────────────────────
 void Player::CheckTriggers(World& world)
 {
-    for (auto& rec : const_cast<std::vector<EntityRecord>&>(world.GetAllRecords()))
+    for (auto& rec : world.GetAllRecords())
     {
         if (!rec.active || !rec.trigger || !rec.transform) continue;
         auto& tri = *rec.trigger;
-        auto& pos = rec.transform->position;
-        auto& ext = tri.halfExtents;
+        const glm::vec3& tp = rec.transform->position;
 
-        bool inside = (m_position.x >= pos.x - ext.x && m_position.x <= pos.x + ext.x)
-                   && (m_position.y >= pos.y - ext.y && m_position.y <= pos.y + ext.y)
-                   && (m_position.z >= pos.z - ext.z && m_position.z <= pos.z + ext.z);
+        bool inside = (m_position.x >= tp.x - tri.halfExtents.x &&
+                       m_position.x <= tp.x + tri.halfExtents.x &&
+                       m_position.y >= tp.y - tri.halfExtents.y &&
+                       m_position.y <= tp.y + tri.halfExtents.y &&
+                       m_position.z >= tp.z - tri.halfExtents.z &&
+                       m_position.z <= tp.z + tri.halfExtents.z);
 
         if (inside && !tri.triggered)
-        { tri.triggered = true;  if (tri.onEnter) tri.onEnter(); }
+        {
+            tri.triggered = true;
+            if (tri.onEnter) tri.onEnter();
+        }
         else if (!inside && tri.triggered)
-        { tri.triggered = false; if (tri.onExit)  tri.onExit();  }
+        {
+            tri.triggered = false;
+            if (tri.onExit) tri.onExit();
+        }
     }
 }

@@ -20,11 +20,11 @@ public:
     // ── Lifecycle ─────────────────────────────────────────────
 
     /// Create the OS window and an OpenGL 4.1 core context.
-    /// @param title      Window title bar string.
-    /// @param width      Client width dimensions in pixels.
-    /// @param height     Client height dimensions in pixels.
-    /// @param fullscreen Borderless fullscreen on primary monitor.
-    /// @param vsync      Enable vertical sync (limits frame rate).
+    /// @param title       Window title bar string.
+    /// @param width Client area dimensions in pixels.
+    /// @param height Client area dimensions in pixels.
+    /// @param fullscreen  Borderless fullscreen on primary monitor.
+    /// @param vsync       Enable vertical sync (limits frame rate).
     bool Init(const std::string& title,
               int width, int height,
               bool fullscreen, bool vsync);

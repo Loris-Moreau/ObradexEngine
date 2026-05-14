@@ -48,7 +48,7 @@ struct PlayerStats
 {
     float walkSpeed       = 2.25f;   // m/s
     float sprintSpeed     = 8.0f;   // m/s
-    float crouchSpeed     = (walkSpeed / 2.0f) - (walkSpeed * 0.10f);   // m/s
+    float crouchSpeed     = walkSpeed / 2.0f;   // m/s
     float slideSpeed      = 10.0f;  // m/s initial
     float jumpHeight      = 1.2f;   // metres
     float gravity         = -12.0f;  // m/s²

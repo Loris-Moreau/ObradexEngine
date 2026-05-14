@@ -8,6 +8,15 @@
 
 namespace Interaction
 {
+    std::string GetInteractionKey()
+    {
+        // Helper: build the "[X] " interact prefix from the global key binding
+        auto interactPrefix = []() -> std::string
+        {
+            return std::string("[") + Input::GetKeyName(INTERACT_KEY) + "] ";
+        };
+        return interactPrefix();
+    }
 
 // ── SpawnDoor ─────────────────────────────────────────────────
 EntityID SpawnDoor(World&            world,
@@ -34,7 +43,7 @@ EntityID SpawnDoor(World&            world,
 
     auto* ia = world.AddInteractable(e);
     ia->range      = 2.5f;
-    ia->promptText = locked ? "[F] Locked" : "[F] Open door";
+    ia->promptText = locked ? GetInteractionKey() + " Locked" : GetInteractionKey() + " Open door";
 
     ia->onInteract = [e, &world, state, onOpen, ia]()
     {
@@ -44,7 +53,7 @@ EntityID SpawnDoor(World&            world,
             return;
         }
         state->open = !state->open;
-        ia->promptText = state->open ? "[F] Close door" : "[F] Open door";
+        ia->promptText = state->open ? GetInteractionKey() + " Close door" : GetInteractionKey() + " Open door";
 
         // Visual feedback: rotate the door 90° by adjusting transform scale
         // (In a full engine, you'd animate the rotation via a tween system)
@@ -77,7 +86,7 @@ EntityID SpawnContainer(World&                world,
     auto opened = std::make_shared<bool>(false);
     auto* ia    = world.AddInteractable(e);
     ia->range      = 2.0f;
-    ia->promptText = "[F] Search";
+    ia->promptText = GetInteractionKey() + " Search";
 
     ia->onInteract = [opened, items, onOpen, ia]()
     {
@@ -116,7 +125,7 @@ EntityID SpawnPickup(World&           world,
 
     auto* ia = world.AddInteractable(e);
     ia->range      = 2.0f;
-    ia->promptText = "[F] Pick up " + item.name;
+    ia->promptText = GetInteractionKey() + " Pick up " + item.name;
 
     ia->onInteract = [e, &world, item, onPickup, ia]()
     {
@@ -162,7 +171,7 @@ EntityID SpawnAlarm(World&            world,
     auto armed = std::make_shared<bool>(true);
     auto* ia   = world.AddInteractable(e);
     ia->range      = 1.5f;
-    ia->promptText = "[F] Defuse alarm";
+    ia->promptText = GetInteractionKey() + " Defuse alarm";
 
     ia->onInteract = [armed, &world, lightE, onTrigger, onDefuse, ia]()
     {
