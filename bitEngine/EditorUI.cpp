@@ -20,6 +20,14 @@
 #include <glm/glm.hpp>
 #include <cstdio>
 
+// ── Constructor / Destructor ────────────────────────────────
+// Defined here (not in the header) so that the compiler sees
+// the complete LevelEditor type when it instantiates
+// std::unique_ptr<LevelEditor>::~unique_ptr().  Defaulting
+// EditorUI() in the header would generate the destructor inline
+// with only a forward declaration — MSVC rejects this.
+EditorUI::EditorUI() = default;
+
 // ── Init ──────────────────────────────────────────────────────
 void EditorUI::Init(GLFWwindow* window)
 {

@@ -26,8 +26,8 @@ class  LevelEditor;
 class EditorUI
 {
 public:
-    EditorUI()  = default;
-    ~EditorUI();
+    EditorUI();   ///< Defined in EditorUI.cpp — LevelEditor must be complete
+    ~EditorUI();  ///< Defined in EditorUI.cpp — LevelEditor must be complete
 
     // ── Lifecycle ─────────────────────────────────────────────
 

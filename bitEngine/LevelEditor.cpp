@@ -30,303 +30,6 @@ static void Wi1(std::ofstream& f, const char* k, int v)
 static void Ws(std::ofstream& f, const char* k, const std::string& v)
 { f << "  " << k << " " << v << "\n"; }
 
-// ── SaveLevel ─────────────────────────────────────────────────
-bool LevelEditor::SaveLevel(const World& world, const std::string& path)
-{
-    std::ofstream file(path);
-    if (!file.is_open())
-    {
-        m_statusMsg   = "ERROR: could not open " + path;
-        m_statusTimer = 4.f;
-        return false;
-    }
-
-    file << "LEVEL_VERSION 1\n\n";
-
-    for (const auto& rec : world.GetAllRecords())
-    {
-        if (!rec.active || !rec.transform) continue;
-
-        // Determine entity type string
-        std::string type = "cube";
-        if (!rec.mesh && rec.light)
-            type = "light";
-        else if (rec.name == "Ground" || (rec.mesh && rec.mesh->mesh == const_cast<World&>(world).GetPlaneMesh()))
-            type = "plane";
-        else if (rec.name.find("Lamppost") != std::string::npos ||
-                 rec.name.find("LampPost") != std::string::npos)
-            type = "lamppost";
-        else if (rec.name.find("Door") != std::string::npos)
-            type = "door";
-        else if (rec.name.find("Container") != std::string::npos)
-            type = "container";
-        else if (rec.name.find("Pickup") != std::string::npos)
-            type = "pickup";
-        else if (rec.name.find("Alarm") != std::string::npos)
-            type = "alarm";
-        // Skip child entities whose data is handled by their parent factory
-        // (e.g. LampostLight, AlarmLight)
-        else if (rec.name.find("Light") != std::string::npos && !rec.mesh)
-            continue;
-
-        file << "ENTITY\n";
-        Ws(file, "TYPE", type);
-        Ws(file, "NAME", rec.name);
-
-        // Transform
-        auto& t = *rec.transform;
-        Wf3(file, "POS",   t.position.x, t.position.y, t.position.z);
-        Wf3(file, "SCALE", t.scale.x,    t.scale.y,    t.scale.z);
-
-        // Mesh
-        if (rec.mesh)
-        {
-            Wf3(file, "ALBEDO", rec.mesh->albedoColour.x,
-                                rec.mesh->albedoColour.y,
-                                rec.mesh->albedoColour.z);
-            Wf1(file, "SPECULAR",  rec.mesh->specular);
-            Wf1(file, "ROUGHNESS", rec.mesh->roughness);
-        }
-
-        // Collision
-        if (rec.collision)
-            Wf3(file, "COLLISION",
-                rec.collision->halfExtents.x,
-                rec.collision->halfExtents.y,
-                rec.collision->halfExtents.z);
-
-        // Light (for standalone lights or lamppost overrides)
-        if (rec.light)
-        {
-            Wf3(file, "LIGHT_COLOR",
-                rec.light->colour.x, rec.light->colour.y, rec.light->colour.z);
-            Wf1(file, "LIGHT_RADIUS",    rec.light->radius);
-            Wf1(file, "LIGHT_INTENSITY", rec.light->intensity);
-            Wi1(file, "LIGHT_FLICKER",   rec.light->flicker ? 1 : 0);
-        }
-
-        file << "END\n\n";
-    }
-
-    m_statusMsg   = "Saved: " + path;
-    m_statusTimer = 3.f;
-    std::cout << "[LevelEditor] Saved " << world.GetAllRecords().size()
-              << " entities to " << path << "\n";
-    return true;
-}
-
-// ── LoadLevel ─────────────────────────────────────────────────
-bool LevelEditor::LoadLevel(World& world, const std::string& path)
-{
-    std::ifstream file(path);
-    if (!file.is_open())
-    {
-        m_statusMsg   = "ERROR: could not open " + path;
-        m_statusTimer = 4.f;
-        return false;
-    }
-
-    world.ClearLevel();
-
-    std::string line;
-    // Per-entity state
-    struct EData {
-        std::string type, name;
-        glm::vec3   pos{0,0,0}, scale{1,1,1};
-        glm::vec3   albedo{0.7f,0.7f,0.7f};
-        float       specular=0.2f, roughness=0.8f;
-        bool        hasCollision=false;
-        glm::vec3   collHalf{0.5f,0.5f,0.5f};
-        bool        hasLight=false;
-        glm::vec3   lightColor{1,0.85f,0.5f};
-        float       lightRadius=10.f, lightIntensity=1.5f;
-        bool        lightFlicker=true;
-    };
-
-    bool inEntity = false;
-    EData cur;
-    int entityCount = 0;
-
-    auto flush = [&]()
-    {
-        if (cur.type == "lamppost")
-        {
-            Interaction::SpawnLamppost(world,
-                // base pos — the POS field stores base (foot) in the file
-                cur.pos,
-                cur.lightColor, cur.lightRadius, cur.lightIntensity, cur.lightFlicker);
-        }
-        else if (cur.type == "door")
-        {
-            Interaction::SpawnDoor(world, cur.pos, false);
-        }
-        else if (cur.type == "container")
-        {
-            Interaction::SpawnContainer(world, cur.pos, {});
-        }
-        else if (cur.type == "pickup")
-        {
-            Item it;
-            it.name = cur.name;
-            it.quantity = 1;
-            Interaction::SpawnPickup(world, cur.pos, it);
-        }
-        else if (cur.type == "alarm")
-        {
-            Interaction::SpawnAlarm(world, cur.pos);
-        }
-        else
-        {
-            // cube / plane / light — build manually
-            EntityID e = world.CreateEntity(cur.name);
-
-            auto* t = world.AddTransform(e);
-            t->position = cur.pos;
-            t->scale    = cur.scale;
-
-            if (cur.type != "light")
-            {
-                auto* m = world.AddMesh(e);
-                m->mesh         = (cur.type == "plane") ? world.GetPlaneMesh()
-                                                        : world.GetCubeMesh();
-                m->albedoColour = cur.albedo;
-                m->specular     = cur.specular;
-                m->roughness    = cur.roughness;
-
-                if (cur.hasCollision)
-                {
-                    auto* col = world.AddCollision(e);
-                    col->halfExtents = cur.collHalf;
-                }
-            }
-
-            if (cur.hasLight || cur.type == "light")
-            {
-                auto* lc = world.AddLight(e);
-                lc->colour    = cur.lightColor;
-                lc->radius    = cur.lightRadius;
-                lc->intensity = cur.lightIntensity;
-                lc->flicker   = cur.lightFlicker;
-            }
-        }
-        ++entityCount;
-    };
-
-    while (std::getline(file, line))
-    {
-        // Strip carriage return (Windows line endings)
-        if (!line.empty() && line.back() == '\r') line.pop_back();
-        if (line.empty() || line[0] == '#') continue;
-
-        std::istringstream ss(line);
-        std::string token;
-        ss >> token;
-
-        if (token == "ENTITY")
-        {
-            inEntity = true;
-            cur = EData{};
-        }
-        else if (token == "END" && inEntity)
-        {
-            flush();
-            inEntity = false;
-        }
-        else if (inEntity)
-        {
-            if      (token == "TYPE")    ss >> cur.type;
-            else if (token == "NAME")    ss >> cur.name;
-            else if (token == "POS")     ss >> cur.pos.x >> cur.pos.y >> cur.pos.z;
-            else if (token == "SCALE")   ss >> cur.scale.x >> cur.scale.y >> cur.scale.z;
-            else if (token == "ALBEDO")  ss >> cur.albedo.x >> cur.albedo.y >> cur.albedo.z;
-            else if (token == "SPECULAR")  ss >> cur.specular;
-            else if (token == "ROUGHNESS") ss >> cur.roughness;
-            else if (token == "COLLISION")
-            {
-                cur.hasCollision = true;
-                ss >> cur.collHalf.x >> cur.collHalf.y >> cur.collHalf.z;
-            }
-            else if (token == "LIGHT_COLOR")
-            {
-                cur.hasLight = true;
-                ss >> cur.lightColor.x >> cur.lightColor.y >> cur.lightColor.z;
-            }
-            else if (token == "LIGHT_RADIUS")    { cur.hasLight=true; ss>>cur.lightRadius; }
-            else if (token == "LIGHT_INTENSITY")  { cur.hasLight=true; ss>>cur.lightIntensity; }
-            else if (token == "LIGHT_FLICKER")    { int v=0; ss>>v; cur.lightFlicker=(v!=0); cur.hasLight=true; }
-        }
-    }
-
-    m_statusMsg   = "Loaded: " + path + " (" + std::to_string(entityCount) + " entities)";
-    m_statusTimer = 3.f;
-    std::cout << "[LevelEditor] Loaded " << entityCount << " entities from " << path << "\n";
-    return true;
-}
-
-// ── SpawnCurrent ─────────────────────────────────────────────
-void LevelEditor::SpawnCurrent(Engine& engine)
-{
-    World& world = engine.GetWorld();
-    glm::vec3 pos(m_spawnPos[0], m_spawnPos[1], m_spawnPos[2]);
-    glm::vec3 scale(m_spawnScale[0], m_spawnScale[1], m_spawnScale[2]);
-    glm::vec3 color(m_spawnColor[0], m_spawnColor[1], m_spawnColor[2]);
-    glm::vec3 lcolor(m_lightColor[0], m_lightColor[1], m_lightColor[2]);
-
-    switch (m_spawnType)
-    {
-        case 0: // Cube
-        {
-            EntityID e = world.CreateEntity("Cube");
-            auto* t = world.AddTransform(e); t->position=pos; t->scale=scale;
-            auto* m = world.AddMesh(e);
-            m->mesh=world.GetCubeMesh(); m->albedoColour=color;
-            m->specular=m_spawnSpecular; m->roughness=m_spawnRoughness;
-            if (m_spawnCollision) {
-                auto* col = world.AddCollision(e);
-                col->halfExtents = {0.5f,0.5f,0.5f};
-            }
-            break;
-        }
-        case 1: // Plane
-        {
-            EntityID e = world.CreateEntity("Plane");
-            auto* t = world.AddTransform(e); t->position=pos; t->scale=scale;
-            auto* m = world.AddMesh(e);
-            m->mesh=world.GetPlaneMesh(); m->albedoColour=color;
-            m->roughness=m_spawnRoughness;
-            break;
-        }
-        case 2: // Lamppost
-            Interaction::SpawnLamppost(world, pos, lcolor,
-                                       m_lightRadius, m_lightIntensity, m_lightFlicker);
-            break;
-        case 3: // Door
-            Interaction::SpawnDoor(world, pos);
-            break;
-        case 4: // Container
-            Interaction::SpawnContainer(world, pos, {});
-            break;
-        case 5: // Pickup
-        {
-            Item it; it.name=m_pickupName; it.quantity=1;
-            Interaction::SpawnPickup(world, pos, it);
-            break;
-        }
-        case 6: // Alarm
-            Interaction::SpawnAlarm(world, pos);
-            break;
-        case 7: // Point Light
-        {
-            EntityID e = world.CreateEntity("Light");
-            auto* t = world.AddTransform(e); t->position=pos;
-            auto* lc = world.AddLight(e);
-            lc->colour=lcolor; lc->radius=m_lightRadius;
-            lc->intensity=m_lightIntensity; lc->flicker=m_lightFlicker;
-            break;
-        }
-    }
-}
-
 // ── RenderPanel ───────────────────────────────────────────────
 void LevelEditor::RenderPanel(Engine& engine)
 {
@@ -444,4 +147,301 @@ void LevelEditor::RenderPanel(Engine& engine)
     // ── Quick inline transform editor for hovered entity ──────
     ImGui::SeparatorText("Quick Edit");
     ImGui::TextDisabled("Select an entity in the World tab to edit it");
+}
+
+// ── SaveLevel ─────────────────────────────────────────────────
+bool LevelEditor::SaveLevel(const World& world, const std::string& path)
+{
+    std::ofstream file(path);
+    if (!file.is_open())
+    {
+        m_statusMsg   = "ERROR: could not open " + path;
+        m_statusTimer = 4.f;
+        return false;
+    }
+
+    file << "LEVEL_VERSION 1\n\n";
+
+    for (const auto& rec : world.GetAllRecords())
+    {
+        if (!rec.active || !rec.transform) continue;
+
+        // Determine entity type string
+        std::string type = "cube";
+        if (!rec.mesh && rec.light)
+            type = "light";
+        else if (rec.name == "Ground" || (rec.mesh && rec.mesh->mesh == const_cast<World&>(world).GetPlaneMesh()))
+            type = "plane";
+        else if (rec.name.find("Lamppost") != std::string::npos ||
+            rec.name.find("LampPost") != std::string::npos)
+            type = "lamppost";
+        else if (rec.name.find("Door") != std::string::npos)
+            type = "door";
+        else if (rec.name.find("Container") != std::string::npos)
+            type = "container";
+        else if (rec.name.find("Pickup") != std::string::npos)
+            type = "pickup";
+        else if (rec.name.find("Alarm") != std::string::npos)
+            type = "alarm";
+            // Skip child entities whose data is handled by their parent factory
+            // (e.g. LampostLight, AlarmLight)
+        else if (rec.name.find("Light") != std::string::npos && !rec.mesh)
+            continue;
+
+        file << "ENTITY\n";
+        Ws(file, "TYPE", type);
+        Ws(file, "NAME", rec.name);
+
+        // Transform
+        auto& t = *rec.transform;
+        Wf3(file, "POS",   t.position.x, t.position.y, t.position.z);
+        Wf3(file, "SCALE", t.scale.x,    t.scale.y,    t.scale.z);
+
+        // Mesh
+        if (rec.mesh)
+        {
+            Wf3(file, "ALBEDO", rec.mesh->albedoColour.x,
+                rec.mesh->albedoColour.y,
+                rec.mesh->albedoColour.z);
+            Wf1(file, "SPECULAR",  rec.mesh->specular);
+            Wf1(file, "ROUGHNESS", rec.mesh->roughness);
+        }
+
+        // Collision
+        if (rec.collision)
+            Wf3(file, "COLLISION",
+                rec.collision->halfExtents.x,
+                rec.collision->halfExtents.y,
+                rec.collision->halfExtents.z);
+
+        // Light (for standalone lights or lamppost overrides)
+        if (rec.light)
+        {
+            Wf3(file, "LIGHT_COLOR",
+                rec.light->colour.x, rec.light->colour.y, rec.light->colour.z);
+            Wf1(file, "LIGHT_RADIUS",    rec.light->radius);
+            Wf1(file, "LIGHT_INTENSITY", rec.light->intensity);
+            Wi1(file, "LIGHT_FLICKER",   rec.light->flicker ? 1 : 0);
+        }
+
+        file << "END\n\n";
+    }
+
+    m_statusMsg   = "Saved: " + path;
+    m_statusTimer = 3.f;
+    std::cout << "[LevelEditor] Saved " << world.GetAllRecords().size()
+        << " entities to " << path << "\n";
+    return true;
+}
+
+// ── LoadLevel ─────────────────────────────────────────────────
+bool LevelEditor::LoadLevel(World& world, const std::string& path)
+{
+    std::ifstream file(path);
+    if (!file.is_open())
+    {
+        m_statusMsg   = "ERROR: could not open " + path;
+        m_statusTimer = 4.f;
+        return false;
+    }
+
+    world.ClearLevel();
+
+    std::string line;
+    // Per-entity state
+    struct EData {
+        std::string type, name;
+        glm::vec3   pos{0,0,0}, scale{1,1,1};
+        glm::vec3   albedo{0.7f,0.7f,0.7f};
+        float       specular=0.2f, roughness=0.8f;
+        bool        hasCollision=false;
+        glm::vec3   collHalf{0.5f,0.5f,0.5f};
+        bool        hasLight=false;
+        glm::vec3   lightColor{1,0.85f,0.5f};
+        float       lightRadius=10.f, lightIntensity=1.5f;
+        bool        lightFlicker=true;
+    };
+
+    bool inEntity = false;
+    EData cur;
+    int entityCount = 0;
+
+    auto flush = [&]()
+    {
+        if (cur.type == "lamppost")
+        {
+            Interaction::SpawnLamppost(world,
+                                       // base pos — the POS field stores base (foot) in the file
+                                       cur.pos,
+                                       cur.lightColor, cur.lightRadius, cur.lightIntensity, cur.lightFlicker);
+        }
+        else if (cur.type == "door")
+        {
+            Interaction::SpawnDoor(world, cur.pos, false);
+        }
+        else if (cur.type == "container")
+        {
+            Interaction::SpawnContainer(world, cur.pos, {});
+        }
+        else if (cur.type == "pickup")
+        {
+            Item it;
+            it.name = cur.name;
+            it.quantity = 1;
+            Interaction::SpawnPickup(world, cur.pos, it);
+        }
+        else if (cur.type == "alarm")
+        {
+            Interaction::SpawnAlarm(world, cur.pos);
+        }
+        else
+        {
+            // cube / plane / light — build manually
+            EntityID e = world.CreateEntity(cur.name);
+
+            auto* t = world.AddTransform(e);
+            t->position = cur.pos;
+            t->scale    = cur.scale;
+
+            if (cur.type != "light")
+            {
+                auto* m = world.AddMesh(e);
+                m->mesh         = (cur.type == "plane") ? world.GetPlaneMesh()
+                                      : world.GetCubeMesh();
+                m->albedoColour = cur.albedo;
+                m->specular     = cur.specular;
+                m->roughness    = cur.roughness;
+
+                if (cur.hasCollision)
+                {
+                    auto* col = world.AddCollision(e);
+                    col->halfExtents = cur.collHalf;
+                }
+            }
+
+            if (cur.hasLight || cur.type == "light")
+            {
+                auto* lc = world.AddLight(e);
+                lc->colour    = cur.lightColor;
+                lc->radius    = cur.lightRadius;
+                lc->intensity = cur.lightIntensity;
+                lc->flicker   = cur.lightFlicker;
+            }
+        }
+        ++entityCount;
+    };
+
+    while (std::getline(file, line))
+    {
+        // Strip carriage return (Windows line endings)
+        if (!line.empty() && line.back() == '\r') line.pop_back();
+        if (line.empty() || line[0] == '#') continue;
+
+        std::istringstream ss(line);
+        std::string token;
+        ss >> token;
+
+        if (token == "ENTITY")
+        {
+            inEntity = true;
+            cur = EData{};
+        }
+        else if (token == "END" && inEntity)
+        {
+            flush();
+            inEntity = false;
+        }
+        else if (inEntity)
+        {
+            if      (token == "TYPE")    ss >> cur.type;
+            else if (token == "NAME")    ss >> cur.name;
+            else if (token == "POS")     ss >> cur.pos.x >> cur.pos.y >> cur.pos.z;
+            else if (token == "SCALE")   ss >> cur.scale.x >> cur.scale.y >> cur.scale.z;
+            else if (token == "ALBEDO")  ss >> cur.albedo.x >> cur.albedo.y >> cur.albedo.z;
+            else if (token == "SPECULAR")  ss >> cur.specular;
+            else if (token == "ROUGHNESS") ss >> cur.roughness;
+            else if (token == "COLLISION")
+            {
+                cur.hasCollision = true;
+                ss >> cur.collHalf.x >> cur.collHalf.y >> cur.collHalf.z;
+            }
+            else if (token == "LIGHT_COLOR")
+            {
+                cur.hasLight = true;
+                ss >> cur.lightColor.x >> cur.lightColor.y >> cur.lightColor.z;
+            }
+            else if (token == "LIGHT_RADIUS")    { cur.hasLight=true; ss>>cur.lightRadius; }
+            else if (token == "LIGHT_INTENSITY")  { cur.hasLight=true; ss>>cur.lightIntensity; }
+            else if (token == "LIGHT_FLICKER")    { int v=0; ss>>v; cur.lightFlicker=(v!=0); cur.hasLight=true; }
+        }
+    }
+
+    m_statusMsg   = "Loaded: " + path + " (" + std::to_string(entityCount) + " entities)";
+    m_statusTimer = 3.f;
+    std::cout << "[LevelEditor] Loaded " << entityCount << " entities from " << path << "\n";
+    return true;
+}
+
+// ── SpawnCurrent ─────────────────────────────────────────────
+void LevelEditor::SpawnCurrent(Engine& engine)
+{
+    World& world = engine.GetWorld();
+    glm::vec3 pos(m_spawnPos[0], m_spawnPos[1], m_spawnPos[2]);
+    glm::vec3 scale(m_spawnScale[0], m_spawnScale[1], m_spawnScale[2]);
+    glm::vec3 color(m_spawnColor[0], m_spawnColor[1], m_spawnColor[2]);
+    glm::vec3 lcolor(m_lightColor[0], m_lightColor[1], m_lightColor[2]);
+
+    switch (m_spawnType)
+    {
+    case 0: // Cube
+        {
+            EntityID e = world.CreateEntity("Cube");
+            auto* t = world.AddTransform(e); t->position=pos; t->scale=scale;
+            auto* m = world.AddMesh(e);
+            m->mesh=world.GetCubeMesh(); m->albedoColour=color;
+            m->specular=m_spawnSpecular; m->roughness=m_spawnRoughness;
+            if (m_spawnCollision) {
+                auto* col = world.AddCollision(e);
+                col->halfExtents = {0.5f,0.5f,0.5f};
+            }
+            break;
+        }
+    case 1: // Plane
+        {
+            EntityID e = world.CreateEntity("Plane");
+            auto* t = world.AddTransform(e); t->position=pos; t->scale=scale;
+            auto* m = world.AddMesh(e);
+            m->mesh=world.GetPlaneMesh(); m->albedoColour=color;
+            m->roughness=m_spawnRoughness;
+            break;
+        }
+    case 2: // Lamppost
+        Interaction::SpawnLamppost(world, pos, lcolor,
+                                   m_lightRadius, m_lightIntensity, m_lightFlicker);
+        break;
+    case 3: // Door
+        Interaction::SpawnDoor(world, pos);
+        break;
+    case 4: // Container
+        Interaction::SpawnContainer(world, pos, {});
+        break;
+    case 5: // Pickup
+        {
+            Item it; it.name=m_pickupName; it.quantity=1;
+            Interaction::SpawnPickup(world, pos, it);
+            break;
+        }
+    case 6: // Alarm
+        Interaction::SpawnAlarm(world, pos);
+        break;
+    case 7: // Point Light
+        {
+            EntityID e = world.CreateEntity("Light");
+            auto* t = world.AddTransform(e); t->position=pos;
+            auto* lc = world.AddLight(e);
+            lc->colour=lcolor; lc->radius=m_lightRadius;
+            lc->intensity=m_lightIntensity; lc->flicker=m_lightFlicker;
+            break;
+        }
+    }
 }
