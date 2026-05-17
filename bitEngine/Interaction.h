@@ -1,29 +1,25 @@
 #pragma once
 
 // ============================================================
-//  Interaction.h  —  World Interaction System
+//  Interaction.h  —  World Interaction Factories
 // ============================================================
-//  Higher-level interaction helpers layered on top of the
-//  basic InteractableComponent.  Provides ready-made
-//  interaction types for common gameplay patterns seen in
-//  Deus Ex and Assassin's Creed:
+//  Factory functions that spawn pre-wired interactive entities.
+//  Each returns the root EntityID so the caller can further
+//  configure or link entities.
 //
-//    Door        — swing open / close with optional lock state
-//    Container   — open a chest / drawer, reveal item list
-//    Terminal    — hacking mini-game entry point (stub)
-//    Alarm       — trigger / defuse an alarm circuit
-//    Pickup      — collect an item into the player's inventory
-//
-//  Each factory function creates an Entity with the right
-//  components already attached and returns the EntityID.
-//  The caller owns any custom onInteract logic via lambdas.
+//  Supported factory types
+//  -----------------------
+//    SpawnLamppost   — post + child light entity + interact toggle
+//    SpawnDoor       — openable / lockable door panel
+//    SpawnContainer  — searchable chest / drawer
+//    SpawnPickup     — collectible ground item
+//    SpawnAlarm      — armed alarm box with defuse interact
 // ============================================================
 
 #include <string>
 #include <vector>
 #include <functional>
 #include <glm/glm.hpp>
-
 #include "Input.h"
 #include "World.h"
 
@@ -38,36 +34,46 @@ struct Item
 // ── Interaction factory namespace ─────────────────────────────
 namespace Interaction
 {
+    /// Returns "[X] " prefix using the globally configured INTERACT_KEY.
     std::string GetInteractionKey();
 
+    // ── Lamppost ──────────────────────────────────────────────
+    /// Spawn a street/room lamp: a post entity + a child light entity.
+    /// The post is interactable (toggles the light on/off).
+    ///
+    /// @param world        Scene to add entities to.
+    /// @param basePosition Base (foot) of the post in world space.
+    /// @param lightColour  Warm amber by default.
+    /// @param lightRadius  Attenuation distance in metres.
+    /// @param intensity    Initial brightness scalar.
+    /// @param flicker      Enable candle-flicker simulation.
+    /// @returns EntityID of the post (root entity).
+    EntityID SpawnLamppost(World&           world,
+                           const glm::vec3& basePosition,
+                           glm::vec3        lightColour  = {1.0f, 0.85f, 0.5f},
+                           float            lightRadius  = 10.f,
+                           float            intensity    = 1.5f,
+                           bool             flicker      = true);
+
     // ── Door ──────────────────────────────────────────────────
-    /// Spawn a door entity.
-    /// @param world        Scene to add the entity to.
-    /// @param position     Hinge position in world space.
-    /// @param locked       If true, displays "Locked" prompt until unlocked.
-    /// @param onOpen       Optional callback when door opens.
     EntityID SpawnDoor(World&           world,
                        const glm::vec3& position,
-                       bool             locked   = false,
+                       bool             locked = false,
                        std::function<void()> onOpen = nullptr);
 
     // ── Container ─────────────────────────────────────────────
-    /// Spawn a container (chest / drawer / cabinet).
-    /// @param items        Items revealed when opened.
-    EntityID SpawnContainer(World&                 world,
-                            const glm::vec3&       position,
-                            std::vector<Item>      items,
+    EntityID SpawnContainer(World&            world,
+                            const glm::vec3&  position,
+                            std::vector<Item> items = {},
                             std::function<void(const std::vector<Item>&)> onOpen = nullptr);
 
     // ── Pickup ────────────────────────────────────────────────
-    /// Spawn a collectible item on the ground.
     EntityID SpawnPickup(World&           world,
                          const glm::vec3& position,
                          const Item&      item,
                          std::function<void(const Item&)> onPickup = nullptr);
 
     // ── Alarm ─────────────────────────────────────────────────
-    /// Spawn an alarm box that can be triggered or defused.
     EntityID SpawnAlarm(World&           world,
                         const glm::vec3& position,
                         std::function<void()> onTrigger = nullptr,

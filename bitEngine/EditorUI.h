@@ -18,8 +18,10 @@
 //  has feedback during gameplay.
 // ============================================================
 
+#include <memory>
 struct GLFWwindow;
 class  Engine;
+class  LevelEditor;
 
 class EditorUI
 {
@@ -45,8 +47,11 @@ private:
     void DrawRendererPanel   (Engine& engine);
     void DrawWorldPanel      (Engine& engine);
     void DrawPlayerPanel     (Engine& engine);
+    void DrawLevelEditorPanel(Engine& engine);
     void DrawHUD             (Engine& engine);   // Always-on
 
     bool m_showEditor     = false;  ///< F1 toggle
     int  m_selectedEntity = -1;     ///< Entity inspector selection
+
+    std::unique_ptr<LevelEditor> m_levelEditor;  ///< Save/load + placement panel
 };

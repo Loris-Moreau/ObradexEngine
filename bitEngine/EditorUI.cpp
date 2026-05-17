@@ -15,6 +15,7 @@
 #include <backends/imgui_impl_glfw.h>
 #include <backends/imgui_impl_opengl3.h>
 
+#include "LevelEditor.h"
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <cstdio>
@@ -49,6 +50,7 @@ void EditorUI::Init(GLFWwindow* window)
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 410");
+    m_levelEditor = std::make_unique<LevelEditor>();
 }
 
 // ── Destructor ────────────────────────────────────────────────
@@ -98,6 +100,11 @@ void EditorUI::Render(Engine& engine)
                 if (ImGui::BeginTabItem("Player"))
                 {
                     DrawPlayerPanel(engine);
+                    ImGui::EndTabItem();
+                }
+                if (ImGui::BeginTabItem("Level Editor"))
+                {
+                    DrawLevelEditorPanel(engine);
                     ImGui::EndTabItem();
                 }
                 ImGui::EndTabBar();
@@ -419,4 +426,11 @@ void EditorUI::DrawPlayerPanel(Engine& engine)
     {
         stats = PlayerStats{};
     }
+}
+
+// ── DrawLevelEditorPanel ──────────────────────────────────────
+void EditorUI::DrawLevelEditorPanel(Engine& engine)
+{
+    if (m_levelEditor)
+        m_levelEditor->RenderPanel(engine);
 }

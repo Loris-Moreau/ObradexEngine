@@ -174,6 +174,7 @@ xcopy /E /Y /I "$(ProjectDir)Shaders" "$(OutDir)Shaders"
 
     <!-- Editor UI -->
     <ClCompile Include="EditorUI.cpp" />
+    <ClCompile Include="LevelEditor.cpp" />
 
     <!-- GLAD — C file, needs C compiler not C++ -->
     <ClCompile Include="..\glad\src\glad.c" />
@@ -205,6 +206,7 @@ xcopy /E /Y /I "$(ProjectDir)Shaders" "$(OutDir)Shaders"
     <ClInclude Include="Player.h" />
     <ClInclude Include="Interaction.h" />
     <ClInclude Include="EditorUI.h" />
+    <ClInclude Include="LevelEditor.h" />
   </ItemGroup>
 
   <!-- ── SHADERS (visible in Solution Explorer) ────────────── -->

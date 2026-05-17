@@ -39,8 +39,8 @@ struct MeshComponent
 struct InteractableComponent
 {
     std::string           promptText;
-    float                 range     = 2.f;
-    bool                  enabled   = true;
+    float                 range   = 2.f;
+    bool                  enabled = true;
     std::function<void()> onInteract;
 };
 
@@ -61,12 +61,12 @@ struct TriggerComponent
     std::function<void()> onExit;
 };
 
-/// Solid AABB that blocks player movement.
+/// Solid AABB used by Player::ResolveCollision.
 /// halfExtents are in LOCAL space — multiplied by transform->scale at runtime.
 struct CollisionComponent
 {
     glm::vec3 halfExtents = {0.5f, 0.5f, 0.5f};
-    bool      solid       = true;   ///< If false, is ghost/trigger only
+    bool      solid       = true;
 };
 
 // ── EntityRecord ─────────────────────────────────────────────
@@ -81,7 +81,7 @@ struct EntityRecord
     InteractableComponent* interactable = nullptr;
     LightComponent*        light        = nullptr;
     TriggerComponent*      trigger      = nullptr;
-    CollisionComponent*    collision    = nullptr;  ///< nullptr = no solid collision
+    CollisionComponent*    collision    = nullptr;
 };
 
 // ── World ─────────────────────────────────────────────────────
@@ -95,17 +95,24 @@ public:
     void Update(float dt);
     void Render(Shader& sh) const;
 
+    // ── Entity lifecycle ──────────────────────────────────────
     EntityID      CreateEntity (const std::string& name = "Entity");
     void          DestroyEntity(EntityID id);
     EntityRecord* GetRecord    (EntityID id);
 
+    /// Remove ALL entities and component data, keeping primitive meshes.
+    /// Call before LoadLevel to start fresh.
+    void ClearLevel();
+
+    // ── Component attachment ──────────────────────────────────
     TransformComponent*    AddTransform    (EntityID id);
     MeshComponent*         AddMesh         (EntityID id);
     InteractableComponent* AddInteractable (EntityID id);
     LightComponent*        AddLight        (EntityID id);
     TriggerComponent*      AddTrigger      (EntityID id);
-    CollisionComponent*    AddCollision    (EntityID id);   ///< Add solid AABB
+    CollisionComponent*    AddCollision    (EntityID id);
 
+    // ── Component query ───────────────────────────────────────
     TransformComponent*    GetTransform    (EntityID id);
     MeshComponent*         GetMesh         (EntityID id);
     InteractableComponent* GetInteractable (EntityID id);
@@ -114,10 +121,18 @@ public:
 
     const std::vector<EntityRecord>& GetAllRecords() const { return m_records; }
 
+    // ── Primitive mesh accessors ──────────────────────────────
+    // Used by Interaction factories and the Level Editor to assign
+    // meshes to newly spawned entities without duplicating GPU data.
+    Mesh* GetCubeMesh()   { return m_cubeMesh.get();   }
+    Mesh* GetPlaneMesh()  { return m_planeMesh.get();  }
+    Mesh* GetSphereMesh() { return m_sphereMesh.get(); }
+
 private:
     void LoadTestLevel();
     void UpdateLights  (float dt);
-    void UpdateTriggers(float dt);
+
+    void ReserveComponentStorage();  // Called in Init + ClearLevel
 
     std::vector<EntityRecord>          m_records;
     std::vector<TransformComponent>    m_transforms;
