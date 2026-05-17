@@ -109,6 +109,7 @@
       <Command>
 if not exist "$(OutDir)Shaders" mkdir "$(OutDir)Shaders"
 xcopy /E /Y /I "$(ProjectDir)Shaders" "$(OutDir)Shaders"
+if not exist "$(OutDir)Levels" mkdir "$(OutDir)Levels"
       </Command>
       <Message>Copying shaders to output directory...</Message>
     </PostBuildEvent>
@@ -140,6 +141,7 @@ xcopy /E /Y /I "$(ProjectDir)Shaders" "$(OutDir)Shaders"
       <Command>
 if not exist "$(OutDir)Shaders" mkdir "$(OutDir)Shaders"
 xcopy /E /Y /I "$(ProjectDir)Shaders" "$(OutDir)Shaders"
+if not exist "$(OutDir)Levels" mkdir "$(OutDir)Levels"
       </Command>
       <Message>Copying shaders to output directory...</Message>
     </PostBuildEvent>
