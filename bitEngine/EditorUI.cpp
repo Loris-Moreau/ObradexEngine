@@ -111,14 +111,14 @@ void EditorUI::Render(Engine& engine)
                     DrawRendererPanel(engine);
                     ImGui::EndTabItem();
                 }
-                if (ImGui::BeginTabItem("World"))
-                {
-                    DrawWorldPanel(engine);
-                    ImGui::EndTabItem();
-                }
                 if (ImGui::BeginTabItem("Player"))
                 {
                     DrawPlayerPanel(engine);
+                    ImGui::EndTabItem();
+                }
+                if (ImGui::BeginTabItem("World"))
+                {
+                    DrawWorldPanel(engine);
                     ImGui::EndTabItem();
                 }
                 if (ImGui::BeginTabItem("Level Editor"))
@@ -301,76 +301,6 @@ void EditorUI::DrawRendererPanel(Engine& engine)
     }
 }
 
-// ── DrawWorldPanel ────────────────────────────────────────────
-void EditorUI::DrawWorldPanel(Engine& engine)
-{
-    World& world = engine.GetWorld();
-    const auto& records = world.GetAllRecords();
-
-    ImGui::SeparatorText("Entities");
-    ImGui::Text("%d entities in scene", (int)records.size());
-
-    ImGui::BeginChild("EntityList", ImVec2(0, 160), true);
-    for (const auto& rec : records)
-    {
-        if (!rec.active) continue;
-        char label[64];
-        std::snprintf(label, sizeof(label), "[%u] %s", rec.id, rec.name.c_str());
-
-        bool selected = (m_selectedEntity == (int)rec.id);
-        if (ImGui::Selectable(label, selected))
-            m_selectedEntity = (int)rec.id;
-    }
-    ImGui::EndChild();
-
-    // ── Component Inspector ───────────────────────────────────
-    if (m_selectedEntity >= 0)
-    {
-        auto* rec = world.GetRecord((EntityID)m_selectedEntity);
-        if (rec)
-        {
-            ImGui::SeparatorText(rec->name.c_str());
-
-            if (rec->transform)
-            {
-                if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    ImGui::DragFloat3("Position##t", &rec->transform->position.x, 0.05f);
-                    ImGui::DragFloat3("Scale##t",    &rec->transform->scale.x,    0.05f);
-                }
-            }
-            if (rec->mesh)
-            {
-                if (ImGui::CollapsingHeader("Mesh", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    ImGui::ColorEdit3("Albedo",    &rec->mesh->albedoColour.x);
-                    ImGui::SliderFloat("Specular", &rec->mesh->specular, 0.f, 1.f);
-                    ImGui::SliderFloat("Roughness",&rec->mesh->roughness, 0.f, 1.f);
-                }
-            }
-            if (rec->light)
-            {
-                if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    ImGui::ColorEdit3("Colour",    &rec->light->colour.x);
-                    ImGui::SliderFloat("Radius",   &rec->light->radius,   0.1f, 30.f);
-                    ImGui::SliderFloat("Intensity",&rec->light->intensity, 0.f,  5.f);
-                    ImGui::Checkbox   ("Flicker",  &rec->light->flicker);
-                }
-            }
-            if (rec->interactable)
-            {
-                if (ImGui::CollapsingHeader("Interactable", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    ImGui::Text("Prompt: %s", rec->interactable->promptText.c_str());
-                    ImGui::SliderFloat("Range", &rec->interactable->range, 0.5f, 10.f);
-                    ImGui::Checkbox("Enabled", &rec->interactable->enabled);
-                }
-            }
-        }
-    }
-}
-
 // ── DrawPlayerPanel ───────────────────────────────────────────
 void EditorUI::DrawPlayerPanel(Engine& engine)
 {
@@ -444,6 +374,76 @@ void EditorUI::DrawPlayerPanel(Engine& engine)
     if (ImGui::Button("Reset"))
     {
         stats = PlayerStats{};
+    }
+}
+
+// ── DrawWorldPanel ────────────────────────────────────────────
+void EditorUI::DrawWorldPanel(Engine& engine)
+{
+    World& world = engine.GetWorld();
+    const auto& records = world.GetAllRecords();
+
+    ImGui::SeparatorText("Entities");
+    ImGui::Text("%d entities in scene", (int)records.size());
+
+    ImGui::BeginChild("EntityList", ImVec2(0, 160), true);
+    for (const auto& rec : records)
+    {
+        if (!rec.active) continue;
+        char label[64];
+        std::snprintf(label, sizeof(label), "[%u] %s", rec.id, rec.name.c_str());
+
+        bool selected = (m_selectedEntity == (int)rec.id);
+        if (ImGui::Selectable(label, selected))
+            m_selectedEntity = (int)rec.id;
+    }
+    ImGui::EndChild();
+
+    // ── Component Inspector ───────────────────────────────────
+    if (m_selectedEntity >= 0)
+    {
+        auto* rec = world.GetRecord((EntityID)m_selectedEntity);
+        if (rec)
+        {
+            ImGui::SeparatorText(rec->name.c_str());
+
+            if (rec->transform)
+            {
+                if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    ImGui::DragFloat3("Position##t", &rec->transform->position.x, 0.05f);
+                    ImGui::DragFloat3("Scale##t",    &rec->transform->scale.x,    0.05f);
+                }
+            }
+            if (rec->mesh)
+            {
+                if (ImGui::CollapsingHeader("Mesh", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    ImGui::ColorEdit3("Albedo",    &rec->mesh->albedoColour.x);
+                    ImGui::SliderFloat("Specular", &rec->mesh->specular, 0.f, 1.f);
+                    ImGui::SliderFloat("Roughness",&rec->mesh->roughness, 0.f, 1.f);
+                }
+            }
+            if (rec->light)
+            {
+                if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    ImGui::ColorEdit3("Colour",    &rec->light->colour.x);
+                    ImGui::SliderFloat("Radius",   &rec->light->radius,   0.1f, 30.f);
+                    ImGui::SliderFloat("Intensity",&rec->light->intensity, 0.f,  5.f);
+                    ImGui::Checkbox   ("Flicker",  &rec->light->flicker);
+                }
+            }
+            if (rec->interactable)
+            {
+                if (ImGui::CollapsingHeader("Interactable", ImGuiTreeNodeFlags_DefaultOpen))
+                {
+                    ImGui::Text("Prompt: %s", rec->interactable->promptText.c_str());
+                    ImGui::SliderFloat("Range", &rec->interactable->range, 0.5f, 10.f);
+                    ImGui::Checkbox("Enabled", &rec->interactable->enabled);
+                }
+            }
+        }
     }
 }
 

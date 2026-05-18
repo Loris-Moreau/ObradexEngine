@@ -460,7 +460,7 @@ void LevelEditor::RenderPanel(Engine& engine)
         ImGui::SetNextItemWidth(130.f);
         ImGui::InputText("##iname", m_newItemName, sizeof(m_newItemName));
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(50.f);
+        ImGui::SetNextItemWidth(75.f);
         ImGui::InputInt("##iqty", &m_newItemQty);
         m_newItemQty = std::max(1, m_newItemQty);
         ImGui::SameLine();
