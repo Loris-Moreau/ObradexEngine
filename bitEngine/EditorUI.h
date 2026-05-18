@@ -48,10 +48,12 @@ private:
     void DrawWorldPanel      (Engine& engine);
     void DrawPlayerPanel     (Engine& engine);
     void DrawLevelEditorPanel(Engine& engine);
+    void DrawContainerPopup  (Engine& engine);   // 3x3 item grid when a container is open
     void DrawHUD             (Engine& engine);   // Always-on
 
     bool m_showEditor     = false;  ///< F1 toggle
     int  m_selectedEntity = -1;     ///< Entity inspector selection
 
     std::unique_ptr<LevelEditor> m_levelEditor;  ///< Save/load + placement panel
+    bool m_wasContainerOpen = false;             ///< Tracks open state for cursor lock/unlock
 };

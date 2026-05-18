@@ -16,6 +16,7 @@
 #include <backends/imgui_impl_opengl3.h>
 
 #include "LevelEditor.h"
+#include "Input.h"
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <cstdio>
@@ -77,6 +78,15 @@ void EditorUI::Render(Engine& engine)
     ImGui::NewFrame();
 
     // ── Always-on HUD (interact prompt, crosshair) ────────────
+    // ── Cursor lock / unlock when container popup opens or closes ──
+    bool containerNowOpen = engine.GetWorld().HasOpenContainer();
+    if (containerNowOpen != m_wasContainerOpen)
+    {
+        engine.GetWindow().SetCursorLocked(!containerNowOpen);
+        m_wasContainerOpen = containerNowOpen;
+    }
+
+    DrawContainerPopup(engine);
     DrawHUD(engine);
 
     // ── Editor panel (F1 toggle) ──────────────────────────────
@@ -441,4 +451,194 @@ void EditorUI::DrawLevelEditorPanel(Engine& engine)
 {
     if (m_levelEditor)
         m_levelEditor->RenderPanel(engine);
+}
+
+// ── DrawContainerPopup ────────────────────────────────────────
+// Shows a 3x3 item grid whenever a ContainerComponent has isOpen==true.
+// The popup is styled with the engine's amber/dark palette.
+//
+//  ┌──────────────────────────┐
+//  │  Container  [Name]       │
+//  │  ┌────┬────┬────┐        │
+//  │  │Item│Item│    │        │
+//  │  ├────┼────┼────┤        │
+//  │  │    │    │    │        │
+//  │  ├────┼────┼────┤        │
+//  │  │    │    │    │        │
+//  │  └────┴────┴────┘        │
+//  │  [Grab All]  [Close]     │
+//  └──────────────────────────┘
+void EditorUI::DrawContainerPopup(Engine& engine)
+{
+    World& world = engine.GetWorld();
+
+    // Find first open container
+    ContainerComponent* container = nullptr;
+    EntityID            containerID = kNullEntity;
+    std::string         containerName;
+    for (auto& rec : world.GetAllRecords())
+    {
+        if (!rec.active || !rec.container || !rec.container->isOpen) continue;
+        container     = rec.container;
+        containerID   = rec.id;
+        containerName = rec.name;
+        break;
+    }
+    if (!container) return;
+
+    // ── Style ─────────────────────────────────────────────────
+    ImGui::PushStyleColor(ImGuiCol_WindowBg,    ImVec4(0.08f, 0.08f, 0.08f, 0.97f));
+    ImGui::PushStyleColor(ImGuiCol_Border,      ImVec4(0.55f, 0.40f, 0.10f, 0.90f));
+    ImGui::PushStyleColor(ImGuiCol_TitleBg,     ImVec4(0.18f, 0.12f, 0.03f, 1.00f));
+    ImGui::PushStyleColor(ImGuiCol_TitleBgActive,ImVec4(0.28f, 0.18f, 0.04f, 1.00f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 6.f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,  ImVec2(12.f, 12.f));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,    ImVec2(6.f, 6.f));
+
+    // Centre popup on screen
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f),
+                            ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+    ImGui::SetNextWindowSize(ImVec2(330.f, 370.f), ImGuiCond_Always);
+
+    char title[64];
+    std::snprintf(title, sizeof(title), "Container  —  %s", containerName.c_str());
+
+    bool windowOpen = true;
+    ImGui::Begin(title, &windowOpen,
+                 ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+                 ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoBringToFrontOnFocus);
+
+    auto& items = container->items;
+
+    // ── 3x3 grid ──────────────────────────────────────────────
+    const float kSlotSize  = 82.f;
+    const float kSlotPad   =  6.f;
+    ImDrawList* dl         = ImGui::GetWindowDrawList();
+    ImVec2      winPos     = ImGui::GetWindowPos();
+    ImVec2      contentOff = ImGui::GetCursorPos();  // start of content area
+
+    int  grabbedIdx = -1;  // index of item clicked this frame
+
+    for (int row = 0; row < 3; ++row)
+    {
+        for (int col = 0; col < 3; ++col)
+        {
+            if (col > 0) ImGui::SameLine(0.f, kSlotPad);
+
+            int idx = row * 3 + col;
+            ImGui::PushID(idx);
+
+            ImVec2 slotCursor = ImGui::GetCursorPos();
+            // Absolute position for the draw list
+            ImVec2 abs = ImVec2(winPos.x + slotCursor.x,
+                                winPos.y + slotCursor.y);
+
+            bool hasItem = (idx < (int)items.size());
+
+            // ── Slot background ───────────────────────────────
+            ImVec4 slotBg = hasItem
+                ? ImVec4(0.22f, 0.16f, 0.06f, 1.f)   // Amber tint if occupied
+                : ImVec4(0.10f, 0.10f, 0.10f, 0.8f);  // Dark empty
+
+            ImGui::PushStyleColor(ImGuiCol_Button,        slotBg);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
+                hasItem ? ImVec4(0.38f, 0.25f, 0.05f, 1.f)
+                        : ImVec4(0.15f, 0.15f, 0.15f, 1.f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive,
+                ImVec4(0.55f, 0.35f, 0.05f, 1.f));
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.f);
+
+            bool clicked = ImGui::Button("##slot", ImVec2(kSlotSize, kSlotSize));
+
+            ImGui::PopStyleVar();
+            ImGui::PopStyleColor(3);
+
+            if (hasItem)
+            {
+                const Item& item = items[idx];
+
+                // Item name — centred in slot, max ~10 chars before wrapping
+                float textW = ImGui::CalcTextSize(item.name.c_str()).x;
+                float textX = abs.x + (kSlotSize - std::min(textW, kSlotSize - 8.f)) * 0.5f;
+                dl->AddText(ImVec2(textX, abs.y + 10.f),
+                            IM_COL32(240, 195, 80, 255),
+                            item.name.c_str());
+
+                // Quantity badge — bottom-right corner
+                char qty[16];
+                std::snprintf(qty, sizeof(qty), "x%d", item.quantity);
+                ImVec2 qSize = ImGui::CalcTextSize(qty);
+                dl->AddText(ImVec2(abs.x + kSlotSize - qSize.x - 6.f,
+                                   abs.y + kSlotSize - qSize.y - 6.f),
+                            IM_COL32(180, 180, 180, 200),
+                            qty);
+
+                if (clicked) grabbedIdx = idx;
+            }
+
+            // Slot border
+            dl->AddRect(abs, ImVec2(abs.x + kSlotSize, abs.y + kSlotSize),
+                        hasItem ? IM_COL32(140, 100, 20, 180)
+                                : IM_COL32(60,  60,  60, 120),
+                        4.f, 0, 1.5f);
+
+            ImGui::PopID();
+        }
+    }
+
+    // ── Handle grab (outside the loop to avoid iterator invalidation) ──
+    if (grabbedIdx >= 0 && grabbedIdx < (int)items.size())
+    {
+        const Item& it = items[grabbedIdx];
+        std::cout << "[Container] Grabbed: " << it.name << " x" << it.quantity << "\n";
+        items.erase(items.begin() + grabbedIdx);
+    }
+
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+
+    // ── Status line ───────────────────────────────────────────
+    if (items.empty())
+        ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,1.f), "Container is empty.");
+    else
+        ImGui::TextColored(ImVec4(0.7f,0.7f,0.7f,1.f),
+                           "%d item(s) remaining", (int)items.size());
+
+    ImGui::Spacing();
+
+    // ── Buttons ───────────────────────────────────────────────
+    float btnW = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+
+    ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.30f, 0.20f, 0.04f, 1.f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.50f, 0.32f, 0.06f, 1.f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.70f, 0.45f, 0.08f, 1.f));
+
+    if (ImGui::Button("Grab All", ImVec2(btnW, 0.f)) && !items.empty())
+    {
+        for (auto& it : items)
+            std::cout << "[Container] Grabbed: " << it.name << " x" << it.quantity << "\n";
+        items.clear();
+        // Prompt player now that the container is empty
+        auto* rec = world.GetRecord(containerID);
+        if (rec && rec->interactable)
+            rec->interactable->promptText =
+                std::string("[") + Input::GetKeyName(INTERACT_KEY) + "] Search  (empty)";
+    }
+
+    ImGui::SameLine();
+
+    if (ImGui::Button("Close", ImVec2(btnW, 0.f)))
+        windowOpen = false;
+
+    ImGui::PopStyleColor(3);
+    ImGui::End();
+
+    ImGui::PopStyleVar(3);
+    ImGui::PopStyleColor(4);
+
+    // Close on X button or explicit Close click
+    if (!windowOpen)
+        container->isOpen = false;
 }

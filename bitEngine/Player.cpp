@@ -28,15 +28,25 @@ void Player::Init()
 // ── Update ────────────────────────────────────────────────────
 void Player::Update(float dt, const Input& input, World& world)
 {
+    // Freeze look + movement while a container grid is open so the
+    // player can click ImGui slots without the camera spinning.
+    bool containerOpen = world.HasOpenContainer();
+
     UpdateMoveState(input, dt);
-    HandleMouseLook(input, dt);
-    HandleMovement(input, dt);
+
+    if (!containerOpen)
+    {
+        HandleMouseLook(input, dt);
+        HandleMovement(input, dt);
+    }
+
     ApplyGravity(dt);
-
-    ResolveCollision(world);   // push out of solid boxes + floor
-
+    ResolveCollision(world);
     UpdateCameraHeight(dt);
-    HandleActions(input, world);
+
+    if (!containerOpen)
+        HandleActions(input, world);
+
     CheckTriggers(world);
 }
 

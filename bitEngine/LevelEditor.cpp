@@ -91,7 +91,12 @@ bool LevelEditor::SaveLevel(const World& world, const std::string& path)
 
         // Transform
         auto& t = *rec.transform;
-        Wf3(file, "POS",   t.position.x, t.position.y, t.position.z);
+        // For lamppost the transform is at the post CENTER (base + halfHeight).
+        // SpawnLamppost expects the BASE, so we subtract halfHeight on save
+        // so the round-trip is: save base → load base → SpawnLamppost(base) → center stored.
+        float saveY = (type == "lamppost") ? t.position.y - t.scale.y * 0.5f
+                                           : t.position.y;
+        Wf3(file, "POS",   t.position.x, saveY, t.position.z);
         Wf3(file, "SCALE", t.scale.x,    t.scale.y,    t.scale.z);
 
         // Mesh
@@ -119,6 +124,20 @@ bool LevelEditor::SaveLevel(const World& world, const std::string& path)
             Wf1(file, "LIGHT_RADIUS",    rec.light->radius);
             Wf1(file, "LIGHT_INTENSITY", rec.light->intensity);
             Wi1(file, "LIGHT_FLICKER",   rec.light->flicker ? 1 : 0);
+        }
+
+        // Container items — one ITEM line per entry
+        // Format: ITEM <name> <quantity>
+        // (names must not contain spaces; replace with _ if needed)
+        if (rec.container)
+        {
+            for (const auto& item : rec.container->items)
+            {
+                // Replace spaces with underscores so the parser can split on whitespace
+                std::string safeName = item.name;
+                for (char& c : safeName) if (c == ' ') c = '_';
+                file << "  ITEM " << safeName << " " << item.quantity << "\n";
+            }
         }
 
         file << "END\n\n";
@@ -158,6 +177,7 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
         glm::vec3   lightColor{1,0.85f,0.5f};
         float       lightRadius=10.f, lightIntensity=1.5f;
         bool        lightFlicker=true;
+        std::vector<Item> items;  // for container entities
     };
 
     bool inEntity = false;
@@ -179,7 +199,7 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
         }
         else if (cur.type == "container")
         {
-            Interaction::SpawnContainer(world, cur.pos, {});
+            Interaction::SpawnContainer(world, cur.pos, cur.items);
         }
         else if (cur.type == "pickup")
         {
@@ -271,6 +291,15 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
             else if (token == "LIGHT_RADIUS")    { cur.hasLight=true; ss>>cur.lightRadius; }
             else if (token == "LIGHT_INTENSITY")  { cur.hasLight=true; ss>>cur.lightIntensity; }
             else if (token == "LIGHT_FLICKER")    { int v=0; ss>>v; cur.lightFlicker=(v!=0); cur.hasLight=true; }
+            else if (token == "ITEM")
+            {
+                // Format: ITEM <name_no_spaces> <quantity>
+                Item it;
+                ss >> it.name >> it.quantity;
+                // Restore underscores-as-spaces convention
+                for (char& c : it.name) if (c == '_') c = ' ';
+                cur.items.push_back(it);
+            }
         }
     }
 
@@ -321,7 +350,8 @@ void LevelEditor::SpawnCurrent(Engine& engine)
             Interaction::SpawnDoor(world, pos);
             break;
         case 4: // Container
-            Interaction::SpawnContainer(world, pos, {});
+            Interaction::SpawnContainer(world, pos, m_containerItems);
+            if (m_clearItemsAfterPlace) m_containerItems.clear();
             break;
         case 5: // Pickup
         {
@@ -404,6 +434,54 @@ void LevelEditor::RenderPanel(Engine& engine)
         ImGui::SliderFloat("Intensity", &m_lightIntensity, 0.f,  5.f);
         ImGui::Checkbox   ("Flicker",   &m_lightFlicker);
     }
+    if (m_spawnType == 4) // Container — item editor
+    {
+        ImGui::SeparatorText("Container Contents");
+
+        // ── Item list ─────────────────────────────────────────
+        if (m_containerItems.empty())
+            ImGui::TextDisabled("(empty — no items)");
+
+        int removeIdx = -1;
+        for (int i = 0; i < (int)m_containerItems.size(); ++i)
+        {
+            ImGui::PushID(i);
+            auto& it = m_containerItems[i];
+            ImGui::Text("%-20s x%d", it.name.c_str(), it.quantity);
+            ImGui::SameLine();
+            if (ImGui::SmallButton("x")) removeIdx = i;
+            ImGui::PopID();
+        }
+        if (removeIdx >= 0)
+            m_containerItems.erase(m_containerItems.begin() + removeIdx);
+
+        // ── Add item form ─────────────────────────────────────
+        ImGui::Spacing();
+        ImGui::SetNextItemWidth(130.f);
+        ImGui::InputText("##iname", m_newItemName, sizeof(m_newItemName));
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(50.f);
+        ImGui::InputInt("##iqty", &m_newItemQty);
+        m_newItemQty = std::max(1, m_newItemQty);
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Add Item"))
+        {
+            Item it;
+            it.name     = m_newItemName;
+            it.quantity = m_newItemQty;
+            m_containerItems.push_back(it);
+        }
+
+        if (!m_containerItems.empty())
+        {
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Clear All"))
+                m_containerItems.clear();
+        }
+
+        ImGui::Checkbox("Clear list after placing", &m_clearItemsAfterPlace);
+    }
+
     if (m_spawnType == 5) // pickup
     {
         ImGui::InputText("Item name", m_pickupName, sizeof(m_pickupName));

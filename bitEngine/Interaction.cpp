@@ -131,6 +131,9 @@ EntityID SpawnDoor(World&            world,
 }
 
 // ── SpawnContainer ────────────────────────────────────────────
+// The onInteract callback just sets container->isOpen = true.
+// The actual item grid + grab logic is handled by EditorUI::DrawContainerPopup,
+// which renders a 3x3 ImGui grid and removes items as the player grabs them.
 EntityID SpawnContainer(World&                world,
                         const glm::vec3&      position,
                         std::vector<Item>     items,
@@ -147,23 +150,29 @@ EntityID SpawnContainer(World&                world,
     m->roughness    = 0.9f;
     m->mesh         = world.GetCubeMesh();
 
-    auto opened = std::make_shared<bool>(false);
-    auto* ia    = world.AddInteractable(e);
+    // ContainerComponent holds the item list.
+    // EditorUI reads isOpen and renders the grid popup.
+    auto* container    = world.AddContainer(e);
+    container->items   = std::move(items);
+    container->isOpen  = false;
+
+    auto* ia = world.AddInteractable(e);
     ia->range      = 2.0f;
     ia->promptText = GetInteractionKey() + "Search";
 
-    ia->onInteract = [opened, items, onOpen, ia]()
+    ia->onInteract = [e, &world, ia]()
     {
-        if (*opened) { std::cout << "[Interaction] Already searched.\n"; return; }
-        *opened = true;
-        ia->promptText = "(Empty)";
-        ia->enabled    = false;
+        auto* rec = world.GetRecord(e);
+        if (!rec || !rec->container) return;
 
-        std::cout << "[Interaction] Container opened.\n";
-        for (const auto& item : items)
-            std::cout << "  - " << item.name << " x" << item.quantity << "\n";
-
-        if (onOpen) onOpen(items);
+        if (rec->container->items.empty())
+        {
+            // Already looted — update prompt so player knows
+            ia->promptText = GetInteractionKey() + "Search  (empty)";
+            rec->container->isOpen = true;   // still show the empty grid
+            return;
+        }
+        rec->container->isOpen = true;
     };
 
     return e;

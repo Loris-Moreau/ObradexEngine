@@ -69,6 +69,24 @@ struct CollisionComponent
     bool      solid       = true;
 };
 
+// ── Item ─────────────────────────────────────────────────────
+// Defined here (not in Interaction.h) so World, EditorUI, and
+// Interaction all share one type without circular includes.
+struct Item
+{
+    std::string name;
+    std::string description;
+    int         quantity = 1;
+};
+
+/// Attached to searchable entities (crates, chests, drawers).
+/// The UI reads isOpen and renders the grid popup.
+struct ContainerComponent
+{
+    std::vector<Item> items;       ///< Remaining items; elements removed as player grabs them
+    bool              isOpen = false;  ///< Set true by onInteract; cleared by the UI on close
+};
+
 // ── EntityRecord ─────────────────────────────────────────────
 struct EntityRecord
 {
@@ -82,6 +100,7 @@ struct EntityRecord
     LightComponent*        light        = nullptr;
     TriggerComponent*      trigger      = nullptr;
     CollisionComponent*    collision    = nullptr;
+    ContainerComponent*    container    = nullptr;  ///< nullptr = not a container
 };
 
 // ── World ─────────────────────────────────────────────────────
@@ -111,6 +130,7 @@ public:
     LightComponent*        AddLight        (EntityID id);
     TriggerComponent*      AddTrigger      (EntityID id);
     CollisionComponent*    AddCollision    (EntityID id);
+    ContainerComponent*    AddContainer    (EntityID id);
 
     // ── Component query ───────────────────────────────────────
     TransformComponent*    GetTransform    (EntityID id);
@@ -120,6 +140,10 @@ public:
     EntityID FindNearestInteractable(const glm::vec3& point, float range) const;
 
     const std::vector<EntityRecord>& GetAllRecords() const { return m_records; }
+
+    /// True if any container entity currently has isOpen == true.
+    /// Used by Player::Update to suppress movement while the grid popup is shown.
+    bool HasOpenContainer() const;
 
     // ── Primitive mesh accessors ──────────────────────────────
     // Used by Interaction factories and the Level Editor to assign
@@ -141,6 +165,7 @@ private:
     std::vector<LightComponent>        m_lights;
     std::vector<TriggerComponent>      m_triggers;
     std::vector<CollisionComponent>    m_collisions;
+    std::vector<ContainerComponent>    m_containers;
 
     std::unique_ptr<Mesh> m_cubeMesh;
     std::unique_ptr<Mesh> m_planeMesh;

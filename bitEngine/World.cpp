@@ -35,6 +35,7 @@ void World::ReserveComponentStorage()
     m_interactables.reserve(MAX);
     m_triggers.reserve(MAX);
     m_collisions.reserve(MAX);
+    m_containers.reserve(MAX);
 }
 
 // ── Init ──────────────────────────────────────────────────────
@@ -59,6 +60,7 @@ void World::ClearLevel()
     m_interactables.clear();
     m_triggers.clear();
     m_collisions.clear();
+    m_containers.clear();
     m_nextID = 0;
 
     // Primitive meshes are kept — they are GPU resources that persist
@@ -104,6 +106,15 @@ void World::LoadTestLevel()
         auto* col = AddCollision(e);
         col->halfExtents = {0.5f, 0.5f, 0.5f};
     }
+
+    // ── Searchable container with starter loot ───────────────
+    Interaction::SpawnContainer(*this, {-1.f, 0.2f, 4.f},
+        {
+            {"Lockpick",  "A steel pick",  3},
+            {"Medkit",    "First aid",     1},
+            {"Ammo",      "9mm rounds",   12},
+        }
+    );
 
     // ── Lamppost — via Interaction factory ────────────────────
     Interaction::SpawnLamppost(*this, {6.f, 0.f, 0.f});
@@ -246,10 +257,26 @@ CollisionComponent* World::AddCollision(EntityID id)
     if (auto* r = GetRecord(id)) r->collision = c;
     return c;
 }
+ContainerComponent* World::AddContainer(EntityID id)
+{
+    m_containers.push_back({});
+    auto* c = &m_containers.back();
+    if (auto* r = GetRecord(id)) r->container = c;
+    return c;
+}
 
 TransformComponent*    World::GetTransform   (EntityID id) { auto* r=GetRecord(id); return r?r->transform   :nullptr; }
 MeshComponent*         World::GetMesh        (EntityID id) { auto* r=GetRecord(id); return r?r->mesh        :nullptr; }
 InteractableComponent* World::GetInteractable(EntityID id) { auto* r=GetRecord(id); return r?r->interactable:nullptr; }
+
+// ── HasOpenContainer ─────────────────────────────────────────
+bool World::HasOpenContainer() const
+{
+    for (const auto& rec : m_records)
+        if (rec.active && rec.container && rec.container->isOpen)
+            return true;
+    return false;
+}
 
 // ── FindNearestInteractable ───────────────────────────────────
 EntityID World::FindNearestInteractable(const glm::vec3& point, float range) const

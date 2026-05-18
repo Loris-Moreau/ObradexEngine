@@ -1,5 +1,7 @@
 #pragma once
 
+#include "World.h"  // for Item
+
 // ============================================================
 //  LevelEditor.h  —  ImGui Level Editor + Save/Load
 // ============================================================
@@ -92,6 +94,12 @@ private:
 
     // Pickup name
     char      m_pickupName[64] = "Item";
+
+    // Container item editor
+    std::vector<Item> m_containerItems;           ///< Items for the next spawned container
+    char              m_newItemName[64] = "Item"; ///< Staging field for the add-item form
+    int               m_newItemQty      = 1;      ///< Staging quantity
+    bool              m_clearItemsAfterPlace = true; ///< Clear list after each Place click
 
     // -- Status message shown after save/load --
     std::string m_statusMsg;

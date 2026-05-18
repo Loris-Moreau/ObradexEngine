@@ -23,13 +23,8 @@
 #include "Input.h"
 #include "World.h"
 
-// ── Item (simple inventory POD) ───────────────────────────────
-struct Item
-{
-    std::string name;
-    std::string description;
-    int         quantity = 1;
-};
+// Item is defined in World.h (included below via World.h)
+// so all subsystems share one type without circular includes.
 
 // ── Interaction factory namespace ─────────────────────────────
 namespace Interaction
