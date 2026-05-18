@@ -382,7 +382,7 @@ m->mesh         = &cubeMesh;
 m->albedoColour = {0.45f, 0.35f, 0.22f};
 
 auto* ia = world.AddInteractable(e);
-ia->promptText = "[E] Open crate";
+ia->promptText = "[F] Open crate";
 ia->onInteract = []() { /* … */ };
 
 // Query
@@ -482,7 +482,7 @@ The **HUD** (crosshair + interact prompt + movement state badge) is always drawn
 ```
   ┌──────────────────────────────────────────────────────────────┐
   │  1. BeginCapture()                                           │
-  │     Bind low-res FBO (e.g. 320 × 180)                       │
+  │     Bind low-res FBO (e.g. 320 × 180)                        │
   │     glClear(COLOR | DEPTH)                                   │
   ├──────────────────────────────────────────────────────────────┤
   │  2. RenderWorld()                                            │
@@ -556,7 +556,8 @@ Key uniforms: `u_Scene` (sampler2D), `u_Palette` (sampler1D), `u_PaletteSize`, `
 | Left Ctrl | Crouch; if sprinting → slide |
 | Space | Jump (only from ground, not while crouching) |
 | Q | Lean left (only when not sprinting) |
-| E | Lean right *or* interact (E lean only when stationary) |
+| E | Lean right |
+| F | interact |
 | F1 | Toggle editor panel |
 | Escape | Toggle pause (freezes Update; editor still ticks) |
 
