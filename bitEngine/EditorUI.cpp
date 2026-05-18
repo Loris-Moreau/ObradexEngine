@@ -20,6 +20,7 @@
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <cstdio>
+#include <iostream>
 
 // ── Constructor / Destructor ────────────────────────────────
 // Defined here (not in the header) so that the compiler sees
