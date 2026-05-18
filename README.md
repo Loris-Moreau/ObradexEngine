@@ -16,6 +16,10 @@
 - **Point light flickering** — multi-sine candle/fire simulation
 - **Dear ImGui editor** — live post-process tuning, entity inspector, player stats, FPS sparkline
 
+## Full Documentation
+
+See [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md) for the complete subsystem reference, rendering pipeline breakdown, shader uniform tables, and extension guide.
+
 ## Quick Start
 
 ```bash
@@ -68,10 +72,6 @@ third_party/    — GLAD, ImGui, stb, GLM (populated by setup.sh)
 | GLAD | OpenGL function loader | `setup.sh` (via `glad2` pip package) |
 | Dear ImGui 1.90.1 | Editor UI | `setup.sh` |
 | stb_image | Texture loading | `setup.sh` |
-
-## Full Documentation
-
-See [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md) for the complete subsystem reference, rendering pipeline breakdown, shader uniform tables, and extension guide.
 
 ## License
 
