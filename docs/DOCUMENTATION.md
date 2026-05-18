@@ -586,17 +586,5 @@ Replace `World::LoadTestLevel()` with a JSON or binary loader. The component API
 ---
 
 ## 11. Known Limitations & Roadmap
-
-| Area | Current State | Planned |
-|------|--------------|---------|
-| Collision | Floor-plane only (y = 0) | Ray-cast vs mesh AABB tree |
-| Shadows | None | Single directional shadow map |
-| Audio | Not implemented | OpenAL-Soft or miniaudio integration |
-| Level loading | Hardcoded test level | JSON / binary scene format |
-| Animation | None | Skeletal animation via Assimp |
-| Vaulting | State stub only | Auto-climb ledges ≤ 1 m high |
-| Texture system | Stub uniforms | Full material system with normal maps |
-| Inventory | Print to console | Diegetic UI (Deus Ex style) |
-| AI / stealth | Not implemented | Visibility cones + noise detection |
-| Networking | Not planned | — |
+[Roadmap & Issues](https://github.com/Loris-Moreau/ObradexEngine/tree/main/docs/RoadmapAndIssues.md)
 

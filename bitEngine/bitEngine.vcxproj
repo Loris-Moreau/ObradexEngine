@@ -223,6 +223,10 @@ if not exist "$(OutDir)Levels" mkdir "$(OutDir)Levels"
     <None Include="..\setup.sh" />
     <None Include="..\README.md" />
   </ItemGroup>
+  <ItemGroup>
+    <Content Include="..\docs\RoadmapAndIssues.md" />
+    <Content Include="..\docs\DOCUMENTATION.md" />
+  </ItemGroup>
 
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets" />
