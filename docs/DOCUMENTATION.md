@@ -1,6 +1,6 @@
 # ObradexEngine — Technical Documentation
 
-> **Version:** 0.1.0 (Pre-Alpha)  
+> **Version:** 0.7.5 (Pre-Alpha)  
 > **Engine style:** 8-bit pixel-art meets *Return of the Obra Dinn*  
 > **Gameplay reference:** *Deus Ex* + *Assassin's Creed Syndicate* (first-person)
 
