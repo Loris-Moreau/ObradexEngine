@@ -31,7 +31,7 @@
 8. [Shader Reference](#8-shader-reference)
 9. [Controls](#9-controls)
 10. [Extending the Engine](#10-extending-the-engine)
-11. [Known Limitations & Roadmap](#11-known-limitations--roadmap)
+11. [Roadmap & Current Issues](https://github.com/Loris-Moreau/ObradexEngine/tree/main/docs/RoadmapAndIssues.md)
 
 ---
 
@@ -584,7 +584,3 @@ Replace `World::LoadTestLevel()` with a JSON or binary loader. The component API
 3. Bind to texture unit 2, set `u_HasTexture = 1` in the world shader, and sample `u_DiffuseMap` in the fragment shader (stub uniform already declared in world.frag).
 
 ---
-
-## 11. Known Limitations & Roadmap
-[Roadmap & Issues](https://github.com/Loris-Moreau/ObradexEngine/tree/main/docs/RoadmapAndIssues.md)
-
