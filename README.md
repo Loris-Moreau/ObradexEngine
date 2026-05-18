@@ -1,7 +1,7 @@
 # ObradexEngine
 
-> **Pre-Alpha** — 8-bit pixel-art meets *Return of the Obra Dinn*  
-> First-person immersive-sim engine inspired by *Deus Ex* + *Assassin's Creed Syndicate*
+> **Pre-Alpha** — Visual style inspired by *Return of the Obra Dinn* 
+> First-person immersive-sim engine inspired by *Deus Ex* & *Assassin's Creed Syndicate*
 
 ---
 
