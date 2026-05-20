@@ -17,7 +17,9 @@
 | Networking                      | Not planned                                     | No. Will think about it if this gets on steam                             |
 
 # 2. List of current issues/bug
-| Bug                                                           | Current State | Potential Fix             |
-|---------------------------------------------------------------|---------------|---------------------------|
-| Duplication of items on level load & pickup item naming       | In Progress   | Check Level Load Function |
-| Need to check if crouch properly resizes the player collision | Planned       | Check it                  |
+| Bug                                                                                                   | Current State | Potential Fix             |
+|-------------------------------------------------------------------------------------------------------|---------------|---------------------------|
+| Duplication of items on level load & pickup item naming *(the light duplicate)*                       | In Progress   | Check Level Load Function |
+| Need to check if crouch properly resizes the player collision                                         | Planned       | Check it                  |
+| Need to press interaction twice to pickup item                                                        | Planned       | Check it                  |
+| Door resize instead of pivoting and need to press interaction key multiple times for the door to open | Planned       | Check it                  |
