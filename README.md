@@ -19,6 +19,7 @@
 ## Full Documentation
 
 See [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md) for the complete subsystem reference, rendering pipeline breakdown, shader uniform tables, and extension guide.
+See [`docs/RoadmapAndIssues.md`](docs/RoadmapAndIssues.md) for the Ropadmap and current Issues of the project as well as past issues and how they were fixed.
 
 ## Quick Start
 
