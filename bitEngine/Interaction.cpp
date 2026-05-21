@@ -198,7 +198,7 @@ EntityID SpawnContainer(World&                world,
     container->isOpen  = false;
 
     auto* ia = world.AddInteractable(e);
-    ia->range      = 2.0f;
+    ia->range      = 2.25f;
     ia->promptText = GetInteractionKey() + "Search";
 
     ia->onInteract = [e, &world, ia]()
@@ -238,7 +238,7 @@ EntityID SpawnPickup(World&           world,
     m->mesh         = world.GetCubeMesh();
 
     auto* ia = world.AddInteractable(e);
-    ia->range      = 2.0f;
+    ia->range      = 2.25f;
     ia->promptText = GetInteractionKey() + "Pick up " + item.name;
 
     ia->onInteract = [e, &world, item, onPickup, ia]()
@@ -281,7 +281,7 @@ EntityID SpawnAlarm(World&            world,
 
     auto armed = std::make_shared<bool>(true);
     auto* ia   = world.AddInteractable(e);
-    ia->range      = 1.5f;
+    ia->range      = 2.0f;
     ia->promptText = GetInteractionKey() + "Defuse alarm";
 
     ia->onInteract = [armed, &world, lightE, onDefuse, ia]()
