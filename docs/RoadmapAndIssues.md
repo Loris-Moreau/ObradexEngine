@@ -49,7 +49,7 @@ All fixes are listed chronologically. Where the same root cause was addressed mo
 
 ---
 
-**[FIX] `setup.sh` closes immediately on Windows without doing anything (other than creating `third_party/`)*
+**[FIX] `setup.sh` closes immediately on Windows without doing anything (other than creating `third_party/`)**
 `set -euo pipefail` at the top of `setup.sh`, combined with CRLF line endings after Windows extraction, caused bash to see `#!/usr/bin/env bash\r` and exit immediately. The only side-effect visible to the user was the `mkdir -p "$TP"` built-in running before the shebang was interpreted.
 
 *Fix:* Removed `set -euo pipefail`. Changed to `set -e` only, with per-command `|| warn "..."` guards. Removed ANSI escape sequences containing `!` from the `warn()` function (`!\033[0m` triggers bash history expansion in Git Bash interactive mode, causing the function definition to fail and all subsequent `warn` calls to error with `bash: warn: command not found`).
