@@ -63,7 +63,16 @@ bool LevelEditor::SaveLevel(const World& world, const std::string& path)
     {
         if (!rec.active || !rec.transform) continue;
 
-        // Determine entity type string
+        // ── Skip child entities FIRST (before type detection) ───────
+        // LampostLight and AlarmLight are created by their parent factories
+        // (SpawnLamppost / SpawnAlarm) when the parent entity is loaded.
+        // If we save them as standalone "light" entities they get duplicated
+        // because the factory also re-creates them on load.
+        bool isFactoryChild =
+            (rec.name == "LampostLight" || rec.name == "AlarmLight") && !rec.mesh;
+        if (isFactoryChild) continue;
+
+        // ── Determine entity type string ───────────────────────
         std::string type = "cube";
         if (!rec.mesh && rec.light)
             type = "light";
@@ -80,10 +89,6 @@ bool LevelEditor::SaveLevel(const World& world, const std::string& path)
             type = "pickup";
         else if (rec.name.find("Alarm") != std::string::npos)
             type = "alarm";
-        // Skip child entities whose data is handled by their parent factory
-        // (e.g. LampostLight, AlarmLight)
-        else if (rec.name.find("Light") != std::string::npos && !rec.mesh)
-            continue;
 
         file << "ENTITY\n";
         Ws(file, "TYPE", type);
@@ -204,7 +209,13 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
         else if (cur.type == "pickup")
         {
             Item it;
-            it.name = cur.name;
+            // Entity name is "Pickup_ItemName" — strip prefix to recover the actual item name.
+            // Also restore underscores-as-spaces (same convention used on save for item names).
+            static const std::string kPrefix = "Pickup_";
+            it.name = (cur.name.rfind(kPrefix, 0) == 0)
+                      ? cur.name.substr(kPrefix.size())
+                      : cur.name;
+            for (char& c : it.name) if (c == '_') c = ' ';
             it.quantity = 1;
             Interaction::SpawnPickup(world, cur.pos, it);
         }

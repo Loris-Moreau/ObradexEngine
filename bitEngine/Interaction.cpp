@@ -84,6 +84,14 @@ EntityID SpawnLamppost(World&           world,
 }
 
 // ── SpawnDoor ─────────────────────────────────────────────────
+// The door panel pivots 90° around a hinge at one end.
+//
+// Geometry (scale = {0.05, 2.2, 1.0}):
+//   Closed: panel width (1 m) runs along Z, centred at `position`.
+//   Hinge : Z-negative end of the panel → position - {0, 0, 0.5}
+//   Open  : panel rotates 90° CCW around Y at the hinge point.
+//           New centre = hinge + {+0.5, 0, 0}
+//           (right-hand 90° rotation maps local +Z to global +X)
 EntityID SpawnDoor(World&            world,
                    const glm::vec3&  position,
                    bool              locked,
@@ -103,9 +111,22 @@ EntityID SpawnDoor(World&            world,
     auto* col = world.AddCollision(e);
     col->halfExtents = {0.5f, 0.5f, 0.5f};
 
-    struct DoorState { bool open = false; bool locked = false; };
-    auto state     = std::make_shared<DoorState>();
-    state->locked  = locked;
+    // DoorState stores the hinge and initial centre so the pivot
+    // calculation works correctly regardless of where the door is placed.
+    struct DoorState
+    {
+        bool      open      = false;
+        bool      locked    = false;
+        glm::vec3 closedPos;   ///< Original centre position (closed)
+        glm::vec3 openPos;     ///< Centre position when fully open
+    };
+    auto state       = std::make_shared<DoorState>();
+    state->locked    = locked;
+    state->closedPos = position;
+    // Hinge at Z-negative end of the panel (position.z - 0.5)
+    // After 90° CCW rotation around Y: new centre = hinge + {+0.5, 0, 0}
+    glm::vec3 hinge  = position - glm::vec3(0.f, 0.f, 0.5f);
+    state->openPos   = hinge + glm::vec3(0.5f, 0.f, 0.f);
 
     auto* ia = world.AddInteractable(e);
     ia->range      = 2.5f;
@@ -114,16 +135,36 @@ EntityID SpawnDoor(World&            world,
 
     ia->onInteract = [e, &world, state, onOpen, ia]()
     {
-        if (state->locked) { std::cout << "[Interaction] Door is locked.\n"; return; }
+        if (state->locked)
+        {
+            std::cout << "[Interaction] Door is locked.\n";
+            return;
+        }
 
         state->open    = !state->open;
         ia->promptText = state->open ? GetInteractionKey() + "Close door"
                                      : GetInteractionKey() + "Open door";
 
         auto* tr = world.GetTransform(e);
-        if (tr) tr->scale.z = state->open ? 0.05f : 1.0f;
+        if (tr)
+        {
+            if (state->open)
+            {
+                // Pivot 90° CCW around Y at the hinge point
+                tr->rotation = glm::angleAxis(glm::radians(90.f),
+                                              glm::vec3(0.f, 1.f, 0.f));
+                tr->position = state->openPos;
+            }
+            else
+            {
+                // Return to closed pose
+                tr->rotation = glm::identity<glm::quat>();
+                tr->position = state->closedPos;
+            }
+        }
 
-        std::cout << "[Interaction] Door " << (state->open ? "opened" : "closed") << ".\n";
+        std::cout << "[Interaction] Door "
+                  << (state->open ? "opened" : "closed") << ".\n";
         if (state->open && onOpen) onOpen();
     };
 
