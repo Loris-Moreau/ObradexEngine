@@ -1,6 +1,6 @@
 # ObradexEngine — Technical Documentation
 
-> **Version:** 0.8.0 *(Pre-Alpha)*  
+> **Version:** 0.8.3 *(Pre-Alpha)*  
 > **Engine style:** Inspired by ***Return of the Obra Dinn***
 > **Gameplay reference:** ***Deus Ex*** & ***Assassin's Creed Syndicate*** *(first-person)*
 
