@@ -28,8 +28,15 @@ void Player::Init()
 // ── Update ────────────────────────────────────────────────────
 void Player::Update(float dt, const Input& input, World& world)
 {
-    // Freeze look + movement while a container grid is open so the
-    // player can click ImGui slots without the camera spinning.
+    // NOTE: HandleActions (interactions) is intentionally NOT called here.
+    // Player::Update runs inside the fixed-timestep accumulator loop and
+    // may execute multiple times per real frame with the same Input snapshot.
+    // IsKeyJustPressed would return true in every iteration, firing onInteract
+    // multiple times — toggling doors/lamps back to their original state and
+    // making it appear that nothing happened.
+    // Interactions are handled in Player::ProcessEvents, which is called
+    // exactly once per real frame from Engine::ProcessInput.
+
     bool containerOpen = world.HasOpenContainer();
 
     UpdateMoveState(input, dt);
@@ -43,11 +50,19 @@ void Player::Update(float dt, const Input& input, World& world)
     ApplyGravity(dt);
     ResolveCollision(world);
     UpdateCameraHeight(dt);
+    CheckTriggers(world);
+}
 
+// ── ProcessEvents ──────────────────────────────────────────────
+// Called ONCE per real frame from Engine::ProcessInput, after
+// Input::Update() has refreshed the key snapshot.
+// Safe to use IsKeyJustPressed here because the snapshot
+// cannot change between this call and the next real frame.
+void Player::ProcessEvents(const Input& input, World& world)
+{
+    bool containerOpen = world.HasOpenContainer();
     if (!containerOpen)
         HandleActions(input, world);
-
-    CheckTriggers(world);
 }
 
 // ── UpdateMoveState ───────────────────────────────────────────

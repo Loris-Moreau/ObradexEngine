@@ -67,7 +67,8 @@ public:
 
     // ── Lifecycle ─────────────────────────────────────────────
     void Init();
-    void Update(float dt, const Input& input, World& world);
+    void Update      (float dt, const Input& input, World& world); ///< Physics tick — called N times per real frame
+    void ProcessEvents(             const Input& input, World& world); ///< Interaction events — called ONCE per real frame
 
     // ── Accessors ─────────────────────────────────────────────
     const Camera&     GetCamera()    const { return m_camera;   }

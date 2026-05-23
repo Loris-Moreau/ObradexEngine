@@ -173,6 +173,15 @@ void Engine::ProcessInput()
             m_window->SetCursorLocked(true);
         }
     }
+
+    // Interaction events — called here (once per real frame) so that
+    // IsKeyJustPressed fires exactly once per key press.
+    // Calling this inside the fixed-timestep Update loop would cause
+    // onInteract to fire on every physics sub-step that shares the same
+    // input snapshot, making doors/lamps toggle back to their original
+    // state and appear unresponsive.
+    if (m_player && m_world && m_state == EngineState::Running)
+        m_player->ProcessEvents(*m_input, *m_world);
 }
 
 // ── Update ────────────────────────────────────────────────────
