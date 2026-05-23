@@ -4,22 +4,26 @@
 
 ## 1. Known Limitations & Roadmap
 
-| Area                      | Current State                                                                               | Planned                                                              |
-|---------------------------|---------------------------------------------------------------------------------------------|----------------------------------------------------------------------|
-| Collision                 | AABB box collision against all solid `CollisionComponent` entities + floor plane at y = 0   | Ray-cast vs mesh AABB tree; stand-up headroom check when uncrouching |
-| Shadows                   | None                                                                                        | Single directional shadow map                                        |
-| Audio                     | Not implemented                                                                             | OpenAL-Soft or miniaudio integration                                 |
-| Level loading             | Runtime `.lvl` save/load via ImGui Level Editor tab (plain-text format, `Levels/` folder)   | Additional entity types; level streaming                             |
-| Animation                 | None                                                                                        | Skeletal animation via Assimp                                        |
-| Vaulting                  | State stub only                                                                             | Auto-climb ledges ≤ 2 m high                                         |
-| Texture system            | Stub uniforms in world shader                                                               | Full material system with diffuse + normal maps                      |
-| Icons for container items | None                                                                                        | Pixel-art icons per item type, rendered in the 3×3 container grid    |
-| Inventory                 | 3×3 container grid popup with per-slot grab + Grab All; standalone pickups hide on interact | Full diegetic inventory UI *(Deus Ex / Arc Raiders style)*           |
-| AI / stealth              | Not implemented                                                                             | Visibility cones + noise detection + random patrol movement          |
-| Weapons                   | Not implemented                                                                             | Blunt, slash, ranged *(pistol, shotgun, sniper, semi-auto)*          |
-| Ammo system               | Not implemented *(requires weapons)*                                                        | Per-weapon pool: 9 mm, 12 ga, 7.62 mm, 5.56 mm                       |
-| Health system             | Not implemented                                                                             | Health bar, death screen, level reload                               |
-| Networking                | Not planned                                                                                 | Revisit if the project ships on Steam                                |
+| Area                                                  | Current State                                                                               | Planned                                                                                |
+|-------------------------------------------------------|---------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
+| Collision                                             | AABB box collision against all solid `CollisionComponent` entities + floor plane at y = 0   | Ray-cast vs mesh AABB tree or OOBB Collision; stand-up headroom check when uncrouching |
+| level editor opens file explorer to select your level | need to write level name exactly                                                            | button that opens file explorer to select a specific file                              |
+| Shadows                                               | None                                                                                        | Single directional shadow map                                                          |
+| Audio                                                 | Not implemented                                                                             | OpenAL-Soft or miniaudio integration                                                   |
+| Level loading                                         | Runtime `.lvl` save/load via ImGui Level Editor tab (plain-text format, `Levels/` folder)   | Additional entity types; level streaming                                               |
+| Animation                                             | None                                                                                        | Skeletal animation via Assimp                                                          |
+| Vaulting                                              | State stub only                                                                             | Auto-climb ledges ≤ 2 m high                                                           |
+| Texture system                                        | Stub uniforms in world shader                                                               | Full material system with diffuse + normal maps                                        |
+| Icons for container items                             | None                                                                                        | Pixel-art icons per item type, rendered in the 3×3 container grid                      |
+| Inventory                                             | Not Implemented                                                                             | Full diegetic inventory UI *(Deus Ex / Arc Raiders style)*                             |
+| Crate                                                 | 3×3 container grid popup with per-slot grab + Grab All; standalone pickups hide on interact | closes after grab all is clicked or when escape is pressed instead of pausing the game |
+| Main Menu                                             | Not Implemented                                                                             | Continue, Start, Level Select, Settings, Quit                                          |
+| Pause Menu                                            | Not Implemented                                                                             | Continue, Restart Level, Settings, Main Menu, Quit                                     |
+| AI / stealth                                          | Not implemented                                                                             | Visibility cones + noise detection + random patrol movement                            |
+| Weapons                                               | Not implemented                                                                             | Blunt, slash, ranged *(pistol, shotgun, sniper, semi-auto)*                            |
+| Ammo system                                           | Not implemented *(requires weapons)*                                                        | Per-weapon pool: 9 mm, 12 ga, 7.62 mm, 5.56 mm                                         |
+| Health system                                         | Not implemented                                                                             | Health bar, death screen, level reload                                                 |
+| Networking                                            | Not planned                                                                                 | Revisit if the project ships on Steam                                                  |
 
 ---
 
