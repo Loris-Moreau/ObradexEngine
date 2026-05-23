@@ -1,7 +1,9 @@
 # ObradexEngine — Technical Documentation
 
-> **Version:** 0.8.3-Pre-Alpha
+![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/Loris-Moreau/ObradexEngine)
+
 > **Engine style:** Inspired by ***Return of the Obra Dinn***
+> 
 > **Gameplay reference:** ***Deus Ex*** & ***Assassin's Creed Syndicate*** *(first-person)*
 
 ---
