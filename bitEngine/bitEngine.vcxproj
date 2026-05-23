@@ -103,6 +103,9 @@
       <!-- Use the pre-built GLFW lib bundled with ImGui for MSVC x64 -->
       <AdditionalLibraryDirectories>$(SolutionDir)third_party\imgui\examples\libs\glfw\lib-vc2010-64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>glfw3.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <!-- glfw3.lib (pre-built release) pulls in MSVCRT; suppress it so
+           only MSVCRTD (our debug CRT) is used. Fixes LNK4098/LNK4217/LNK4286. -->
+      <IgnoreSpecificDefaultLibraries>MSVCRT</IgnoreSpecificDefaultLibraries>
     </Link>
     <!-- Copy Shaders/ folder next to the .exe so they're found at runtime -->
     <PostBuildEvent>
@@ -136,6 +139,8 @@ if not exist "$(OutDir)Levels" mkdir "$(OutDir)Levels"
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>$(SolutionDir)third_party\imgui\examples\libs\glfw\lib-vc2010-64;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>glfw3.lib;opengl32.lib;gdi32.lib;user32.lib;shell32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <!-- Suppress debug CRTs that can leak in from mixed-configuration dependencies. -->
+      <IgnoreSpecificDefaultLibraries>MSVCRTD;LIBCMTD</IgnoreSpecificDefaultLibraries>
     </Link>
     <PostBuildEvent>
       <Command>
