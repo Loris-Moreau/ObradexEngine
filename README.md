@@ -1,7 +1,12 @@
 # ObradexEngine
 
-> **Pre-Alpha** — Visual style inspired by *Return of the Obra Dinn* 
+> **Pre-Alpha** 
+>
+> Visual style inspired by *Return of the Obra Dinn*
+> 
 > First-person immersive-sim engine inspired by *Deus Ex* & *Assassin's Creed Syndicate*
+
+![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/Loris-Moreau/ObradexEngine)
 
 ---
 
