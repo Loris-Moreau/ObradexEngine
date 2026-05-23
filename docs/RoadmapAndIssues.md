@@ -7,7 +7,6 @@
 | Area                                                  | Current State                                                                               | Planned                                                                                |
 |-------------------------------------------------------|---------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
 | Collision                                             | AABB box collision against all solid `CollisionComponent` entities + floor plane at y = 0   | Ray-cast vs mesh AABB tree or OOBB Collision; stand-up headroom check when uncrouching |
-| level editor opens file explorer to select your level | need to write level name exactly                                                            | button that opens file explorer to select a specific file                              |
 | Shadows                                               | None                                                                                        | Single directional shadow map                                                          |
 | Audio                                                 | Not implemented                                                                             | OpenAL-Soft or miniaudio integration                                                   |
 | Level loading                                         | Runtime `.lvl` save/load via ImGui Level Editor tab (plain-text format, `Levels/` folder)   | Additional entity types; level streaming                                               |
@@ -24,6 +23,8 @@
 | Ammo system                                           | Not implemented *(requires weapons)*                                                        | Per-weapon pool: 9 mm, 12 ga, 7.62 mm, 5.56 mm                                         |
 | Health system                                         | Not implemented                                                                             | Health bar, death screen, level reload                                                 |
 | Networking                                            | Not planned                                                                                 | Revisit if the project ships on Steam                                                  |
+| Meshes                                                | Cubes                                                                                       | any mesh                                                                               |
+| VFX and Materials                                     | None                                                                                        | vfx editor similar to unreal and/or unity                                              |
 
 ---
 
@@ -35,6 +36,7 @@
 | Inventory system missing                                                          | Open   | Items grabbed from containers and standalone pickups print to the console only. A proper inventory data structure and UI is required before weapons, ammo, and consumables can be designed.                                                                                          |
 | Container grid limited to 9 slots                                                 | Open   | The 3×3 grid silently drops items beyond index 8. Containers should enforce a 9-item cap at spawn time.                                                                                                                                                                              |
 | Interaction key needs to be pressed multiple times in order to do the interaction | Open   |                                                                                                                                                                                                                                                                                      |
+| need to write level name exactly in level editor                                  | Open   | need a button that opens file explorer to select a specific file                                                                                                                                                                                                                     |
 
 ---
 
