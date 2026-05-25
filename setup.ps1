@@ -1,5 +1,5 @@
-# ============================================================
-#  setup.ps1  —  ObradexEngine Dependency Setup (Windows)
+﻿# ============================================================
+#  setup.ps1   --  ObradexEngine Dependency Setup (Windows)
 # ============================================================
 #  Run from the repository root in PowerShell:
 #    Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
@@ -38,13 +38,13 @@ if ($gladReal) {
     } catch {}
 
     if ($hasPython) {
-        Write-Host "  Python found — generating via glad pip package..."
+        Write-Host "  Python found  -- generating via glad pip package..."
         & python -m pip install glad --quiet
         New-Item -ItemType Directory -Force -Path (Join-Path $tp "glad") | Out-Null
         & python -m glad --generator c --profile core --api "gl=4.1" `
             --out-path (Join-Path $tp "glad")
         if (Test-Path $gladH) { ok "GLAD generated via Python." }
-        else { warn "Python generation failed — trying web download..." }
+        else { warn "Python generation failed  -- trying web download..." }
     }
 
     # Strategy 2: download pre-generated zip from glad.dav1d.de
@@ -120,7 +120,7 @@ else {
 
 if (-not (Test-Path $stbImpl)) {
     Set-Content $stbImpl @"
-// stb_image_impl.cpp — defines STB_IMAGE_IMPLEMENTATION in one translation unit only.
+// stb_image_impl.cpp  -- defines STB_IMAGE_IMPLEMENTATION in one translation unit only.
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 "@ -Encoding UTF8
