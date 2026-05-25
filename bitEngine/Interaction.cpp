@@ -145,7 +145,8 @@ EntityID SpawnDoor(World&            world,
         ia->promptText = state->open ? GetInteractionKey() + "Close door"
                                      : GetInteractionKey() + "Open door";
 
-        auto* tr = world.GetTransform(e);
+        auto* tr  = world.GetTransform(e);
+        auto* rec = world.GetRecord(e);
         if (tr)
         {
             if (state->open)
@@ -154,12 +155,17 @@ EntityID SpawnDoor(World&            world,
                 tr->rotation = glm::angleAxis(glm::radians(90.f),
                                               glm::vec3(0.f, 1.f, 0.f));
                 tr->position = state->openPos;
+                // Door is out of the doorway — disable collision so the
+                // player can walk through the opening.
+                if (rec && rec->collision) rec->collision->solid = false;
             }
             else
             {
                 // Return to closed pose
                 tr->rotation = glm::identity<glm::quat>();
                 tr->position = state->closedPos;
+                // Restore collision for the closed door.
+                if (rec && rec->collision) rec->collision->solid = true;
             }
         }
 

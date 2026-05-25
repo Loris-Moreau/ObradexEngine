@@ -73,14 +73,18 @@ glm::mat4 Camera::GetView() const
                   + m_up    * m_bobY
                   + m_right * m_bobX;
 
-    // Base view matrix
-    glm::mat4 view = glm::lookAt(eye, eye + m_forward, m_up);
+    // Always use world-up (0,1,0) for lookAt so that the view matrix
+    // never has an implicit roll component from pitch.  When the camera
+    // pitches near ±90° glm::lookAt handles the singularity gracefully.
+    glm::mat4 view = glm::lookAt(eye, eye + m_forward, glm::vec3(0.f, 1.f, 0.f));
 
-    // Apply lean as a roll rotation around the forward axis
+    // Lean: roll around view-space Z (axis pointing into the screen).
+    // Applied post-lookAt so the axis is in view-space, giving a stable
+    // screen-space tilt that does not change with yaw or pitch.
     if (std::abs(m_lean) > 0.001f)
     {
         view = glm::rotate(view,
-                           glm::radians(m_lean),
+                           glm::radians(-m_lean),
                            glm::vec3(0.f, 0.f, 1.f));
     }
 

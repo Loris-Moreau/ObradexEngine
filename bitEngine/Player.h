@@ -93,7 +93,7 @@ private:
     void HandleInteraction(const Input& input, World& world);
     void UpdateMoveState(const Input& input, float dt);  ///< Evaluate and transition movement states
     void ApplyGravity(float dt);
-    void UpdateCameraHeight(float dt);
+    void UpdateCameraHeight(float dt, bool suppressBob = false);
     void CheckTriggers(World& world);
 
     // ── Physics helpers ───────────────────────────────────────

@@ -166,20 +166,40 @@ void Engine::ProcessInput()
 
     // I key — toggle inventory (only when game is running and no container open)
     if (m_input->IsKeyJustPressed(Key::I) &&
-        m_state == EngineState::Running &&
         !m_world->HasOpenContainer())
     {
-        m_inventory->Toggle();
-        m_window->SetCursorLocked(!m_inventory->IsOpen());
+        if (m_inventory->IsOpen())
+        {
+            // Close inventory — resume
+            m_inventory->Toggle();
+            m_window->SetCursorLocked(true);
+            if (m_state == EngineState::Paused)
+                m_state = EngineState::Running;
+        }
+        else if (m_state == EngineState::Running)
+        {
+            // Open inventory — pause so physics freezes
+            m_inventory->Toggle();
+            m_window->SetCursorLocked(false);
+            m_state = EngineState::Paused;
+        }
     }
 
     if (m_input->IsKeyJustPressed(Key::Escape))
     {
-        // If a container is open, Escape closes it instead of pausing
+        // Priority 1: close open container
         if (m_world && m_world->HasOpenContainer())
         {
             m_world->CloseOpenContainer();
         }
+        // Priority 2: close open inventory
+        else if (m_inventory && m_inventory->IsOpen())
+        {
+            m_inventory->Toggle();
+            m_window->SetCursorLocked(true);
+            m_state = EngineState::Running;
+        }
+        // Priority 3: normal pause toggle
         else if (m_state == EngineState::Running)
         {
             m_state = EngineState::Paused;

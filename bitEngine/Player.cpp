@@ -46,13 +46,18 @@ void Player::Update(float dt, const Input& input, World& world)
         HandleMouseLook(input, dt);
         HandleMovement(input, dt);
     }
+    else
+    {
+        // Reset lean so it damps to zero while UI is open
+        m_camera.SetLean(0.f);
+    }
 
     ApplyGravity(dt);
     ResolveCollision(world);
-    UpdateCameraHeight(dt);
+    UpdateCameraHeight(dt, containerOpen);
     CheckTriggers(world);
     ResolveCollision(world);
-    UpdateCameraHeight(dt);
+    UpdateCameraHeight(dt, containerOpen);
     CheckTriggers(world);
 }
 
@@ -228,7 +233,25 @@ void Player::ResolveCollision(World& world)
         if (!rec.collision->solid) continue;
 
         const glm::vec3& ctr  = rec.transform->position;
-        const glm::vec3  half = rec.collision->halfExtents * rec.transform->scale;
+        // Scale the local half-extents
+        glm::vec3 localHalf = rec.collision->halfExtents * rec.transform->scale;
+
+        // Rotate the half-extents by the entity's rotation to get a
+        // world-space AABB.  For a rotated OBB we compute the enclosing
+        // AABB by transforming each basis vector and summing the absolutes
+        // (the standard OBB→AABB expansion formula).
+        glm::mat3 rot(rec.transform->rotation);
+        glm::vec3 half;
+        half.x = std::abs(rot[0].x) * localHalf.x
+               + std::abs(rot[1].x) * localHalf.y
+               + std::abs(rot[2].x) * localHalf.z;
+        half.y = std::abs(rot[0].y) * localHalf.x
+               + std::abs(rot[1].y) * localHalf.y
+               + std::abs(rot[2].y) * localHalf.z;
+        half.z = std::abs(rot[0].z) * localHalf.x
+               + std::abs(rot[1].z) * localHalf.y
+               + std::abs(rot[2].z) * localHalf.z;
+
         glm::vec3 bMin = ctr - half;
         glm::vec3 bMax = ctr + half;
 
@@ -285,16 +308,16 @@ void Player::ResolveCollision(World& world)
 }
 
 // ── UpdateCameraHeight ────────────────────────────────────────
-void Player::UpdateCameraHeight(float dt)
+void Player::UpdateCameraHeight(float dt, bool suppressBob)
 {
     float targetH = (m_state == MoveState::Crouching || m_state == MoveState::Sliding)
                     ? m_stats.crouchHeight : m_stats.eyeHeight;
 
-    // Smooth lerp towards target eye height
     m_currentEyeH += (targetH - m_currentEyeH) * std::min(dt * 12.f, 1.f);
 
-    // Head bob while walking / sprinting
-    m_camera.UpdateHeadBob(m_speed, dt);
+    // Zero speed when a UI popup is open so the bob damps out cleanly.
+    float bobSpeed = suppressBob ? 0.f : m_speed;
+    m_camera.UpdateHeadBob(bobSpeed, dt);
     m_camera.SetPosition(m_position + glm::vec3(0.f, m_currentEyeH, 0.f));
 }
 
