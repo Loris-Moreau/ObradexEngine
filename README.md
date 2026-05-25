@@ -44,17 +44,17 @@ cmake --build . -j$(nproc)
 
 ## Controls
 
-| Input           | Action |
-|-----------------|--------|
-| ZQSD            | Move |
-| Mouse           | Look |
-| Shift           | Sprint |
-| Ctrl            | Crouch / Slide |
-| Space           | Jump |
-| A / E           | Lean left / right |
-| E (near object) | Interact |
+| Input           | Action                |
+|-----------------|-----------------------|
+| ZQSD/WASD       | Move                  |
+| Mouse           | Look                  |
+| Shift           | Sprint                |
+| Ctrl            | Crouch / Slide        |
+| Space           | Jump                  |
+| A / E           | Lean left / right     |
+| F (near object) | Interact              |
 | F1              | Toggle editor overlay |
-| Escape          | Pause |
+| Escape          | Pause                 |
 
 ## Project Structure
 
@@ -71,14 +71,14 @@ third_party/    — GLAD, ImGui, stb, GLM (populated by setup.sh)
 
 ## Dependencies
 
-| Library | Role | How obtained |
-|---------|------|--------------|
-| OpenGL 4.1 | GPU rendering | System / driver |
-| GLFW 3.3+ | Window + input | System pkg or CMake FetchContent |
-| GLM 0.9.9.8 | Math (vectors, matrices, quaternions) | `setup.sh` |
-| GLAD | OpenGL function loader | `setup.sh` (via `glad2` pip package) |
-| Dear ImGui 1.90.1 | Editor UI | `setup.sh` |
-| stb_image | Texture loading | `setup.sh` |
+| Library           | Role                                  | How obtained                         |
+|-------------------|---------------------------------------|--------------------------------------|
+| OpenGL 4.1        | GPU rendering                         | System / driver                      |
+| GLFW 3.3+         | Window + input                        | System pkg or CMake FetchContent     |
+| GLM 0.9.9.8       | Math (vectors, matrices, quaternions) | `setup.sh`                           |
+| GLAD              | OpenGL function loader                | `setup.sh` (via `glad2` pip package) |
+| Dear ImGui 1.90.1 | Editor UI                             | `setup.sh`                           |
+| stb_image         | Texture loading                       | `setup.sh`                           |
 
 ## License
 

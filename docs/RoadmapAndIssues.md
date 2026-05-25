@@ -4,39 +4,34 @@
 
 ## 1. Known Limitations & Roadmap
 
-| Area                                                  | Current State                                                                               | Planned                                                                                |
-|-------------------------------------------------------|---------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
-| Collision                                             | AABB box collision against all solid `CollisionComponent` entities + floor plane at y = 0   | Ray-cast vs mesh AABB tree or OOBB Collision; stand-up headroom check when uncrouching |
-| Shadows                                               | None                                                                                        | Single directional shadow map                                                          |
-| Audio                                                 | Not implemented                                                                             | OpenAL-Soft or miniaudio integration                                                   |
-| Level loading                                         | Runtime `.lvl` save/load via ImGui Level Editor tab (plain-text format, `Levels/` folder)   | Additional entity types; level streaming                                               |
-| Animation                                             | None                                                                                        | Skeletal animation via Assimp                                                          |
-| Vaulting                                              | State stub only                                                                             | Auto-climb ledges ≤ 2 m high                                                           |
-| Texture system                                        | Stub uniforms in world shader                                                               | Full material system with diffuse + normal maps                                        |
-| Icons for container items                             | None                                                                                        | Pixel-art icons per item type, rendered in the 3×3 container grid                      |
-| Inventory                                             | Not Implemented                                                                             | Full diegetic inventory UI *(Deus Ex / Arc Raiders style)*                             |
-| Crate                                                 | 3×3 container grid popup with per-slot grab + Grab All; standalone pickups hide on interact | closes after grab all is clicked or when escape is pressed instead of pausing the game |
-| Main Menu                                             | Not Implemented                                                                             | Continue, Start, Level Select, Settings, Quit                                          |
-| Pause Menu                                            | Not Implemented                                                                             | Continue, Restart Level, Settings, Main Menu, Quit                                     |
-| AI / stealth                                          | Not implemented                                                                             | Visibility cones + noise detection + random patrol movement                            |
-| Weapons                                               | Not implemented                                                                             | Blunt, slash, ranged *(pistol, shotgun, sniper, semi-auto)*                            |
-| Ammo system                                           | Not implemented *(requires weapons)*                                                        | Per-weapon pool: 9 mm, 12 ga, 7.62 mm, 5.56 mm                                         |
-| Health system                                         | Not implemented                                                                             | Health bar, death screen, level reload                                                 |
-| Networking                                            | Not planned                                                                                 | Revisit if the project ships on Steam                                                  |
-| Meshes                                                | Cubes                                                                                       | any mesh                                                                               |
-| VFX and Materials                                     | None                                                                                        | vfx editor similar to unreal and/or unity                                              |
+| Area                      | Current State                                                                               | Planned                                                                                |
+|---------------------------|---------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
+| Collision                 | AABB box collision against all solid `CollisionComponent` entities + floor plane at y = 0   | Ray-cast vs mesh AABB tree or OOBB Collision; stand-up headroom check when uncrouching |
+| Shadows                   | None                                                                                        | Single directional shadow map                                                          |
+| Audio                     | Not implemented                                                                             | OpenAL-Soft or miniaudio integration                                                   |
+| Level loading             | Runtime `.lvl` save/load via ImGui Level Editor tab (plain-text format, `Levels/` folder)   | Additional entity types; level streaming                                               |
+| Animation                 | None                                                                                        | Skeletal animation via Assimp                                                          |
+| Vaulting                  | State stub only                                                                             | Auto-climb ledges ≤ 2 m high                                                           |
+| Texture system            | Stub uniforms in world shader                                                               | Full material system with diffuse + normal maps                                        |
+| Icons for container items | None                                                                                        | Pixel-art icons per item type, rendered in the 3×3 container grid                      |
+| Inventory                 | Data structure + Deus Ex Mankind Divided style UI implemented (I key); routes grabbed items | Weapons, ammo, and consumable design; equipment slots; weight system                   |
+| Main Menu                 | Not Implemented                                                                             | Continue, Start, Level Select, Settings, Quit                                          |
+| Pause Menu                | Not Implemented                                                                             | Continue, Restart Level, Settings, Main Menu, Quit                                     |
+| AI / stealth              | Not implemented                                                                             | Visibility cones + noise detection + random patrol movement                            |
+| Weapons                   | Not implemented                                                                             | Blunt, slash, ranged *(pistol, shotgun, sniper, semi-auto)*                            |
+| Ammo system               | Not implemented *(requires weapons)*                                                        | Per-weapon pool: 9 mm, 12 ga, 7.62 mm, 5.56 mm                                         |
+| Health system             | Not implemented                                                                             | Health bar, death screen, level reload                                                 |
+| Networking                | Not planned                                                                                 | Revisit if the project ships on Steam                                                  |
+| Meshes                    | Cube, Plane, Sphere placeable from Level Editor                                             | OBJ/glTF import via Assimp                                                             |
+| VFX and Materials         | None                                                                                        | VFX editor similar to Unreal / Unity                                                   |
 
 ---
 
 ## 2. Open Issues
 
-| Bug                                                                               | Status | Notes                                                                                                                                                                                                                                                                                |
-|-----------------------------------------------------------------------------------|--------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Crouch does not properly disable stand-up when there is a ceiling above           | Open   | The AABB correctly shrinks to `crouchHeight = 0.85 m` when crouching. However there is no headroom check when releasing Ctrl — the player can clip through a low ceiling by standing up inside it. A sweep test upward before allowing the state transition to `Standing` is needed. |
-| Inventory system missing                                                          | Open   | Items grabbed from containers and standalone pickups print to the console only. A proper inventory data structure and UI is required before weapons, ammo, and consumables can be designed.                                                                                          |
-| Container grid limited to 9 slots                                                 | Open   | The 3×3 grid silently drops items beyond index 8. Containers should enforce a 9-item cap at spawn time.                                                                                                                                                                              |
-| Interaction key needs to be pressed multiple times in order to do the interaction | Open   |                                                                                                                                                                                                                                                                                      |
-| need to write level name exactly in level editor                                  | Open   | need a button that opens file explorer to select a specific file                                                                                                                                                                                                                     |
+| Bug                                                               | Status | Notes                                                                                                                                                                                                                                                                                |
+|-------------------------------------------------------------------|--------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Crouch does not properly disable stand-up when ceiling is above   | Open   | The AABB correctly shrinks to `crouchHeight = 0.85 m` when crouching. However there is no headroom check when releasing Ctrl — the player can clip through a low ceiling by standing up inside it. A sweep test upward before allowing the state transition to `Standing` is needed. |
 
 ---
 
@@ -124,6 +119,20 @@ The input double-buffer used a copy-then-overwrite pattern: `m_keys[prev] = m_ke
 
 ---
 
+**[FIX] Container closes game instead of closing popup when Escape is pressed**
+`Engine::ProcessInput` handled Escape before checking whether a container was open, so pressing Escape during looting paused the game rather than dismissing the popup.
+
+*Fix:* `Engine::ProcessInput` now calls `World::CloseOpenContainer()` and returns early when `HasOpenContainer()` is true. `World::CloseOpenContainer()` sets `isOpen = false` on the first open container. The cursor is re-locked by `EditorUI::Render` on the next frame when it detects the container closed.
+
+---
+
+**[FIX] Grab All closes container without dismissing popup (container stays visible as empty)**
+After `Grab All` cleared the item list the popup remained open, showing "Container is empty." The user had to click Close separately.
+
+*Fix:* The Grab All button now sets `windowOpen = false` immediately after clearing items. The popup dismissal path at the bottom of `DrawContainerPopup` (which sets `container->isOpen = false`) fires on the same frame.
+
+---
+
 ### 3.4 Physics & Collision
 
 **[FIX] Crash in `Mesh::Draw()` — vector pointer invalidation**
@@ -170,11 +179,17 @@ The load flush for `type == "pickup"` passed `cur.name` (the entity name, e.g. `
 
 ---
 
-
 **[FIX] Door shrinks instead of pivoting**
 `SpawnDoor`'s `onInteract` set `tr->scale.z = 0.05f` when open, making the door panel nearly invisible instead of rotating like a real door.
 
 *Fix:* `DoorState` now stores the closed centre position and the pre-computed open centre position (hinge + rotated offset). On interact: if opening, `tr->rotation` is set to `glm::angleAxis(90°, {0,1,0})` and `tr->position` moves to the open centre; if closing, both are restored to their original values. The hinge is placed at the Z-negative end of the panel; a 90° CCW rotation around Y maps the panel's local +Z axis to global +X, so the door swings outward correctly.
+
+---
+
+**[FIX] Container 3×3 grid silently drops items beyond index 8**
+`SpawnContainer` accepted an unbounded `std::vector<Item>`, but `DrawContainerPopup` only renders a 3×3 grid (9 slots). Items at index ≥ 9 were stored in the component but never displayed or grabbable.
+
+*Fix:* `SpawnContainer` now calls `items.resize(9)` (no-op if ≤ 9 items) before moving into the `ContainerComponent`. The cap is enforced at spawn time so the data is always consistent with what the UI renders.
 
 ---
 
@@ -197,4 +212,18 @@ The load flush for `type == "pickup"` passed `cur.name` (the entity name, e.g. `
 **[FIX] Container interaction opens nothing visible — interact prompt was the only feedback**
 Interacting with a container printed items to the console but showed no UI.
 
-*Fix:* Added `ContainerComponent { vector<Item> items; bool isOpen; }`. `SpawnContainer`'s `onInteract` sets `isOpen = true` instead of printing. `EditorUI::DrawContainerPopup` renders a centred 3×3 ImGui grid popup (amber/dark palette) when any container has `isOpen == true`. Each occupied slot shows the item name and quantity badge; clicking a slot removes that item and prints a grab message; **Grab All** takes everything at once. While the popup is open, the cursor is unlocked and player look/movement are suppressed so clicks register correctly.
+*Fix:* Added `ContainerComponent { vector<Item> items; bool isOpen; }`. `SpawnContainer`'s `onInteract` sets `isOpen = true` instead of printing. `EditorUI::DrawContainerPopup` renders a centred 3×3 ImGui grid popup (amber/dark palette) when any container has `isOpen == true`. Each occupied slot shows the item name and quantity badge; clicking a slot removes that item and routes it into the inventory; **Grab All** takes everything at once and closes the popup. While the popup is open, the cursor is unlocked and player look/movement are suppressed so clicks register correctly.
+
+---
+
+**[FIX] Level editor required exact filename to be typed manually**
+The filename input field had no file picker; the user had to type `level.lvl` exactly or the load would fail with a misleading error.
+
+*Fix:* A **Browse** button opens the OS native file dialog (`GetOpenFileNameA` on Windows, `zenity` on Linux) filtered to `*.lvl` files, defaulting to the `Levels/` directory. Selecting a file populates the filename field with the basename only, which `LevelPath()` then resolves to `Levels/<basename>` as usual. Typing the name manually continues to work.
+
+---
+
+**[FIX] Inventory items printed to console only — no UI or data structure**
+Grabbed items (container slots, Grab All, standalone pickups) called `std::cout` and were discarded with no persistent storage.
+
+*Fix:* Added `InventorySystem` (`InventorySystem.h/.cpp`). It stores `InventoryEntry` values (item + stack count) and stacks by name on `AddItem`. The Deus Ex: Mankind Divided-style overlay (`DrawUI`) is drawn at native resolution over the game view, toggled by the **I** key. Container grabs and standalone pickup `onInteract` callbacks now call `engine.GetInventory().AddItem(it)` instead of printing. The cursor is unlocked while the inventory is open.
