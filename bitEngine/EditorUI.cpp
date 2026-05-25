@@ -10,6 +10,7 @@
 #include "PostProcess.h"
 #include "World.h"
 #include "Player.h"
+#include "InventorySystem.h"
 
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
@@ -89,6 +90,10 @@ void EditorUI::Render(Engine& engine)
 
     DrawContainerPopup(engine);
     DrawHUD(engine);
+
+    // ── Inventory overlay (I key) ──────────────────────────────
+    ImGuiIO& io2 = ImGui::GetIO();
+    engine.GetInventory().DrawUI(io2.DisplaySize.x, io2.DisplaySize.y);
 
     // ── Editor panel (F1 toggle) ──────────────────────────────
     if (m_showEditor)
@@ -592,7 +597,7 @@ void EditorUI::DrawContainerPopup(Engine& engine)
     if (grabbedIdx >= 0 && grabbedIdx < (int)items.size())
     {
         const Item& it = items[grabbedIdx];
-        std::cout << "[Container] Grabbed: " << it.name << " x" << it.quantity << "\n";
+        engine.GetInventory().AddItem(it);
         items.erase(items.begin() + grabbedIdx);
     }
 
@@ -619,18 +624,24 @@ void EditorUI::DrawContainerPopup(Engine& engine)
     if (ImGui::Button("Grab All", ImVec2(btnW, 0.f)) && !items.empty())
     {
         for (auto& it : items)
-            std::cout << "[Container] Grabbed: " << it.name << " x" << it.quantity << "\n";
+            engine.GetInventory().AddItem(it);
         items.clear();
-        // Prompt player now that the container is empty
+        // Update prompt and close
         auto* rec = world.GetRecord(containerID);
         if (rec && rec->interactable)
             rec->interactable->promptText =
                 std::string("[") + Input::GetKeyName(INTERACT_KEY) + "] Search  (empty)";
+        windowOpen = false;
     }
 
     ImGui::SameLine();
 
     if (ImGui::Button("Close", ImVec2(btnW, 0.f)))
+        windowOpen = false;
+
+    // Escape closes the container without pausing the game
+    ImGuiIO& escIO = ImGui::GetIO();
+    if (escIO.KeysDown[256] /* GLFW_KEY_ESCAPE */ && !escIO.WantCaptureKeyboard)
         windowOpen = false;
 
     ImGui::PopStyleColor(3);

@@ -56,7 +56,7 @@ enum class Key : int
     Escape = 256,
 
     // Misc
-    R = 82, F = 70, G = 71, Tab = 258,
+    R = 82, F = 70, G = 71, Tab = 258, I = 73,
     D1 = 49, D2 = 50, D3 = 51, D4 = 52,
 
     _Count = 350   // Must be last — sets array size

@@ -10,6 +10,7 @@
 #include "World.h"
 #include "Player.h"
 #include "EditorUI.h"
+#include "InventorySystem.h"
 
 #include <iostream>
 #include <stdexcept>
@@ -75,7 +76,11 @@ bool Engine::Init(const EngineConfig& config)
         m_player->Init();
         std::cout << "[Engine]  Player       OK\n";
 
-        // ── 7. Editor UI (ImGui; needs Window + OpenGL) ───────
+        // ── 7. Inventory ──────────────────────────────────────
+        m_inventory = std::make_unique<InventorySystem>();
+        std::cout << "[Engine]  Inventory    OK\n";
+
+        // ── 8. Editor UI (ImGui; needs Window + OpenGL) ───────
         m_editorUI = std::make_unique<EditorUI>();
         m_editorUI->Init(m_window->GetGLFWWindow());
         std::cout << "[Engine]  EditorUI     OK\n";
@@ -159,10 +164,23 @@ void Engine::ProcessInput()
         m_editorUI->ToggleEditorPanel();
     }
 
+    // I key — toggle inventory (only when game is running and no container open)
+    if (m_input->IsKeyJustPressed(Key::I) &&
+        m_state == EngineState::Running &&
+        !m_world->HasOpenContainer())
+    {
+        m_inventory->Toggle();
+        m_window->SetCursorLocked(!m_inventory->IsOpen());
+    }
+
     if (m_input->IsKeyJustPressed(Key::Escape))
     {
-        // Toggle pause or ask for quit confirmation via UI
-        if (m_state == EngineState::Running)
+        // If a container is open, Escape closes it instead of pausing
+        if (m_world && m_world->HasOpenContainer())
+        {
+            m_world->CloseOpenContainer();
+        }
+        else if (m_state == EngineState::Running)
         {
             m_state = EngineState::Paused;
             m_window->SetCursorLocked(false);
@@ -233,10 +251,11 @@ void Engine::RequestShutdown()
 }
 
 // ── Subsystem accessors ───────────────────────────────────────
-Window&   Engine::GetWindow()   const { return *m_window;   }
-Renderer& Engine::GetRenderer() const { return *m_renderer; }
-Input&    Engine::GetInput()    const { return *m_input;    }
-Timer&    Engine::GetTimer()    const { return *m_timer;    }
-World&    Engine::GetWorld()    const { return *m_world;    }
-Player&   Engine::GetPlayer()   const { return *m_player;   }
-EditorUI& Engine::GetEditorUI() const { return *m_editorUI; }
+Window&          Engine::GetWindow()    const { return *m_window;    }
+Renderer&        Engine::GetRenderer()  const { return *m_renderer;  }
+Input&           Engine::GetInput()     const { return *m_input;     }
+Timer&           Engine::GetTimer()     const { return *m_timer;     }
+World&           Engine::GetWorld()     const { return *m_world;     }
+Player&          Engine::GetPlayer()    const { return *m_player;    }
+EditorUI&        Engine::GetEditorUI()  const { return *m_editorUI;  }
+InventorySystem& Engine::GetInventory() const { return *m_inventory; }

@@ -7,6 +7,8 @@
 #include "Mesh.h"
 #include "Input.h"
 #include "Interaction.h"
+#include "Engine.h"
+#include "InventorySystem.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <cmath>
@@ -268,6 +270,17 @@ ContainerComponent* World::AddContainer(EntityID id)
 TransformComponent*    World::GetTransform   (EntityID id) { auto* r=GetRecord(id); return r?r->transform   :nullptr; }
 MeshComponent*         World::GetMesh        (EntityID id) { auto* r=GetRecord(id); return r?r->mesh        :nullptr; }
 InteractableComponent* World::GetInteractable(EntityID id) { auto* r=GetRecord(id); return r?r->interactable:nullptr; }
+
+// ── CloseOpenContainer ───────────────────────────────────────
+void World::CloseOpenContainer()
+{
+    for (auto& rec : m_records)
+        if (rec.active && rec.container && rec.container->isOpen)
+        {
+            rec.container->isOpen = false;
+            return;
+        }
+}
 
 // ── HasOpenContainer ─────────────────────────────────────────
 bool World::HasOpenContainer() const

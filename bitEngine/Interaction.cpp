@@ -194,6 +194,8 @@ EntityID SpawnContainer(World&                world,
     // ContainerComponent holds the item list.
     // EditorUI reads isOpen and renders the grid popup.
     auto* container    = world.AddContainer(e);
+    // Enforce the 3×3 grid cap — silently drop items beyond index 8.
+    if (items.size() > 9) items.resize(9);
     container->items   = std::move(items);
     container->isOpen  = false;
 
@@ -249,7 +251,6 @@ EntityID SpawnPickup(World&           world,
         if (tr) tr->scale = {0.f, 0.f, 0.f};
         if (onPickup) onPickup(item);
     };
-
     return e;
 }
 

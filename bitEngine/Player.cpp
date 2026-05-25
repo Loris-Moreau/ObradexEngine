@@ -51,6 +51,9 @@ void Player::Update(float dt, const Input& input, World& world)
     ResolveCollision(world);
     UpdateCameraHeight(dt);
     CheckTriggers(world);
+    ResolveCollision(world);
+    UpdateCameraHeight(dt);
+    CheckTriggers(world);
 }
 
 // ── ProcessEvents ──────────────────────────────────────────────

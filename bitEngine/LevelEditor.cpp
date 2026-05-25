@@ -18,6 +18,15 @@
 #include <cstring>
 #include <algorithm>
 
+// Windows file dialog (compile-time optional — only on Win32)
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#include <commdlg.h>
+#pragma comment(lib, "comdlg32.lib")
+#endif
+
 namespace fs = std::filesystem;
 static constexpr const char* kLevelsDir = "Levels";
 
@@ -78,6 +87,8 @@ bool LevelEditor::SaveLevel(const World& world, const std::string& path)
             type = "light";
         else if (rec.name == "Ground" || (rec.mesh && rec.mesh->mesh == const_cast<World&>(world).GetPlaneMesh()))
             type = "plane";
+        else if (rec.mesh && rec.mesh->mesh == const_cast<World&>(world).GetSphereMesh())
+            type = "sphere";
         else if (rec.name.find("Lamppost") != std::string::npos ||
                  rec.name.find("LampPost") != std::string::npos)
             type = "lamppost";
@@ -225,7 +236,7 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
         }
         else
         {
-            // cube / plane / light — build manually
+            // cube / plane / sphere / light — build manually
             EntityID e = world.CreateEntity(cur.name);
 
             auto* t = world.AddTransform(e);
@@ -235,8 +246,12 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
             if (cur.type != "light")
             {
                 auto* m = world.AddMesh(e);
-                m->mesh         = (cur.type == "plane") ? world.GetPlaneMesh()
-                                                        : world.GetCubeMesh();
+                if (cur.type == "plane")
+                    m->mesh = world.GetPlaneMesh();
+                else if (cur.type == "sphere")
+                    m->mesh = world.GetSphereMesh();
+                else
+                    m->mesh = world.GetCubeMesh();
                 m->albedoColour = cur.albedo;
                 m->specular     = cur.specular;
                 m->roughness    = cur.roughness;
@@ -353,27 +368,40 @@ void LevelEditor::SpawnCurrent(Engine& engine)
             m->roughness=m_spawnRoughness;
             break;
         }
-        case 2: // Lamppost
+        case 2: // Sphere
+        {
+            EntityID e = world.CreateEntity("Sphere");
+            auto* t = world.AddTransform(e); t->position=pos; t->scale=scale;
+            auto* m = world.AddMesh(e);
+            m->mesh=world.GetSphereMesh(); m->albedoColour=color;
+            m->specular=m_spawnSpecular; m->roughness=m_spawnRoughness;
+            if (m_spawnCollision) {
+                auto* col = world.AddCollision(e);
+                col->halfExtents = {0.5f,0.5f,0.5f};
+            }
+            break;
+        }
+        case 3: // Lamppost
             Interaction::SpawnLamppost(world, pos, lcolor,
                                        m_lightRadius, m_lightIntensity, m_lightFlicker);
             break;
-        case 3: // Door
+        case 4: // Door
             Interaction::SpawnDoor(world, pos);
             break;
-        case 4: // Container
+        case 5: // Container
             Interaction::SpawnContainer(world, pos, m_containerItems);
             if (m_clearItemsAfterPlace) m_containerItems.clear();
             break;
-        case 5: // Pickup
+        case 6: // Pickup
         {
             Item it; it.name=m_pickupName; it.quantity=1;
             Interaction::SpawnPickup(world, pos, it);
             break;
         }
-        case 6: // Alarm
+        case 7: // Alarm
             Interaction::SpawnAlarm(world, pos);
             break;
-        case 7: // Point Light
+        case 8: // Point Light
         {
             EntityID e = world.CreateEntity("Light");
             auto* t = world.AddTransform(e); t->position=pos;
@@ -403,8 +431,53 @@ void LevelEditor::RenderPanel(Engine& engine)
     // ── File I/O ──────────────────────────────────────────────
     ImGui::SeparatorText("Level File  [Levels/ folder]");
     ImGui::TextDisabled("Files are stored in:  Levels/<filename>");
-    ImGui::SetNextItemWidth(200.f);
+    ImGui::SetNextItemWidth(160.f);
     ImGui::InputText("##filename", m_filenameBuffer, sizeof(m_filenameBuffer));
+    ImGui::SameLine();
+
+    // Browse button — opens the OS file picker, fills filename field
+    if (ImGui::Button("Browse"))
+    {
+#ifdef _WIN32
+        char path[MAX_PATH] = {};
+        OPENFILENAMEA ofn   = {};
+        ofn.lStructSize     = sizeof(ofn);
+        ofn.hwndOwner       = nullptr;
+        ofn.lpstrFilter     = "Level Files (*.lvl)\0*.lvl\0All Files (*.*)\0*.*\0";
+        ofn.lpstrFile       = path;
+        ofn.nMaxFile        = MAX_PATH;
+        ofn.lpstrInitialDir = kLevelsDir;
+        ofn.Flags           = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+        if (GetOpenFileNameA(&ofn))
+        {
+            // Store only the basename so LevelPath() keeps it in Levels/
+            fs::path picked(path);
+            std::string name = picked.filename().string();
+            std::strncpy(m_filenameBuffer, name.c_str(), sizeof(m_filenameBuffer) - 1);
+            m_filenameBuffer[sizeof(m_filenameBuffer) - 1] = '\0';
+        }
+#else
+        // Non-Windows: open a native dialog via zenity/kdialog if available,
+        // falling back to a console hint.
+        FILE* f = popen("zenity --file-selection --file-filter='Level files | *.lvl' "
+                        "--filename=Levels/ 2>/dev/null", "r");
+        if (f)
+        {
+            char buf[512] = {};
+            if (fgets(buf, sizeof(buf), f))
+            {
+                // Strip trailing newline
+                size_t len = strlen(buf);
+                if (len && buf[len - 1] == '\n') buf[len - 1] = '\0';
+                fs::path picked(buf);
+                std::string name = picked.filename().string();
+                std::strncpy(m_filenameBuffer, name.c_str(), sizeof(m_filenameBuffer) - 1);
+                m_filenameBuffer[sizeof(m_filenameBuffer) - 1] = '\0';
+            }
+            pclose(f);
+        }
+#endif
+    }
     ImGui::SameLine();
 
     if (ImGui::Button("Save"))
@@ -429,23 +502,23 @@ void LevelEditor::RenderPanel(Engine& engine)
     ImGui::DragFloat3("Position##sp", m_spawnPos,   0.1f);
 
     // Show relevant params per type
-    if (m_spawnType == 0 || m_spawnType == 1) // cube / plane
+    if (m_spawnType == 0 || m_spawnType == 1 || m_spawnType == 2) // cube / plane / sphere
     {
         ImGui::DragFloat3("Scale##sp",    m_spawnScale,  0.05f, 0.01f, 100.f);
         ImGui::ColorEdit3("Colour##sp",   m_spawnColor);
         ImGui::SliderFloat("Roughness##sp",&m_spawnRoughness, 0.f, 1.f);
         ImGui::SliderFloat("Specular##sp", &m_spawnSpecular,  0.f, 1.f);
-        if (m_spawnType == 0)
+        if (m_spawnType == 0 || m_spawnType == 2) // cube / sphere
             ImGui::Checkbox("Solid collision", &m_spawnCollision);
     }
-    if (m_spawnType == 2 || m_spawnType == 7) // lamppost / light
+    if (m_spawnType == 3 || m_spawnType == 8) // lamppost / light
     {
         ImGui::ColorEdit3("Light colour", m_lightColor);
         ImGui::SliderFloat("Radius",    &m_lightRadius,    0.5f, 40.f);
         ImGui::SliderFloat("Intensity", &m_lightIntensity, 0.f,  5.f);
         ImGui::Checkbox   ("Flicker",   &m_lightFlicker);
     }
-    if (m_spawnType == 4) // Container — item editor
+    if (m_spawnType == 5) // Container — item editor
     {
         ImGui::SeparatorText("Container Contents");
 
@@ -493,7 +566,7 @@ void LevelEditor::RenderPanel(Engine& engine)
         ImGui::Checkbox("Clear list after placing", &m_clearItemsAfterPlace);
     }
 
-    if (m_spawnType == 5) // pickup
+    if (m_spawnType == 6) // pickup
     {
         ImGui::InputText("Item name", m_pickupName, sizeof(m_pickupName));
     }

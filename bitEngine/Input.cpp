@@ -130,6 +130,7 @@ const char* Input::GetKeyName(Key k)
         case Key::R:      return "R";
         case Key::F:      return "F";
         case Key::G:      return "G";
+        case Key::I:      return "I";
         case Key::Tab:    return "Tab";
         default:          return "?";
     }

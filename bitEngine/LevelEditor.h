@@ -106,8 +106,8 @@ private:
     float       m_statusTimer = 0.f;  // Seconds remaining to display
 
     static constexpr const char* kSpawnTypeNames[] = {
-        "Cube", "Plane", "Lamppost", "Door",
+        "Cube", "Plane", "Sphere", "Lamppost", "Door",
         "Container", "Pickup", "Alarm", "Point Light"
     };
-    static constexpr int kSpawnTypeCount = 8;
+    static constexpr int kSpawnTypeCount = 9;
 };

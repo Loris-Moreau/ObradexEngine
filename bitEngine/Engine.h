@@ -28,6 +28,7 @@ class Timer;
 class World;
 class Player;
 class EditorUI;
+class InventorySystem;
 
 // ── Engine State ─────────────────────────────────────────────
 enum class EngineState
@@ -92,6 +93,7 @@ public:
     World&    GetWorld()    const;
     Player&   GetPlayer()   const;
     EditorUI& GetEditorUI() const;
+    InventorySystem& GetInventory() const;
     /// @}
 
     // ── State ─────────────────────────────────────────────────
@@ -113,11 +115,12 @@ private:
     EngineState  m_state = EngineState::Uninitialized;
 
     // Subsystems (ordered — destruction is reverse of declaration)
-    std::unique_ptr<Timer>    m_timer;
-    std::unique_ptr<Input>    m_input;
-    std::unique_ptr<Window>   m_window;
-    std::unique_ptr<Renderer> m_renderer;
-    std::unique_ptr<World>    m_world;
-    std::unique_ptr<Player>   m_player;
-    std::unique_ptr<EditorUI> m_editorUI;
+    std::unique_ptr<Timer>           m_timer;
+    std::unique_ptr<Input>           m_input;
+    std::unique_ptr<Window>          m_window;
+    std::unique_ptr<Renderer>        m_renderer;
+    std::unique_ptr<World>           m_world;
+    std::unique_ptr<Player>          m_player;
+    std::unique_ptr<InventorySystem> m_inventory;
+    std::unique_ptr<EditorUI>        m_editorUI;
 };

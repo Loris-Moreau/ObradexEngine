@@ -145,6 +145,9 @@ public:
     /// Used by Player::Update to suppress movement while the grid popup is shown.
     bool HasOpenContainer() const;
 
+    /// Close any open container (called when Escape is pressed).
+    void CloseOpenContainer();
+
     // ── Primitive mesh accessors ──────────────────────────────
     // Used by Interaction factories and the Level Editor to assign
     // meshes to newly spawned entities without duplicating GPU data.
