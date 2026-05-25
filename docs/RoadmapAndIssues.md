@@ -4,27 +4,26 @@
 
 ## 1. Known Limitations & Roadmap
 
-| Area                      | Current State                                                                                 | Planned                                                                                                                             |
-|---------------------------|-----------------------------------------------------------------------------------------------|-------------------------------------------------------------------------------------------------------------------------------------|
-| Collision                 | AABB box collision against all solid `CollisionComponent` entities + floor plane at y = 0     | Ray-cast vs mesh AABB tree or OOBB Collision; stand-up headroom check when uncrouching                                              |
-| Shadows                   | None                                                                                          | Single directional shadow map                                                                                                       |
-| Audio                     | Not implemented                                                                               | OpenAL-Soft or miniaudio integration                                                                                                |
-| Level loading             | Runtime `.lvl` save/load via ImGui Level Editor tab *(plain-text format, `Levels/` folder)*   | Additional entity types; level streaming                                                                                            |
-| Animation                 | None                                                                                          | Skeletal animation via Assimp                                                                                                       |
-| Vaulting                  | State stub only                                                                               | Auto-climb ledges ≤ 2 m high                                                                                                        |
-| Texture system            | Stub uniforms in world shader                                                                 | Full material system with diffuse + normal maps                                                                                     |
-| Icons for container items | None                                                                                          | Pixel-art icons per item type, rendered in the 3×3 container grid                                                                   |
-| Inventory                 | Data structure + Deus Ex Mankind Divided style UI implemented *(I key)*; routes grabbed items | Weapons, ammo, and consumable design; equipment slots; weight system                                                                |
-| Inventory Style           | Items are displayed as a list with Name, Description, Amount, and cannot be interacted with   | be like the inventory in the latest Deus Ex where you can move stuff around and each item takes a certain amount of space on a grid |
-| Main Menu                 | Not Implemented                                                                               | Continue, Start, Level Select, Settings, Quit                                                                                       |
-| Pause Menu                | Not Implemented                                                                               | Continue, Restart Level, Settings, Main Menu, Quit                                                                                  |
-| AI / stealth              | Not implemented                                                                               | Visibility cones + noise detection + random patrol movement                                                                         |
-| Weapons                   | Not implemented                                                                               | Blunt, slash, ranged *(pistol, shotgun, sniper, semi-auto)*                                                                         |
-| Ammo system               | Not implemented *(requires weapons)*                                                          | Per-weapon pool: 9 mm, 12 ga, 7.62 mm, 5.56 mm                                                                                      |
-| Health system             | Not implemented                                                                               | Health bar, death screen, level reload                                                                                              |
-| Networking                | Not planned                                                                                   | Revisit if the project ships on Steam                                                                                               |
-| Meshes                    | Cube, Plane, Sphere placeable from Level Editor                                               | OBJ/glTF import via Assimp                                                                                                          |
-| VFX and Materials         | None                                                                                          | VFX editor similar to Unreal / Unity                                                                                                |
+| Area                      | Current State                                                                               | Planned                                                                                |
+|---------------------------|---------------------------------------------------------------------------------------------|----------------------------------------------------------------------------------------|
+| Collision                 | AABB box collision against all solid `CollisionComponent` entities + floor plane at y = 0   | Ray-cast vs mesh AABB tree or OOBB Collision; stand-up headroom check when uncrouching |
+| Shadows                   | None                                                                                        | Single directional shadow map                                                          |
+| Audio                     | Not implemented                                                                             | OpenAL-Soft or miniaudio integration                                                   |
+| Level loading             | Runtime `.lvl` save/load via ImGui Level Editor tab (plain-text format, `Levels/` folder)   | Additional entity types; level streaming                                               |
+| Animation                 | None                                                                                        | Skeletal animation via Assimp                                                          |
+| Vaulting                  | State stub only                                                                             | Auto-climb ledges ≤ 2 m high                                                           |
+| Texture system            | Stub uniforms in world shader                                                               | Full material system with diffuse + normal maps                                        |
+| Icons for container items | None                                                                                        | Pixel-art icons per item type, rendered in the 3×3 container grid                      |
+| Inventory                 | Data structure + Deus Ex Mankind Divided style UI implemented (I key); routes grabbed items | Weapons, ammo, and consumable design; equipment slots; weight system                   |
+| Main Menu                 | Not Implemented                                                                             | Continue, Start, Level Select, Settings, Quit                                          |
+| Pause Menu                | Not Implemented                                                                             | Continue, Restart Level, Settings, Main Menu, Quit                                     |
+| AI / stealth              | Not implemented                                                                             | Visibility cones + noise detection + random patrol movement                            |
+| Weapons                   | Not implemented                                                                             | Blunt, slash, ranged *(pistol, shotgun, sniper, semi-auto)*                            |
+| Ammo system               | Not implemented *(requires weapons)*                                                        | Per-weapon pool: 9 mm, 12 ga, 7.62 mm, 5.56 mm                                         |
+| Health system             | Not implemented                                                                             | Health bar, death screen, level reload                                                 |
+| Networking                | Not planned                                                                                 | Revisit if the project ships on Steam                                                  |
+| Meshes                    | Cube, Plane, Sphere placeable from Level Editor                                             | OBJ/glTF import via Assimp                                                             |
+| VFX and Materials         | None                                                                                        | VFX editor similar to Unreal / Unity                                                   |
 
 ---
 
@@ -33,10 +32,7 @@
 | Bug                                                                       | Status | Notes                                                                                                                                                                                                                                                                                |
 |---------------------------------------------------------------------------|--------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Crouch does not properly disable stand-up when ceiling is above           | Open   | The AABB correctly shrinks to `crouchHeight = 0.85 m` when crouching. However there is no headroom check when releasing Ctrl — the player can clip through a low ceiling by standing up inside it. A sweep test upward before allowing the state transition to `Standing` is needed. |
-| Camera still moves when inventory is open                                 | Open   | needs to be same as crate                                                                                                                                                                                                                                                            |
 | Inventory UI needs some polish *(text isn't align with titles)*           | Open   | Just need to move them a bit                                                                                                                                                                                                                                                         |
-| Esc Key should exit inventory and opening inventory should pause the game | Open   | need to add another exception to esc key, and in inventory open need to pause game                                                                                                                                                                                                   |
-| headbobbing continues when walking then open crate                        | Open   | deactivate it when crate opens                                                                                                                                                                                                                                                       |
 | Tilt changes angle when look around                                       | Open   | Rotations                                                                                                                                                                                                                                                                            |
 | Weird collision when the door is open                                     | Open   | I dunno need to check that the collision properly rotates with the door                                                                                                                                                                                                              |
 
@@ -234,3 +230,29 @@ The filename input field had no file picker; the user had to type `level.lvl` ex
 Grabbed items (container slots, Grab All, standalone pickups) called `std::cout` and were discarded with no persistent storage.
 
 *Fix:* Added `InventorySystem` (`InventorySystem.h/.cpp`). It stores `InventoryEntry` values (item + stack count) and stacks by name on `AddItem`. The Deus Ex: Mankind Divided-style overlay (`DrawUI`) is drawn at native resolution over the game view, toggled by the **I** key. Container grabs and standalone pickup `onInteract` callbacks now call `engine.GetInventory().AddItem(it)` instead of printing. The cursor is unlocked while the inventory is open.
+
+---
+
+### 3.7 Camera, Inventory & Door (batch fix)
+
+**[FIX] Camera continues to move when inventory is open**
+`Player::Update` checked `HasOpenContainer()` to block mouse look and movement, but inventory open state was not checked. Inventory now sets `EngineState::Paused` when opened (same as pressing Escape), which stops the fixed-step `Update` loop entirely. Camera movement is blocked as a side-effect of the engine not ticking rather than requiring a per-system guard.
+
+**[FIX] Escape key does not close inventory**
+`Engine::ProcessInput` Escape handling only checked for open containers, then fell through to the pause toggle. Escape now checks containers first (priority 1), then inventory (priority 2, closes it and resumes `EngineState::Running`), then the normal pause toggle (priority 3).
+
+**[FIX] Opening inventory does not pause the game**
+`Toggle()` + `SetCursorLocked(false)` was the only effect of pressing I. Physics and movement continued running (head bob, gravity, sliding). The I handler now sets `m_state = EngineState::Paused` on open and restores `EngineState::Running` on close, consistent with how Escape-pause works.
+
+**[FIX] Head bob continues when walking then opening a container**
+`UpdateCameraHeight` called `camera.UpdateHeadBob(m_speed, dt)` unconditionally. `m_speed` retained its last value from the previous frame when `HandleMovement` was blocked by the container popup, so the bob continued advancing at the last walking speed. Fixed by passing `suppressBob` to `UpdateCameraHeight` — when a container is open, speed `0` is passed so the bob damps out via the existing decay path in `UpdateHeadBob`.
+
+**[FIX] Lean tilt angle changes while looking around**
+`Camera::GetView()` built the view matrix via `glm::lookAt(eye, eye + m_forward, m_up)` where `m_up` is the camera's pitched-up vector (from `cross(right, forward)`). At non-zero pitch `m_up` tilts, introducing an implicit roll into the base view matrix that compounded with the explicit lean roll. Fixed by passing `glm::vec3(0,1,0)` (world-up) to `lookAt` so the base view matrix is always roll-free, and the lean rotation post-multiplied with axis `(0,0,1)` is purely a screen-space roll at all pitch angles.
+
+**[FIX] Door collision is one-way (player blocked after door opens)**
+Two independent sub-bugs:
+
+1. `ResolveCollision` computed the door's AABB as `halfExtents * scale` without applying `transform->rotation`. When the door opened (90° Y rotation) the physical AABB remained in the closed orientation, blocking the doorway even though the mesh had swung away. Fixed by expanding the OBB to an enclosing AABB using the standard formula: `halfAABB[i] = Σ |R[col][i]| * localHalf[col]` where R is the rotation matrix.
+
+2. Even with a correctly rotated AABB the open door still partially blocked the opening because the panel now occupies the wall beside the door rather than the doorway. Fixed by setting `collision->solid = false` in the `onInteract` open branch and `solid = true` in the close branch. The AABB rotation fix is retained for any other rotating solid entities.
