@@ -453,8 +453,8 @@ void LevelEditor::RenderPanel(Engine& engine)
             // Store only the basename so LevelPath() keeps it in Levels/
             fs::path picked(path);
             std::string name = picked.filename().string();
-            std::strncpy(m_filenameBuffer, name.c_str(), sizeof(m_filenameBuffer) - 1);
-            m_filenameBuffer[sizeof(m_filenameBuffer) - 1] = '\0';
+            strncpy_s(m_filenameBuffer, sizeof(m_filenameBuffer),
+                      name.c_str(), sizeof(m_filenameBuffer) - 1);
         }
 #else
         // Non-Windows: open a native dialog via zenity/kdialog if available,
@@ -471,8 +471,8 @@ void LevelEditor::RenderPanel(Engine& engine)
                 if (len && buf[len - 1] == '\n') buf[len - 1] = '\0';
                 fs::path picked(buf);
                 std::string name = picked.filename().string();
-                std::strncpy(m_filenameBuffer, name.c_str(), sizeof(m_filenameBuffer) - 1);
-                m_filenameBuffer[sizeof(m_filenameBuffer) - 1] = '\0';
+                strncpy_s(m_filenameBuffer, sizeof(m_filenameBuffer),
+                          name.c_str(), sizeof(m_filenameBuffer) - 1);
             }
             pclose(f);
         }

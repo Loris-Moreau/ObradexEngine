@@ -40,6 +40,7 @@
     <ClCompile Include="Interaction.cpp"><Filter>Gameplay</Filter></ClCompile>
     <ClCompile Include="LevelEditor.cpp"><Filter>UI</Filter></ClCompile>
     <ClCompile Include="EditorUI.cpp"><Filter>UI</Filter></ClCompile>
+    <ClCompile Include="InventorySystem.cpp"><Filter>UI</Filter></ClCompile>
     <ClCompile Include="..\third_party\glad\src\glad.c"><Filter>Third Party</Filter></ClCompile>
     <ClCompile Include="..\third_party\imgui\imgui.cpp"><Filter>Third Party</Filter></ClCompile>
     <ClCompile Include="..\third_party\imgui\imgui_draw.cpp"><Filter>Third Party</Filter></ClCompile>
@@ -65,6 +66,7 @@
     <ClInclude Include="Interaction.h"><Filter>Gameplay</Filter></ClInclude>
     <ClInclude Include="LevelEditor.h"><Filter>UI</Filter></ClInclude>
     <ClInclude Include="EditorUI.h"><Filter>UI</Filter></ClInclude>
+    <ClInclude Include="InventorySystem.h"><Filter>UI</Filter></ClInclude>
   </ItemGroup>
 
   <ItemGroup>
