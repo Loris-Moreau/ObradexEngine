@@ -235,6 +235,7 @@ if not exist "$(OutDir)Levels" mkdir "$(OutDir)Levels"
     <None Include="..\README.md" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="..\docs\References.md" />
     <Content Include="..\docs\RoadmapAndIssues.md" />
     <Content Include="..\docs\DOCUMENTATION.md" />
   </ItemGroup>
