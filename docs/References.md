@@ -1,8 +1,13 @@
 # References for the direction of the engine
 
-## Game Feel : 
-- Titan Fall, 
+each are in order of importance/priority.
+
+---
+
+## Game Feel :
 - Mirrors Edge
+- Titan Fall
+- Assassin's Creed Syndicate/Unity
 - Warframe
 
 ## Gameplay: 
