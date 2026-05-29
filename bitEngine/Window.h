@@ -36,10 +36,10 @@ public:
     void SwapBuffers();
 
     // ── Queries ───────────────────────────────────────────────
-    bool ShouldClose() const;   ///< True when the user closes the window
-    int  GetWidth()    const { return m_width;  }
-    int  GetHeight()   const { return m_height; }
-    float GetAspect()  const;   ///< width / height
+    bool  ShouldClose() const;   ///< True when the user closes the window
+    int   GetWidth()    const;   ///< Current framebuffer width  (live query)
+    int   GetHeight()   const;   ///< Current framebuffer height (live query)
+    float GetAspect()   const;   ///< width / height (live query)
 
     /// Raw GLFW handle (needed by ImGui, Input callbacks).
     GLFWwindow* GetGLFWWindow() const { return m_window; }

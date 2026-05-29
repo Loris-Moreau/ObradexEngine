@@ -68,38 +68,57 @@ void Camera::UpdateHeadBob(float speed, float dt)
 // ── GetView ───────────────────────────────────────────────────
 glm::mat4 Camera::GetView() const
 {
-    // Eye position includes head-bob offsets applied in camera-local space
+    // ── Eye position ──────────────────────────────────────────
+    // Bob offsets in world space using world-up and flat-right so they are
+    // always purely vertical/horizontal regardless of pitch.
+    glm::vec3 worldUp   = {0.f, 1.f, 0.f};
+    glm::vec3 flatRight = glm::normalize(glm::cross(m_forward, worldUp));
     glm::vec3 eye = m_position
-                  + m_up    * m_bobY
-                  + m_right * m_bobX;
+                  + worldUp   * m_bobY
+                  + flatRight * m_bobX;
 
-    // Build a roll-free base view matrix.
-    // Using world-up (0,1,0) instead of m_up ensures pitch never leaks an
-    // implicit roll component into the base matrix.
-    glm::mat4 view = glm::lookAt(eye, eye + m_forward, glm::vec3(0.f, 1.f, 0.f));
-
-    // ── Lean (screen-space roll) ──────────────────────────────
-    // WRONG approach: glm::rotate(view, angle, vec3(0,0,1))
-    //   glm::rotate(M, a, axis) computes  M * R(axis_worldspace, a).
-    //   The axis (0,0,1) is world +Z.  As the player yaws, world +Z maps
-    //   to a different screen direction, so the roll axis precesses — the
-    //   horizon tilt visibly changes while looking around.
+    // ── View matrix = R * T(-eye) ─────────────────────────────
     //
-    // CORRECT approach: right-multiply a rotation built on the identity.
-    //   view_final = view * R(vec3(0,0,1), a)
-    //   Right-multiplying onto a view matrix applies R in VIEW space
-    //   (the space the view maps TO).  View-space Z is always the
-    //   into-screen axis regardless of yaw or pitch, so the roll is a
-    //   stable screen-space tilt at all camera orientations.
+    // A view matrix decomposes as:   V = R * T(-eye)
+    //   T(-eye)  translates world so the camera eye is at the origin.
+    //   R        is the camera orientation (rotation only).
+    //
+    // Lean must rotate the camera around its OWN forward axis (local Z).
+    // If we apply the roll AFTER assembling the full V (i.e. V * R_roll or
+    // R_roll * V), the rotation axis passes through the WORLD ORIGIN, not
+    // the eye.  When the eye is far from the world origin this swings it
+    // through a visible arc — the distortion seen far from (0,0,0).
+    //
+    // The fix: apply the lean roll to R BEFORE appending T(-eye).
+    //   V_final = R_lean * R_yawpitch * T(-eye)
+    // Because T(-eye) is applied last, the rotation axis always passes
+    // through the eye regardless of where it is in the world.
+
+    // Step 1 – orientation rows from yaw/pitch basis vectors
+    //   (identical to the 3×3 rotation block that glm::lookAt produces)
+    glm::vec3 up_view = glm::normalize(glm::cross(flatRight, m_forward));
+    glm::mat4 R(1.f);
+    // Column-major storage: R[col][row]
+    R[0][0] =  flatRight.x;  R[0][1] =  up_view.x;  R[0][2] = -m_forward.x;
+    R[1][0] =  flatRight.y;  R[1][1] =  up_view.y;  R[1][2] = -m_forward.y;
+    R[2][0] =  flatRight.z;  R[2][1] =  up_view.z;  R[2][2] = -m_forward.z;
+
+    // Step 2 – lean roll applied to R (no translation yet, so rotation
+    // axis is at the origin of R's space = the eye position after T)
+    // Sign: A → m_lean < 0 → left side of screen up → lean left  ✓
+    //       E → m_lean > 0 → right side of screen up → lean right ✓
     if (std::abs(m_lean) > 0.001f)
     {
-        glm::mat4 roll = glm::rotate(glm::mat4(1.f),
-                                     glm::radians(-m_lean),
-                                     glm::vec3(0.f, 0.f, 1.f));
-        view = view * roll;
+        R = glm::rotate(R, glm::radians(m_lean), glm::vec3(0.f, 0.f, 1.f));
     }
 
-    return view;
+    // Step 3 – eye translation (column-major: last column = translation)
+    glm::mat4 T(1.f);
+    T[3][0] = -eye.x;
+    T[3][1] = -eye.y;
+    T[3][2] = -eye.z;
+
+    return R * T;
 }
 
 // ── GetProjection ─────────────────────────────────────────────

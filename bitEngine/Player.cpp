@@ -166,12 +166,14 @@ void Player::HandleMovement(const Input& input, float dt)
     }
     m_speed = glm::length(glm::vec3(m_velocity.x, 0.f, m_velocity.z));
 
-    // Lean (A = left, E = right) — only when not sprinting
+    // Lean (A = left, E = right)
+    // Lean is available when standing, crouching, or in air.
+    // Disabled during sprint and slide — too fast to peek.
     float lean = 0.f;
     if (m_state != MoveState::Sprinting && m_state != MoveState::Sliding)
     {
         if (input.IsKeyHeld(Key::A)) lean = -1.f;
-        if (input.IsKeyHeld(Key::E) && glm::length(moveDir) < 0.001f) lean = 1.f;
+        if (input.IsKeyHeld(Key::E)) lean =  1.f;
     }
     m_camera.SetLean(lean * 12.f);
 

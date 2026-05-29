@@ -40,9 +40,10 @@
 |-----------------------------------------------------------------|--------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Crouch does not properly disable stand-up when ceiling is above | Open   | The AABB correctly shrinks to `crouchHeight = 0.85 m` when crouching. However there is no headroom check when releasing Ctrl — the player can clip through a low ceiling by standing up inside it. A sweep test upward before allowing the state transition to `Standing` is needed. |
 | Inventory UI needs some polish *(text isn't align with titles)* | Open   | Just need to move them a bit                                                                                                                                                                                                                                                         |
-| Tilt changes angle when look around                             | Open   | Rotations                                                                                                                                                                                                                                                                            |
-| Weird collision when the door is open                           | Open   | I dunno need to check that the collision properly rotates with the door                                                                                                                                                                                                              |
-| Doesn't properly maximize                                       | Open   | Do not do fullscreen only maximize                                                                                                                                                                                                                                                   |
+| Tilt changes angle when look around                             | Open   | left and right leans up and down instead of side to side                                                                                                                                                                                                                             |
+| no collision on door open                                       | Open   | Need to check the door collision                                                                                                                                                                                                                                                     |
+| Jump Doesn't conserve velocity                                  | Open   |                                                                                                                                                                                                                                                                                      |
+
 
 ---
 
@@ -264,3 +265,67 @@ Two independent sub-bugs:
 1. `ResolveCollision` computed the door's AABB as `halfExtents * scale` without applying `transform->rotation`. When the door opened (90° Y rotation) the physical AABB remained in the closed orientation, blocking the doorway even though the mesh had swung away. Fixed by expanding the OBB to an enclosing AABB using the standard formula: `halfAABB[i] = Σ |R[col][i]| * localHalf[col]` where R is the rotation matrix.
 
 2. Even with a correctly rotated AABB the open door still partially blocked the opening because the panel now occupies the wall beside the door rather than the doorway. Fixed by setting `collision->solid = false` in the `onInteract` open branch and `solid = true` in the close branch. The AABB rotation fix is retained for any other rotating solid entities.
+
+---
+
+### 3.8 Camera Lean & Window Maximize
+
+**[FIX] Lean tilt angle changes while looking around**
+
+Root cause: `glm::rotate(mat4 M, angle, axis)` applies the rotation in the coordinate space that `M` maps *from* — world space. The axis `vec3(0, 0, 1)` is world +Z. As the player yaws, world +Z maps to a different direction on screen, so the roll axis precesses and the horizon tilt visibly shifts with yaw.
+
+*Fix (`Camera.cpp`):* Build the roll rotation on `glm::mat4(1.f)` (identity) and right-multiply it onto the view matrix: `view = view * roll`. Right-multiplying a rotation onto a view matrix applies it in *view space* (the space the view maps TO). View-space Z is the permanent into-screen axis at all yaw and pitch angles, so the tilt is a stable screen-space roll that never precesses. The `glm::lookAt` call continues to use world-up `(0,1,0)` so the base matrix is always roll-free.
+
+---
+
+**[FIX] Window does not properly maximise — image stretches to fill window**
+
+`PostProcess::Apply` called `glViewport(0, 0, windowW, windowH)` unconditionally, stretching the 320×180 render to fill any window size. Maximising to a size with a different aspect ratio (or any size that isn't an exact integer multiple of 320×180) produced visible distortion.
+
+Additionally `Window::FramebufferSizeCallback` called `glViewport(0, 0, w, h)` on every OS resize event, which could fire mid-frame and override the low-res capture viewport set by `BeginCapture`.
+
+*Fix (`PostProcess.cpp`, `Window.cpp`):*
+- `Apply` now computes `scale = min(windowW / renderW, windowH / renderH)`, produces a centred viewport of `(renderW × scale) × (renderH × scale)`, clears the full window to black first (painting the letterbox bars), then blits into only the centred region. The image is never stretched at any window size.
+- `FramebufferSizeCallback` no longer calls `glViewport` — it only updates `m_width` / `m_height`. All viewport management is owned by `PostProcess::Apply` (blit) and `PostProcess::BeginCapture` (low-res scene render).
+
+---
+
+### 3.9 Lean & Maximize (corrected)
+
+Previous §3.8 entries described the intended fix; the actual bugs in the shipped code required the following additional corrections.
+
+**[FIX] Lean inverted, precesses with yaw, lost while moving, causes diagonal drift**
+
+Four sub-bugs:
+
+**a) Precesses with yaw** — `glm::rotate(M, angle, axis)` rotates in world space. `vec3(0,0,1)` is world +Z; as the player yaws it maps to different screen directions, so the roll axis drifted. Fix: `view = view * glm::rotate(I, angle, Z)` — right-multiplying applies the rotation in view space where Z is permanently the into-screen axis.
+
+**b) Inverted direction** — The sign was `-m_lean` in `GetView`, which made A (target −12) produce a +12° roll = right-side-up = lean right. Changed to `+m_lean`: A → negative roll → left-side-up → lean left ✓.
+
+**c) E lean lost while moving** — E was gated on `glm::length(moveDir) < 0.001f`. Pressing any movement key zeroed the lean immediately. Restriction removed — lean works freely during walk/crouch/air.
+
+**d) Bob offsets using pitched camera vectors** — `GetView` computed eye position as `m_position + m_up*bobY + m_right*bobX`. `m_up` has a forward component when pitched, making the eye drift forward/backward during bob. Changed to `worldUp = {0,1,0}` for bobY and `flatRight = normalize(cross(m_forward, worldUp))` for bobX.
+
+---
+
+**[FIX] Maximize black bars not painted — GL_SCISSOR_TEST left enabled by ImGui**
+
+ImGui leaves `GL_SCISSOR_TEST` enabled with its own scissor rect after `ImGui_ImplOpenGL3_RenderDrawData`. On the next frame, the `glClear` at the start of `PostProcess::Apply` was clipped to ImGui's last scissor region, so the letterbox bar areas were never cleared and retained stale pixel content. Fix: `glDisable(GL_SCISSOR_TEST)` before the full-window clear in `Apply`.
+
+---
+
+### 3.10 Lean distortion & maximize bottom-left (root cause fixes)
+
+**[FIX] Lean distorts geometry when far from the world origin / wrong direction per facing**
+
+Root cause: `view * roll` right-multiplies the roll rotation onto the **full** view matrix `V = R * T(-eye)`. The rotation axis passes through the world origin, not through the eye. When the eye is far from `(0,0,0)` the eye position is swung through a visible arc on every lean frame — causing the distortion reported far from origin. The direction also varied by facing because the axis `(0,0,1)` in the space `view` maps from is world +Z, which points in a different screen direction at different yaw angles.
+
+*Fix (`Camera.cpp`):* Decompose the view matrix construction explicitly as `V = R * T(-eye)` and apply the lean roll **to R before T is appended**. When `T(-eye)` has not been applied yet, the rotation origin is the eye. `glm::rotate(R, lean, Z)` rotates the orientation matrix around its local Z axis (which is the camera's into-screen axis regardless of yaw/pitch), and the eye translation is applied afterward — so the axis always passes through the eye at any world position. The orientation matrix is built from the same `flatRight`, `up_view`, `m_forward` basis vectors that `glm::lookAt` would produce, giving identical results without a lean.
+
+---
+
+**[FIX] Maximize keeps render at bottom-left of window**
+
+Root cause: `GetWidth()` / `GetHeight()` returned the cached `m_width` / `m_height` members that are only updated by `FramebufferSizeCallback`. On Windows, GLFW fires the framebuffer-size callback correctly, but there are edge cases (minimize then maximize, certain DPI-scaling configurations, window state transitions during the same `PollEvents` call where a frame is already mid-render) where the cached value is stale. The letterbox viewport `vpX = (windowW - vpW) / 2` then receives the original window dimensions rather than the maximised ones, producing `vpX = 0, vpY = 0` — image at bottom-left with black bars only on the right and top.
+
+*Fix (`Window.cpp`, `Window.h`):* `GetWidth()`, `GetHeight()`, and `GetAspect()` now call `glfwGetFramebufferSize()` directly on every query rather than reading cached members. `glfwGetFramebufferSize` always returns the current framebuffer dimensions synchronously with no caching, so the letterbox calculation is never based on a stale size.

@@ -304,8 +304,12 @@ void PostProcess::Apply(int windowW, int windowH)
     int vpX = (windowW - vpW) / 2;
     int vpY = (windowH - vpH) / 2;
 
-    // Clear the whole window (fills the black bars around the image)
+    // Clear the whole window (fills the black bars around the image).
+    // Must disable GL_SCISSOR_TEST first: ImGui leaves it enabled after
+    // rendering, and its scissor rect would clip the clear to only part
+    // of the window — leaving stale pixels in the letterbox bars.
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    glDisable(GL_SCISSOR_TEST);
     glViewport(0, 0, windowW, windowH);
     glClearColor(0.f, 0.f, 0.f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT);

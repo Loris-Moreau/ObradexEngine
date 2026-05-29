@@ -94,10 +94,27 @@ void Window::SwapBuffers() { glfwSwapBuffers(m_window); }
 
 // ── Queries ───────────────────────────────────────────────────
 bool  Window::ShouldClose() const { return glfwWindowShouldClose(m_window); }
-float Window::GetAspect()   const
+
+int Window::GetWidth() const
 {
-    if (m_height == 0) return 1.0f;
-    return static_cast<float>(m_width) / static_cast<float>(m_height);
+    int w, h;
+    glfwGetFramebufferSize(m_window, &w, &h);
+    return w;
+}
+
+int Window::GetHeight() const
+{
+    int w, h;
+    glfwGetFramebufferSize(m_window, &w, &h);
+    return h;
+}
+
+float Window::GetAspect() const
+{
+    int w, h;
+    glfwGetFramebufferSize(m_window, &w, &h);
+    if (h == 0) return 1.0f;
+    return static_cast<float>(w) / static_cast<float>(h);
 }
 
 // ── Cursor lock (FPS capture) ─────────────────────────────────
