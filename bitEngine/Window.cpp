@@ -111,11 +111,11 @@ void Window::SetCursorLocked(bool locked)
 // ── Framebuffer resize callback ───────────────────────────────
 void Window::FramebufferSizeCallback(GLFWwindow* win, int w, int h)
 {
-    // Update stored dimensions; the Renderer reads these when blitting.
+    // Only update stored dimensions.
+    // PostProcess::Apply recomputes the letterbox viewport every frame from
+    // these values — calling glViewport here would override that and stretch
+    // the image for one frame (or permanently if Apply doesn't reset it).
     auto* self   = static_cast<Window*>(glfwGetWindowUserPointer(win));
     self->m_width  = w;
     self->m_height = h;
-
-    // Keep the full-window viewport in sync
-    glViewport(0, 0, w, h);
 }

@@ -68,24 +68,35 @@ void Camera::UpdateHeadBob(float speed, float dt)
 // ── GetView ───────────────────────────────────────────────────
 glm::mat4 Camera::GetView() const
 {
-    // Eye position includes head-bob offsets
+    // Eye position includes head-bob offsets applied in camera-local space
     glm::vec3 eye = m_position
                   + m_up    * m_bobY
                   + m_right * m_bobX;
 
-    // Always use world-up (0,1,0) for lookAt so that the view matrix
-    // never has an implicit roll component from pitch.  When the camera
-    // pitches near ±90° glm::lookAt handles the singularity gracefully.
+    // Build a roll-free base view matrix.
+    // Using world-up (0,1,0) instead of m_up ensures pitch never leaks an
+    // implicit roll component into the base matrix.
     glm::mat4 view = glm::lookAt(eye, eye + m_forward, glm::vec3(0.f, 1.f, 0.f));
 
-    // Lean: roll around view-space Z (axis pointing into the screen).
-    // Applied post-lookAt so the axis is in view-space, giving a stable
-    // screen-space tilt that does not change with yaw or pitch.
+    // ── Lean (screen-space roll) ──────────────────────────────
+    // WRONG approach: glm::rotate(view, angle, vec3(0,0,1))
+    //   glm::rotate(M, a, axis) computes  M * R(axis_worldspace, a).
+    //   The axis (0,0,1) is world +Z.  As the player yaws, world +Z maps
+    //   to a different screen direction, so the roll axis precesses — the
+    //   horizon tilt visibly changes while looking around.
+    //
+    // CORRECT approach: right-multiply a rotation built on the identity.
+    //   view_final = view * R(vec3(0,0,1), a)
+    //   Right-multiplying onto a view matrix applies R in VIEW space
+    //   (the space the view maps TO).  View-space Z is always the
+    //   into-screen axis regardless of yaw or pitch, so the roll is a
+    //   stable screen-space tilt at all camera orientations.
     if (std::abs(m_lean) > 0.001f)
     {
-        view = glm::rotate(view,
-                           glm::radians(-m_lean),
-                           glm::vec3(0.f, 0.f, 1.f));
+        glm::mat4 roll = glm::rotate(glm::mat4(1.f),
+                                     glm::radians(-m_lean),
+                                     glm::vec3(0.f, 0.f, 1.f));
+        view = view * roll;
     }
 
     return view;

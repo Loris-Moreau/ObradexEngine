@@ -1,4 +1,4 @@
-# ObradexEngine — Roadmap, Issues & Fix Log
+# Obradex Engine — Roadmap, Issues & Fix Log
 
 ---
 
@@ -43,7 +43,6 @@
 | Tilt changes angle when look around                             | Open   | Rotations                                                                                                                                                                                                                                                                            |
 | Weird collision when the door is open                           | Open   | I dunno need to check that the collision properly rotates with the door                                                                                                                                                                                                              |
 | Doesn't properly maximize                                       | Open   | Do not do fullscreen only maximize                                                                                                                                                                                                                                                   |
-
 
 ---
 

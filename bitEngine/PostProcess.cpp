@@ -295,10 +295,24 @@ void PostProcess::EndCapture()
 // ── Apply ─────────────────────────────────────────────────────
 void PostProcess::Apply(int windowW, int windowH)
 {
-    // Restore full-window viewport for the blit
+    // ── Letterbox: preserve render aspect ratio, centre in window ──
+    float scaleX = static_cast<float>(windowW) / static_cast<float>(m_renderW);
+    float scaleY = static_cast<float>(windowH) / static_cast<float>(m_renderH);
+    float scale  = std::min(scaleX, scaleY);
+    int vpW = static_cast<int>(m_renderW * scale);
+    int vpH = static_cast<int>(m_renderH * scale);
+    int vpX = (windowW - vpW) / 2;
+    int vpY = (windowH - vpH) / 2;
+
+    // Clear the whole window (fills the black bars around the image)
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glViewport(0, 0, windowW, windowH);
+    glClearColor(0.f, 0.f, 0.f, 1.f);
     glClear(GL_COLOR_BUFFER_BIT);
     glDisable(GL_DEPTH_TEST);
+
+    // Blit into the centred, aspect-correct region
+    glViewport(vpX, vpY, vpW, vpH);
 
     m_shader->Bind();
 
