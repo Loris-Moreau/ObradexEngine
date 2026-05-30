@@ -14,8 +14,8 @@
 //    Vaulting   — auto-climb low ledges (Syndicate-style)
 //
 //  Abilities (Deus Ex style):
-//    Lean (Q/E)          — peek around corners
-//    Interaction (E)     — pick up / open / activate
+//    Lean (A/E)          — peek around corners
+//    Interaction (F)     — pick up / open / activate
 //    Crouch-slide (LCtrl)— momentum preserved briefly
 //
 //  Physics:
@@ -108,8 +108,9 @@ private:
 
     float m_speed           = 0.f;
     float m_currentEyeH     = 1.7f;
-    float m_slideTimer      = 0.f;
-    float m_vaultTimer      = 0.f;
+    float m_slideTimer      = 0.0f;
+    float m_vaultTimer      = 0.0f;
+    float m_airSpeedCap     = 0.0f;   ///< Horizontal speed captured at jump time; used as in-air cap
     bool  m_onGround        = true;
     bool  m_isHidden        = false;
 

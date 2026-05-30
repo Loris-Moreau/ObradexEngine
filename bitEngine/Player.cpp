@@ -3,12 +3,13 @@
 // ============================================================
 
 #include "Player.h"
-#include "Input.h"
-#include "World.h"
-#include <glm/gtc/matrix_transform.hpp>
+#include <algorithm>
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include <glm/gtc/matrix_transform.hpp>
+#include "Input.h"
+#include "World.h"
 
 // Player AABB dimensions (metres)
 static constexpr float kPlayerHalfW = 0.30f;   // half-width X and Z
@@ -159,9 +160,12 @@ void Player::HandleMovement(const Input& input, float dt)
         moveDir = glm::normalize(moveDir);
 
     // Horizontal velocity
-    // On the ground: snap directly to input direction × speed (responsive).
-    // In the air:    steer with reduced influence but preserve the velocity
-    //               from the moment of jump — no snapping to walk speed.
+    // On the ground: snap to input × targetSpeed (responsive).
+    // In the air:    preserve the horizontal speed at jump time.
+    //               Air control nudges direction but is capped at
+    //               m_airSpeedCap — set to the actual speed when the
+    //               jump was initiated, so a sprint-jump stays at sprint
+    //               speed and a walk-jump stays at walk speed.
     if (m_state != MoveState::Sliding)
     {
         if (m_onGround)
@@ -171,19 +175,16 @@ void Player::HandleMovement(const Input& input, float dt)
         }
         else
         {
-            // Air control: nudge toward input direction without overriding
-            // the jump's horizontal momentum.  Scale influence so the player
-            // can steer but not instantly redirect a sprint-jump.
+            // Air steering: small directional nudge, no speed increase
             const float kAirControl = 4.0f;   // m/s² influence
             m_velocity.x += moveDir.x * kAirControl * dt;
             m_velocity.z += moveDir.z * kAirControl * dt;
 
-            // Cap horizontal speed in air to the current target speed so
-            // air-strafing can't infinitely accelerate.
+            // Clamp to the speed captured at jump time, not the current state's targetSpeed (which would be walkSpeed for InAir).
             float hspd = glm::length(glm::vec2(m_velocity.x, m_velocity.z));
-            if (hspd > targetSpeed)
+            if (hspd > m_airSpeedCap && m_airSpeedCap > 0.f)
             {
-                float scale = targetSpeed / hspd;
+                float scale = m_airSpeedCap / hspd;
                 m_velocity.x *= scale;
                 m_velocity.z *= scale;
             }
@@ -211,6 +212,10 @@ void Player::HandleMovement(const Input& input, float dt)
         m_velocity.y   = jumpVel;
         m_onGround     = false;
         m_state        = MoveState::InAir;
+        // Lock in the horizontal speed at jump time so the air cap uses
+        // sprint speed after a sprint-jump, walk speed after a walk-jump.
+        m_airSpeedCap = glm::length(glm::vec2(m_velocity.x, m_velocity.z));
+        m_airSpeedCap = std::max(m_airSpeedCap, m_stats.walkSpeed); // always allow basic air steering
     }
 
     // Apply horizontal displacement

@@ -1,4 +1,4 @@
-# Obradex Engine — Roadmap, Issues & Fix Log
+# ObradexEngine — Roadmap, Issues & Fix Log
 
 ---
 
@@ -36,12 +36,11 @@
 
 ## 2. Open Issues
 
-| Bug                                                                  | Status | Notes                                                                                                                                                                                                                                                                                |
-|----------------------------------------------------------------------|--------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Crouch does not properly disable stand-up when ceiling is above      | Open   | The AABB correctly shrinks to `crouchHeight = 0.85 m` when crouching. However there is no headroom check when releasing Ctrl — the player can clip through a low ceiling by standing up inside it. A sweep test upward before allowing the state transition to `Standing` is needed. |
-| Inventory UI needs some polish *(text isn't align with titles)*      | Open   | Just need to move them a bit                                                                                                                                                                                                                                                         |
-| Jump Velocity isn't conserved when sprinting or walking then jumping | Open   | Conserve running velocity *(0.75)* when jumping                                                                                                                                                                                                                                      |
-| Weird collision when the door is open                                | Open   | Need to check that the collision properly rotates with the door                                                                                                                                                                                                                      |
+| Bug                                                             | Status | Notes                                                                                                                                                                                                                                                                                |
+|-----------------------------------------------------------------|--------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Crouch does not properly disable stand-up when ceiling is above | Open   | The AABB correctly shrinks to `crouchHeight = 0.85 m` when crouching. However there is no headroom check when releasing Ctrl — the player can clip through a low ceiling by standing up inside it. A sweep test upward before allowing the state transition to `Standing` is needed. |
+| Inventory UI needs some polish *(text isn't align with titles)* | Open   | Just need to move them a bit                                                                                                                                                                                                                                                         |
+| Weird collision when the door is open                           | Open   | Need to check that the collision properly rotates with the door                                                                                                                                                                                                                      |
 
 ---
 
@@ -347,3 +346,13 @@ Root cause: `HandleMovement` set `m_velocity.x = moveDir * speed` and `m_velocit
 *Fix (`Player.cpp`):* Split the velocity assignment on `m_onGround`:
 - **On ground**: snap directly to `moveDir * targetSpeed` (unchanged — responsive ground movement).
 - **In air**: apply input as an acceleration nudge (`kAirControl = 4 m/s²`) so the player can steer during a jump but the horizontal speed set at jump-time is preserved. A cap at `targetSpeed` prevents unlimited air-strafe acceleration. A sprint-jump now carries the sprint velocity for the full arc; a walk-jump carries walk velocity.
+
+---
+
+### 3.12 Jump velocity cap fix
+
+**[FIX] Jump does not conserve sprint or walk velocity (cap was wrong)**
+
+The §3.11 fix preserved momentum in the air but the cap `if (hspd > targetSpeed)` read `targetSpeed` from the current state switch, which falls through to `walkSpeed = 2.25 m/s` for `InAir`. On the very first air frame the sprint velocity (8 m/s) was clamped to 2.25 m/s — effectively the same bug.
+
+*Fix (`Player.cpp`, `Player.h`):* Added `m_airSpeedCap` (float member). At the exact frame `Space` is pressed, `m_airSpeedCap` is set to the current horizontal speed (`length(velocity.xz)`) — this captures sprint speed after a sprint-jump and walk speed after a walk-jump. A floor of `walkSpeed` ensures standing-still jumps still allow basic air steering. The in-air cap now uses `m_airSpeedCap` instead of `targetSpeed`, so the horizontal velocity is fully preserved for the entire arc.
