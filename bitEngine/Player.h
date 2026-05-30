@@ -24,8 +24,8 @@
 //    Gravity is applied; jumping is supported.
 // ============================================================
 
-#include <glm/glm.hpp>
 #include <string>
+#include <glm/glm.hpp>
 
 #include "Camera.h"
 
@@ -46,16 +46,18 @@ enum class MoveState
 // ── Player stats (tweak-able from the editor) ─────────────────
 struct PlayerStats
 {
-    float walkSpeed       = 2.25f;   // m/s
-    float sprintSpeed     = 8.0f;   // m/s
-    float crouchSpeed     = walkSpeed / 2.0f;   // m/s
-    float slideSpeed      = 10.0f;  // m/s initial
-    float jumpHeight      = 1.2f;   // metres
-    float gravity         = -12.0f;  // m/s²
-    float mouseSensitivity= 0.12f;
-    float eyeHeight       = 1.8f;   // Standing eye height (m)
-    float crouchHeight    = 0.85f;  // Crouching eye height (m)
-    float interactRange   = 2.25f;   // Reach distance (m)
+    float walkSpeed          = 2.25f;  // m/s
+    float sprintSpeed        = 8.0f;   // m/s
+    float crouchSpeed        = walkSpeed / 2.0f; // m/s
+    float slideSpeed         = 10.0f;  // m/s initial
+    float jumpHeight         = 1.2f;   // metres
+    float gravity            = -12.0f; // m/s²
+    float mouseSensitivity   = 0.12f;
+    float eyeHeight          = 1.8f;   // Standing eye height (m)
+    float crouchHeight       = 0.85f;  // Crouching eye height (m)
+    float interactRange      = 2.25f;  // Reach distance (m)
+    float airControl         = 4.0f;   // m/s² horizontal influence while airborne
+    float jumpVelocityRetain = 0.8f;  // Fraction of horizontal speed kept at jump (0–1)
 };
 
 // ── Player ───────────────────────────────────────────────────
@@ -112,6 +114,7 @@ private:
     float m_vaultTimer      = 0.0f;
     float m_airSpeedCap     = 0.0f;   ///< Horizontal speed captured at jump time; used as in-air cap
     bool  m_onGround        = true;
+    bool  m_jumpConsumed    = false;  ///< Set on jump frame; prevents re-fire within same key press
     bool  m_isHidden        = false;
 
     std::string m_interactPrompt;

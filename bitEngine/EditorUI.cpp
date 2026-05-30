@@ -329,16 +329,24 @@ void EditorUI::DrawPlayerPanel(Engine& engine)
     ImGui::Text("Speed     : %.2f m/s", player.GetSpeed());
 
     ImGui::SeparatorText("Stats");
-    ImGui::SliderFloat("Walk speed",   &stats.walkSpeed,        1.0f, 10.0f);
-    ImGui::SliderFloat("Sprint speed", &stats.sprintSpeed,      4.0f, 20.0f);
-    ImGui::SliderFloat("Crouch speed", &stats.crouchSpeed,      0.5f, 5.0f);
-    ImGui::SliderFloat("Slide Speed",  &stats.slideSpeed,       0.25f, 20.0f);
-    ImGui::SliderFloat("Jump height",  &stats.jumpHeight,       0.3f, 4.0f);
-    ImGui::SliderFloat("Gravity",      &stats.gravity,          0.2f, -20.0f);
-    ImGui::SliderFloat("Mouse sens.",  &stats.mouseSensitivity, 0.02f, 0.5f);
-    ImGui::SliderFloat("Eye height",   &stats.eyeHeight,        0.5f, 2.5f);
-    ImGui::SliderFloat("Crouch height",&stats.crouchHeight,     0.3f, 1.5f);
-    ImGui::SliderFloat("Interact range",&stats.interactRange,   0.5f, 6.0f);
+    ImGui::SliderFloat("Walk speed",        &stats.walkSpeed,           1.0f,  10.0f);
+    ImGui::SliderFloat("Sprint speed",      &stats.sprintSpeed,         4.0f,  20.0f);
+    ImGui::SliderFloat("Crouch speed",      &stats.crouchSpeed,         0.5f,   5.0f);
+    ImGui::SliderFloat("Slide Speed",       &stats.slideSpeed,          0.25f, 20.0f);
+    ImGui::SliderFloat("Jump height",       &stats.jumpHeight,          0.3f,   4.0f);
+    ImGui::SliderFloat("Gravity",           &stats.gravity,            -20.0f,  0.2f);
+    ImGui::SliderFloat("Mouse sens.",       &stats.mouseSensitivity,    0.02f,  0.5f);
+    ImGui::SliderFloat("Eye height",        &stats.eyeHeight,           0.5f,   2.5f);
+    ImGui::SliderFloat("Crouch height",     &stats.crouchHeight,        0.3f,   1.5f);
+    ImGui::SliderFloat("Interact range",    &stats.interactRange,       0.5f,   6.0f);
+
+    ImGui::SeparatorText("Air Movement");
+    ImGui::SliderFloat("Air control",       &stats.airControl,          0.0f,  20.0f);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("m/s^2 horizontal nudge while airborne");
+    ImGui::SliderFloat("Jump vel. retain",  &stats.jumpVelocityRetain,  0.0f,   1.0f);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("Fraction of horizontal speed kept at jump\n0 = stop, 0.85 = default, 1 = full");
 
     ImGui::SeparatorText("Camera");
     Camera& cam = player.GetCamera();
@@ -350,30 +358,34 @@ void EditorUI::DrawPlayerPanel(Engine& engine)
     ImGui::SeparatorText("Presets");
     if (ImGui::Button("Base"))
     {
-        stats.walkSpeed = 4.0f;
-        stats.sprintSpeed = 8.0f;
-        stats.crouchSpeed = 1.8f;
-        stats.slideSpeed = 10.0f;
-        stats.jumpHeight = 1.2f;
-        stats.gravity = -15.0f;
-        stats.mouseSensitivity = 0.12f;
-        stats.eyeHeight = 1.75f;
-        stats.crouchHeight = 0.85f;
-        stats.interactRange = 2.5f;
+        stats.walkSpeed           = 4.0f;
+        stats.sprintSpeed         = 8.0f;
+        stats.crouchSpeed         = 1.8f;
+        stats.slideSpeed          = 10.0f;
+        stats.jumpHeight          = 1.2f;
+        stats.gravity             = -15.0f;
+        stats.mouseSensitivity    = 0.12f;
+        stats.eyeHeight           = 1.75f;
+        stats.crouchHeight        = 0.85f;
+        stats.interactRange       = 2.5f;
+        stats.airControl          = 4.0f;
+        stats.jumpVelocityRetain  = 0.75f;
     }
     ImGui::SameLine();
     if (ImGui::Button("SpeedRun"))
     {
-        stats.walkSpeed = 3.0f;
-        stats.sprintSpeed = 8.0f;
-        stats.crouchSpeed = 1.75f;
-        stats.slideSpeed = 15.0f;
-        stats.jumpHeight = 1.25f;
-        stats.gravity = -12.0f;
-        stats.mouseSensitivity = 0.24f;
-        stats.eyeHeight = 1.9f;
-        stats.crouchHeight = 0.9f;
-        stats.interactRange = 2.75f;
+        stats.walkSpeed           = 3.0f;
+        stats.sprintSpeed         = 8.0f;
+        stats.crouchSpeed         = 1.75f;
+        stats.slideSpeed          = 15.0f;
+        stats.jumpHeight          = 1.25f;
+        stats.gravity             = -12.0f;
+        stats.mouseSensitivity    = 0.24f;
+        stats.eyeHeight           = 1.9f;
+        stats.crouchHeight        = 0.9f;
+        stats.interactRange       = 2.75f;
+        stats.airControl          = 6.0f;
+        stats.jumpVelocityRetain  = 0.95f;
     }
     
     if (ImGui::Button("Reset"))

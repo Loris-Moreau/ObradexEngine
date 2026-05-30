@@ -1,4 +1,4 @@
-# ObradexEngine — Roadmap, Issues & Fix Log
+# Obradex Engine — Roadmap, Issues & Fix Log
 
 ---
 
@@ -356,3 +356,25 @@ Root cause: `HandleMovement` set `m_velocity.x = moveDir * speed` and `m_velocit
 The §3.11 fix preserved momentum in the air but the cap `if (hspd > targetSpeed)` read `targetSpeed` from the current state switch, which falls through to `walkSpeed = 2.25 m/s` for `InAir`. On the very first air frame the sprint velocity (8 m/s) was clamped to 2.25 m/s — effectively the same bug.
 
 *Fix (`Player.cpp`, `Player.h`):* Added `m_airSpeedCap` (float member). At the exact frame `Space` is pressed, `m_airSpeedCap` is set to the current horizontal speed (`length(velocity.xz)`) — this captures sprint speed after a sprint-jump and walk speed after a walk-jump. A floor of `walkSpeed` ensures standing-still jumps still allow basic air steering. The in-air cap now uses `m_airSpeedCap` instead of `targetSpeed`, so the horizontal velocity is fully preserved for the entire arc.
+
+---
+
+### 3.13 Jump reliability, velocity retention & editor exposure
+
+**[FIX] Spacebar sometimes requires multiple presses to jump**
+
+Root cause: `Player::Update` runs inside a fixed-timestep accumulator and can execute 2–3 sub-steps per real frame. `IsKeyJustPressed` returns `true` throughout the entire real frame (the snapshot doesn't change between sub-steps). On the first sub-step, the jump fires and sets `m_onGround = false`. Then `ApplyGravity` moves the player slightly upward, but `ResolveCollision` (which runs after gravity) can snap `m_position.y` back to 0 and reset `m_onGround = true` on the same sub-step if the upward displacement is small. On subsequent sub-steps of the same frame, `IsKeyJustPressed` is still true and `m_onGround` is true again — the jump fires a second time, doubling the vertical velocity. The resulting over-launch ends abnormally, making the jump feel unreliable.
+
+*Fix (`Player.cpp`, `Player.h`):* Added `bool m_jumpConsumed`. Set to `true` the frame Space is first processed; cleared when `m_onGround` becomes true (floor landing, box landing) and when `IsKeyHeld(Space)` is false (key released). The jump condition now requires `!m_jumpConsumed`, so it fires exactly once per key press regardless of how many physics sub-steps run.
+
+---
+
+**[FIX / FEATURE] Jump conserves only 85% of horizontal velocity**
+
+*Fix (`Player.cpp`):* At jump time, `m_velocity.x` and `m_velocity.z` are multiplied by `m_stats.jumpVelocityRetain` (default `0.85f`) before setting the vertical impulse and computing `m_airSpeedCap`. Sprint-jumps carry 85% of sprint speed; walk-jumps carry 85% of walk speed.
+
+---
+
+**[FEATURE] Air control and jump velocity retention exposed in editor**
+
+Added `airControl` (m/s² horizontal nudge in air) and `jumpVelocityRetain` (0–1 fraction) to `PlayerStats`. Both appear as sliders in the **Player → Air Movement** section of the F1 editor with tooltips. Presets (Base, SpeedRun) updated to include the new fields.

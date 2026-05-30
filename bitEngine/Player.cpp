@@ -161,11 +161,8 @@ void Player::HandleMovement(const Input& input, float dt)
 
     // Horizontal velocity
     // On the ground: snap to input × targetSpeed (responsive).
-    // In the air:    preserve the horizontal speed at jump time.
-    //               Air control nudges direction but is capped at
-    //               m_airSpeedCap — set to the actual speed when the
-    //               jump was initiated, so a sprint-jump stays at sprint
-    //               speed and a walk-jump stays at walk speed.
+    // In the air:    preserve the horizontal speed set at jump time.
+    //               Air control nudges direction but is capped at m_airSpeedCap.
     if (m_state != MoveState::Sliding)
     {
         if (m_onGround)
@@ -175,12 +172,11 @@ void Player::HandleMovement(const Input& input, float dt)
         }
         else
         {
-            // Air steering: small directional nudge, no speed increase
-            const float kAirControl = 4.0f;   // m/s² influence
-            m_velocity.x += moveDir.x * kAirControl * dt;
-            m_velocity.z += moveDir.z * kAirControl * dt;
+            // Air steering: nudge toward input direction
+            m_velocity.x += moveDir.x * m_stats.airControl * dt;
+            m_velocity.z += moveDir.z * m_stats.airControl * dt;
 
-            // Clamp to the speed captured at jump time, not the current state's targetSpeed (which would be walkSpeed for InAir).
+            // Cap to the speed captured at jump time
             float hspd = glm::length(glm::vec2(m_velocity.x, m_velocity.z));
             if (hspd > m_airSpeedCap && m_airSpeedCap > 0.f)
             {
@@ -192,9 +188,9 @@ void Player::HandleMovement(const Input& input, float dt)
     }
     m_speed = glm::length(glm::vec3(m_velocity.x, 0.f, m_velocity.z));
 
-    // Lean (A = left, E = right)
-    // Lean is available when standing, crouching, or in air.
-    // Disabled during sprint and slide — too fast to peek.
+    // ── Lean (A = left, E = right) ────────────────────────────
+    // Available when standing, crouching, or in air.
+    // Disabled during sprint and slide.
     float lean = 0.f;
     if (m_state != MoveState::Sprinting && m_state != MoveState::Sliding)
     {
@@ -203,19 +199,30 @@ void Player::HandleMovement(const Input& input, float dt)
     }
     m_camera.SetLean(lean * 12.f);
 
-    // Jump
+    // ── Jump ──────────────────────────────────────────────────
+    // m_jumpConsumed prevents the jump from firing more than once per key
+    // press even when IsKeyJustPressed stays true across multiple physics
+    // sub-steps (fixed-step accumulator) or when ResolveCollision briefly
+    // resets m_onGround=true mid-frame after the initial jump displacement.
+    if (!input.IsKeyHeld(Key::Space))
+        m_jumpConsumed = false;  // Key released — reset for next press
+
     if (input.IsKeyJustPressed(Key::Space) && m_onGround
+        && !m_jumpConsumed
         && m_state != MoveState::Crouching
         && m_state != MoveState::Sliding)
     {
         float jumpVel  = std::sqrt(2.f * std::abs(m_stats.gravity) * m_stats.jumpHeight);
+        // Retain only a fraction of the horizontal velocity at launch
+        m_velocity.x  *= m_stats.jumpVelocityRetain;
+        m_velocity.z  *= m_stats.jumpVelocityRetain;
         m_velocity.y   = jumpVel;
         m_onGround     = false;
+        m_jumpConsumed = true;
         m_state        = MoveState::InAir;
-        // Lock in the horizontal speed at jump time so the air cap uses
-        // sprint speed after a sprint-jump, walk speed after a walk-jump.
-        m_airSpeedCap = glm::length(glm::vec2(m_velocity.x, m_velocity.z));
-        m_airSpeedCap = std::max(m_airSpeedCap, m_stats.walkSpeed); // always allow basic air steering
+        // Lock in the retained horizontal speed as the in-air cap
+        m_airSpeedCap  = glm::length(glm::vec2(m_velocity.x, m_velocity.z));
+        m_airSpeedCap  = std::max(m_airSpeedCap, m_stats.walkSpeed);
     }
 
     // Apply horizontal displacement
@@ -239,13 +246,13 @@ void Player::ResolveCollision(World& world)
     // ── 1. Floor ──────────────────────────────────────────────
     if (m_position.y < 0.f)
     {
-        m_position.y = 0.f;
-        m_velocity.y = 0.f;
-        m_onGround   = true;
+        m_position.y   = 0.f;
+        m_velocity.y   = 0.f;
+        m_onGround     = true;
+        m_jumpConsumed = false;
     }
     else
     {
-        // Only mark in-air if we are clearly above the ground
         if (m_position.y > 0.01f) m_onGround = false;
     }
 
@@ -328,7 +335,8 @@ void Player::ResolveCollision(World& world)
             {
                 m_position.y += oy;   // push up (land on top)
                 m_velocity.y  = 0.f;
-                m_onGround    = true;
+                m_onGround     = true;
+                m_jumpConsumed = false;
             }
         }
 
