@@ -1,4 +1,4 @@
-# ObradexEngine — Technical Documentation
+# ObradexEngine - Technical Documentation
 
 ![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/Loris-Moreau/ObradexEngine)
 
@@ -30,7 +30,7 @@
 ObradexEngine is a self-contained C++17 game engine built around the aesthetic of *Return of the Obra Dinn* (limited palette, heavy dithering) crossed with classic 8-bit pixel art. The gameplay layer targets immersive-sim first-person interactions in the spirit of *Deus Ex* and *Assassin's Creed Syndicate*.
 
 **Key aesthetic properties:**
-- Renders to a low-resolution internal framebuffer (default 320 × 180 — a 4:1 scale on a 1280 × 720 window).
+- Renders to a low-resolution internal framebuffer (default 320 × 180 - a 4:1 scale on a 1280 × 720 window).
 - A post-process pass applies Bayer ordered dithering, palette quantisation, scanline overlay, and vignette.
 - "Obra Dinn mode" forces greyscale + ordered dithering for the classic woodcut look.
 - All UI (crosshair, interact prompts, inventory, editor) is drawn at native resolution on top, staying crisp.
@@ -41,43 +41,43 @@ ObradexEngine is a self-contained C++17 game engine built around the aesthetic o
 
 ```
 ObradexEngine/
-├── CMakeLists.txt              — CMake build definition
-├── setup.sh                    — One-time dependency bootstrapper (Git Bash / Linux)
-├── setup.ps1                   — One-time dependency bootstrapper (PowerShell / Windows)
+├── CMakeLists.txt              - CMake build definition
+├── setup.sh                    - One-time dependency bootstrapper (Git Bash / Linux)
+├── setup.ps1                   - One-time dependency bootstrapper (PowerShell / Windows)
 ├── README.md
 ├── docs/
-│   ├── DOCUMENTATION.md        — This file
-│   └── RoadmapAndIssues.md     — Known issues, fix log, roadmap
-├── bitEngine/                  — All source files (flat layout)
+│   ├── DOCUMENTATION.md        - This file
+│   └── RoadmapAndIssues.md     - Known issues, fix log, roadmap
+├── bitEngine/                  - All source files (flat layout)
 │   ├── main.cpp
-│   ├── Engine.h/.cpp           — Singleton core; owns all subsystems; drives the loop
-│   ├── Window.h/.cpp           — GLFW window + OpenGL 4.1 context
-│   ├── Input.h/.cpp            — Frame-snapshot keyboard / mouse / scroll
-│   ├── Timer.h/.cpp            — High-resolution frame timer + smoothed FPS
-│   ├── Renderer.h/.cpp         — Top-level render coordinator
-│   ├── Shader.h/.cpp           — GLSL compile/link + uniform setters
-│   ├── Mesh.h/.cpp             — VAO/VBO/EBO + primitive factories (cube, plane, sphere)
-│   ├── Camera.h/.cpp           — FPS camera: yaw/pitch, lean, head-bob
-│   ├── PostProcess.h/.cpp      — FBO capture, dither, palette, vignette
-│   ├── World.h/.cpp            — Entity/component scene container
-│   ├── Player.h/.cpp           — Movement state machine + interaction dispatch
-│   ├── Interaction.h/.cpp      — Spawn helpers: lamps, doors, containers, pickups, alarms
-│   ├── InventorySystem.h/.cpp  — Item storage + Deus Ex-style overlay UI
-│   ├── EditorUI.h/.cpp         — Dear ImGui runtime editor + HUD + container popup
-│   ├── LevelEditor.h/.cpp      — Level save/load (.lvl) + entity placement panel
+│   ├── Engine.h/.cpp           - Singleton core; owns all subsystems; drives the loop
+│   ├── Window.h/.cpp           - GLFW window + OpenGL 4.1 context
+│   ├── Input.h/.cpp            - Frame-snapshot keyboard / mouse / scroll
+│   ├── Timer.h/.cpp            - High-resolution frame timer + smoothed FPS
+│   ├── Renderer.h/.cpp         - Top-level render coordinator
+│   ├── Shader.h/.cpp           - GLSL compile/link + uniform setters
+│   ├── Mesh.h/.cpp             - VAO/VBO/EBO + primitive factories (cube, plane, sphere)
+│   ├── Camera.h/.cpp           - FPS camera: yaw/pitch, lean, head-bob
+│   ├── PostProcess.h/.cpp      - FBO capture, dither, palette, vignette
+│   ├── World.h/.cpp            - Entity/component scene container
+│   ├── Player.h/.cpp           - Movement state machine + interaction dispatch
+│   ├── Interaction.h/.cpp      - Spawn helpers: lamps, doors, containers, pickups, alarms
+│   ├── InventorySystem.h/.cpp  - Item storage + Deus Ex-style overlay UI
+│   ├── EditorUI.h/.cpp         - Dear ImGui runtime editor + HUD + container popup
+│   ├── LevelEditor.h/.cpp      - Level save/load (.lvl) + entity placement panel
 │   ├── Shaders/
 │   │   ├── world.vert
 │   │   └── world.frag
 │   └── Levels/
 │       ├── level.lvl
 │       └── levelBase.lvl
-├── glad/                       — Pre-generated OpenGL 4.1 Core loader
-├── third_party/                — Vendored libraries (populated by setup scripts)
+├── glad/                       - Pre-generated OpenGL 4.1 Core loader
+├── third_party/                - Vendored libraries (populated by setup scripts)
 │   ├── glad/
-│   ├── imgui/                  — Dear ImGui
-│   ├── stb/                    — stb_image
-│   └── glm/                    — GLM math
-└── build/                      — CMake / MSVC build output
+│   ├── imgui/                  - Dear ImGui
+│   ├── stb/                    - stb_image
+│   └── glm/                    - GLM math
+└── build/                      - CMake / MSVC build output
 ```
 
 ---
@@ -93,7 +93,7 @@ ObradexEngine/
 | Git            | any                           | For ImGui clone in setup.sh                          |
 | OpenGL drivers | 4.1 Core                      | macOS capped at 4.1; Windows/Linux support up to 4.6 |
 
-### Visual Studio 2022 / JetBrains Rider (Windows — recommended)
+### Visual Studio 2022 / JetBrains Rider (Windows - recommended)
 
 ```powershell
 # 1. Fetch all third-party dependencies
@@ -102,7 +102,7 @@ ObradexEngine/
 # 2. Open bitEngine.sln in Visual Studio 2022 or Rider
 #    Build target: Debug x64
 
-# 3. Run — the working directory must be bitEngine/
+# 3. Run - the working directory must be bitEngine/
 #    (VS sets this automatically via the .vcxproj)
 ```
 
@@ -135,7 +135,7 @@ cmake --build . -j$(nproc)
 | **stb_image**  | latest          | Public domain | Vendored in `third_party/stb/`                      |
 | **GLM**        | 0.9.9.8         | MIT           | Vendored in `third_party/glm/`                      |
 | **GLFW**       | ≥ 3.3           | Zlib          | Bundled in `third_party/imgui/examples/libs/glfw/`  |
-| **OpenGL**     | 4.1 Core        | —             | System / GPU driver                                 |
+| **OpenGL**     | 4.1 Core        | -             | System / GPU driver                                 |
 
 All libraries are vendored. No internet access required at build time after setup runs.
 
@@ -155,16 +155,16 @@ main()
         ├── InventorySystem(item storage, overlay UI)
         └── EditorUI       (Dear ImGui context)
   └── Engine::Run()        ← fixed-timestep game loop
-        ├── PollEvents()   — glfwPollEvents (must be first)
-        ├── ProcessInput() — Input::Update(), hotkeys (F1, Escape, I)
-        ├── Update(dt)     — World::Update(), Player::Update()
-        └── Render()       — BeginFrame → RenderWorld → PostProcess → Present → ImGui
+        ├── PollEvents()   - glfwPollEvents (must be first)
+        ├── ProcessInput() - Input::Update(), hotkeys (F1, Escape, I)
+        ├── Update(dt)     - World::Update(), Player::Update()
+        └── Render()       - BeginFrame → RenderWorld → PostProcess → Present → ImGui
 ```
 
 **Design principles:**
 - **Singleton engine** (`Engine::Get()`) owns all subsystems as `unique_ptr`; destruction is automatic RAII in reverse declaration order.
 - **Fixed-timestep physics** with uncapped rendering. The accumulator pattern avoids spiral-of-death on slow machines.
-- **No ECS framework** — a `vector<EntityRecord>` with optional component pointers is fast enough at the target entity count (~512) and easier to debug.
+- **No ECS framework** - a `vector<EntityRecord>` with optional component pointers is fast enough at the target entity count (~512) and easier to debug.
 - **Low-res FBO → nearest-neighbour upscale** is the entire "pixel art" trick: render at 320 × 180, blit to 1280 × 720 without interpolation.
 - **Interaction key is a single constant** (`constexpr Key INTERACT_KEY = Key::F` in `Input.h`). All prompt strings are built dynamically via `Input::GetKeyName(INTERACT_KEY)`, so rebinding requires changing one line.
 
@@ -187,7 +187,7 @@ engine.RequestShutdown();    // Signal clean exit from game code
 
 | Field                | Default                 | Description                              |
 |----------------------|-------------------------|------------------------------------------|
-| `windowTitle`        | `"Obradex — Pre-Alpha"` | Window title bar                         |
+| `windowTitle`        | `"Obradex - Pre-Alpha"` | Window title bar                         |
 | `windowWidth/Height` | 1280 × 720              | OS window size in pixels                 |
 | `fullscreen`         | false                   | Borderless fullscreen on primary monitor |
 | `vsync`              | true                    | Vertical sync                            |
@@ -198,7 +198,7 @@ engine.RequestShutdown();    // Signal clean exit from game code
 ```
 Uninitialized → Running ⇄ Paused → Shutdown
                   ↑
-               Escape toggles (unless a container is open —
+               Escape toggles (unless a container is open -
                Escape then closes the container instead)
 ```
 
@@ -219,7 +219,7 @@ win.GetAspect();             // width / height
 
 ### 6.3 Input (`Input.h`)
 
-Frame-snapshot polling — no raw callbacks exposed to game code.
+Frame-snapshot polling - no raw callbacks exposed to game code.
 
 ```cpp
 input.Update();                        // Call once per frame after PollEvents
@@ -309,7 +309,7 @@ Mesh plane  = Mesh::MakePlane(10.f, 4);   // 10 m, 4 subdivisions
 Mesh sphere = Mesh::MakeSphere(1.f, 16);  // r=1, 16 latitudinal segments
 ```
 
-The three primitive meshes (`cube`, `plane`, `sphere`) are owned by `World` and reused by every entity — they are created once in `World::Init()` and never duplicated.
+The three primitive meshes (`cube`, `plane`, `sphere`) are owned by `World` and reused by every entity - they are created once in `World::Init()` and never duplicated.
 
 ---
 
@@ -428,24 +428,24 @@ s.interactRange    = 2.5f;
 Factory functions that spawn pre-wired interactable entities. All return the root `EntityID`.
 
 ```cpp
-// Lamppost — post + child light, interact toggles light
+// Lamppost - post + child light, interact toggles light
 Interaction::SpawnLamppost(world, {6.f, 0.f, 0.f});
 
-// Door — pivots 90° CCW around its Z-negative hinge
+// Door - pivots 90° CCW around its Z-negative hinge
 Interaction::SpawnDoor(world, {5.f, 0.f, 3.f},
     /*locked=*/false,
     []() { std::cout << "Opened!\n"; });
 
-// Container — 9-item cap enforced at spawn; popup shown on interact
+// Container - 9-item cap enforced at spawn; popup shown on interact
 Interaction::SpawnContainer(world, {2.f, 0.2f, 4.f},
     { {"Lockpick", "A steel pick", 3}, {"Medkit", "First aid", 1} });
 
-// Pickup — hides on grab, routes item to InventorySystem via callback
+// Pickup - hides on grab, routes item to InventorySystem via callback
 Interaction::SpawnPickup(world, {1.f, 0.f, 4.f},
     {"Ammo", "9mm rounds", 12},
     [](const Item& it) { Engine::Get().GetInventory().AddItem(it); });
 
-// Alarm — red light + defuse interact
+// Alarm - red light + defuse interact
 Interaction::SpawnAlarm(world, {-3.f, 1.5f, 0.f});
 ```
 
@@ -668,7 +668,7 @@ Item names with spaces are serialised with underscores (`First_Aid_Kit`) and res
 ### Adding a new subsystem
 
 1. Create `MySystem.h/.cpp` in `bitEngine/`.
-2. Add `std::unique_ptr<MySystem> m_mySystem;` to `Engine.h` (order determines destruction order — last declared, first destroyed).
+2. Add `std::unique_ptr<MySystem> m_mySystem;` to `Engine.h` (order determines destruction order - last declared, first destroyed).
 3. Construct and `Init()` in `Engine::Init()`.
 4. Call `Update()` / `Render()` from the appropriate engine phase.
 5. Add a `GetMySystem() const` accessor.
