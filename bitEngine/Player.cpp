@@ -33,7 +33,7 @@ void Player::Update(float dt, const Input& input, World& world)
     // Player::Update runs inside the fixed-timestep accumulator loop and
     // may execute multiple times per real frame with the same Input snapshot.
     // IsKeyJustPressed would return true in every iteration, firing onInteract
-    // multiple times — toggling doors/lamps back to their original state and
+    // multiple times - toggling doors/lamps back to their original state and
     // making it appear that nothing happened.
     // Interactions are handled in Player::ProcessEvents, which is called
     // exactly once per real frame from Engine::ProcessInput.
@@ -205,7 +205,7 @@ void Player::HandleMovement(const Input& input, float dt)
     // sub-steps (fixed-step accumulator) or when ResolveCollision briefly
     // resets m_onGround=true mid-frame after the initial jump displacement.
     if (!input.IsKeyHeld(Key::Space))
-        m_jumpConsumed = false;  // Key released — reset for next press
+        m_jumpConsumed = false;  // Key released - reset for next press
 
     if (input.IsKeyJustPressed(Key::Space) && m_onGround
         && !m_jumpConsumed
@@ -325,7 +325,7 @@ void Player::ResolveCollision(World& world)
         }
         else
         {
-            // Y axis — could be landing on top or hitting ceiling
+            // Y axis - could be landing on top or hitting ceiling
             if (pMax.y - bMin.y < bMax.y - pMin.y)
             {
                 m_position.y -= oy;   // push down (ceiling hit)
@@ -378,7 +378,7 @@ void Player::HandleInteraction(const Input& input, World& world)
         auto* ia = world.GetRecord(near)->interactable;
         m_interactPrompt = ia ? ia->promptText : "";
 
-        // Use INTERACT_KEY from Input.h — single source of truth for the binding
+        // Use INTERACT_KEY from Input.h - single source of truth for the binding
         if (input.IsKeyJustPressed(INTERACT_KEY) && ia && ia->onInteract)
             ia->onInteract();
     }

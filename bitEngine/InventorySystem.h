@@ -1,7 +1,7 @@
 #pragma once
 
 // ============================================================
-//  InventorySystem.h  —  Player Inventory
+//  InventorySystem.h  -  Player Inventory
 // ============================================================
 //  Stores the player's collected items as a flat list of
 //  InventoryEntry values (item + stack count).

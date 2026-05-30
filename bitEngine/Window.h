@@ -1,7 +1,7 @@
 #pragma once
 
 // ============================================================
-//  Window.h  —  GLFW Window & OpenGL Context
+//  Window.h  -  GLFW Window & OpenGL Context
 // ============================================================
 //  Wraps GLFW for window creation, OpenGL context management,
 //  and basic window queries. Owns the GLFW lifecycle.

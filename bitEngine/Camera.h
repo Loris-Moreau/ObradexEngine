@@ -1,7 +1,7 @@
 #pragma once
 
 // ============================================================
-//  Camera.h  —  First-Person Camera
+//  Camera.h  -  First-Person Camera
 // ============================================================
 //  Manages a view matrix via yaw/pitch Euler angles.
 //  Designed for first-person movement (Deus Ex / Syndicate):

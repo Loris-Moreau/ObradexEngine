@@ -17,7 +17,7 @@ find_package(OpenGL REQUIRED)
 # ── GLFW ─────────────────────────────────────────────────────
 find_package(glfw3 3.3 QUIET)
 if(NOT glfw3_FOUND)
-    message(STATUS "[ObradexEngine] GLFW not found — fetching via FetchContent.")
+    message(STATUS "[ObradexEngine] GLFW not found - fetching via FetchContent.")
     include(FetchContent)
     FetchContent_Declare(
         glfw
@@ -34,7 +34,7 @@ endif()
 # We intentionally NEVER run GLM's own CMakeLists.txt because
 # older releases (0.9.9.8) declare cmake_minimum_required(2.6)
 # which CMake 3.28+ rejects.  Instead we create an INTERFACE
-# target ourselves pointing at the headers — all we ever need.
+# target ourselves pointing at the headers - all we ever need.
 if(NOT TARGET glm::glm)
     # Priority 1: already downloaded by setup.sh into third_party/glm
     set(GLM_LOCAL "${CMAKE_SOURCE_DIR}/third_party/glm")
@@ -44,9 +44,9 @@ if(NOT TARGET glm::glm)
         target_include_directories(_glm INTERFACE "${GLM_LOCAL}")
         add_library(glm::glm ALIAS _glm)
     else()
-        # Priority 2: fetch via FetchContent — use Populate (not MakeAvailable)
+        # Priority 2: fetch via FetchContent - use Populate (not MakeAvailable)
         # so we never invoke GLM's own broken CMakeLists.txt
-        message(STATUS "[ObradexEngine] GLM not found — fetching via FetchContent.")
+        message(STATUS "[ObradexEngine] GLM not found - fetching via FetchContent.")
         include(FetchContent)
         FetchContent_Declare(
             glm
@@ -99,7 +99,7 @@ set(ENGINE_SOURCES
     bitEngine/Interaction.cpp
     # Editor UI
     bitEngine/EditorUI.cpp
-    # GLAD — pre-generated OpenGL 4.1 Core loader
+    # GLAD - pre-generated OpenGL 4.1 Core loader
     glad/src/glad.c
     # Dear ImGui
     third_party/imgui/imgui.cpp
@@ -108,7 +108,7 @@ set(ENGINE_SOURCES
     third_party/imgui/imgui_widgets.cpp
     third_party/imgui/backends/imgui_impl_glfw.cpp
     third_party/imgui/backends/imgui_impl_opengl3.cpp
-    # stb_image — one implementation unit
+    # stb_image - one implementation unit
     third_party/stb/stb_image_impl.cpp
 )
 
@@ -150,7 +150,7 @@ add_custom_command(TARGET ObradexEngine POST_BUILD
 # ============================================================
 if(MSVC)
     target_compile_options(ObradexEngine PRIVATE /W3)
-    # Suppress C4100 (unreferenced param) — ImGui callbacks trigger this
+    # Suppress C4100 (unreferenced param) - ImGui callbacks trigger this
     target_compile_options(ObradexEngine PRIVATE /wd4100 /wd4505)
 else()
     target_compile_options(ObradexEngine PRIVATE

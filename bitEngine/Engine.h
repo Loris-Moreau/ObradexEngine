@@ -1,16 +1,16 @@
 #pragma once
 
 // ============================================================
-//  Engine.h  —  ObradexEngine Core
+//  Engine.h  -  ObradexEngine Core
 // ============================================================
 //  The Engine class is the root of the entire application.
 //  It owns every major subsystem (Window, Renderer, Input,
 //  World, Player, UI) and drives the main game loop.
 //
 //  Lifecycle:
-//    Engine::Get().Init()   — allocate & initialise all systems
-//    Engine::Get().Run()    — enter the blocking game loop
-//    Engine::Get().Shutdown()— release resources (called by Run)
+//    Engine::Get().Init()   - allocate & initialise all systems
+//    Engine::Get().Run()    - enter the blocking game loop
+//    Engine::Get().Shutdown()- release resources (called by Run)
 //
 //  Design pattern: Singleton accessed via Engine::Get().
 //  Systems are stored as unique_ptr to guarantee RAII cleanup
@@ -101,7 +101,7 @@ public:
     const EngineConfig& GetConfig() const { return m_config; }
 
 private:
-    Engine() = default;  ///< Private — use Engine::Get()
+    Engine() = default;  ///< Private - use Engine::Get()
     ~Engine() = default;
 
     // ── Internal loop phases ──────────────────────────────────
@@ -114,7 +114,7 @@ private:
     EngineConfig m_config;
     EngineState  m_state = EngineState::Uninitialized;
 
-    // Subsystems (ordered — destruction is reverse of declaration)
+    // Subsystems (ordered - destruction is reverse of declaration)
     std::unique_ptr<Timer>           m_timer;
     std::unique_ptr<Input>           m_input;
     std::unique_ptr<Window>          m_window;

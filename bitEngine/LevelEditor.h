@@ -3,7 +3,7 @@
 #include "World.h"  // for Item
 
 // ============================================================
-//  LevelEditor.h  —  ImGui Level Editor + Save/Load
+//  LevelEditor.h  -  ImGui Level Editor + Save/Load
 // ============================================================
 //  Provides a visual editor panel for placing, inspecting,
 //  and deleting entities at runtime, plus saving/loading
@@ -38,14 +38,14 @@
 //
 //  Supported TYPE values
 //  ---------------------
-//    cube      — static box (mesh + optional collision)
-//    plane     — flat plane (floor / ceiling / wall)
-//    lamppost  — Interaction::SpawnLamppost factory
-//    door      — Interaction::SpawnDoor factory
-//    container — Interaction::SpawnContainer factory
-//    pickup    — Interaction::SpawnPickup factory
-//    alarm     — Interaction::SpawnAlarm factory
-//    light     — standalone point light (no mesh)
+//    cube      - static box (mesh + optional collision)
+//    plane     - flat plane (floor / ceiling / wall)
+//    lamppost  - Interaction::SpawnLamppost factory
+//    door      - Interaction::SpawnDoor factory
+//    container - Interaction::SpawnContainer factory
+//    pickup    - Interaction::SpawnPickup factory
+//    alarm     - Interaction::SpawnAlarm factory
+//    light     - standalone point light (no mesh)
 // ============================================================
 
 #include <string>

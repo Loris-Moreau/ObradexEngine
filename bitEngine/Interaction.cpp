@@ -1,5 +1,5 @@
 // ============================================================
-//  Interaction.cpp  —  World Interaction Factories
+//  Interaction.cpp  -  World Interaction Factories
 // ============================================================
 
 #include "Interaction.h"
@@ -155,7 +155,7 @@ EntityID SpawnDoor(World&            world,
                 tr->rotation = glm::angleAxis(glm::radians(90.f),
                                               glm::vec3(0.f, 1.f, 0.f));
                 tr->position = state->openPos;
-                // Door is out of the doorway — disable collision so the
+                // Door is out of the doorway - disable collision so the
                 // player can walk through the opening.
                 if (rec && rec->collision) rec->collision->solid = false;
             }
@@ -200,7 +200,7 @@ EntityID SpawnContainer(World&                world,
     // ContainerComponent holds the item list.
     // EditorUI reads isOpen and renders the grid popup.
     auto* container    = world.AddContainer(e);
-    // Enforce the 3×3 grid cap — silently drop items beyond index 8.
+    // Enforce the 3×3 grid cap - silently drop items beyond index 8.
     if (items.size() > 9) items.resize(9);
     container->items   = std::move(items);
     container->isOpen  = false;
@@ -216,7 +216,7 @@ EntityID SpawnContainer(World&                world,
 
         if (rec->container->items.empty())
         {
-            // Already looted — update prompt so player knows
+            // Already looted - update prompt so player knows
             ia->promptText = GetInteractionKey() + "Search  (empty)";
             rec->container->isOpen = true;   // still show the empty grid
             return;

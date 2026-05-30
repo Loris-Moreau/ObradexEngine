@@ -1,5 +1,5 @@
 // ============================================================
-//  Window.cpp  —  GLFW Window & OpenGL Context
+//  Window.cpp  -  GLFW Window & OpenGL Context
 // ============================================================
 
 #include "Window.h"
@@ -130,7 +130,7 @@ void Window::FramebufferSizeCallback(GLFWwindow* win, int w, int h)
 {
     // Only update stored dimensions.
     // PostProcess::Apply recomputes the letterbox viewport every frame from
-    // these values — calling glViewport here would override that and stretch
+    // these values - calling glViewport here would override that and stretch
     // the image for one frame (or permanently if Apply doesn't reset it).
     auto* self   = static_cast<Window*>(glfwGetWindowUserPointer(win));
     self->m_width  = w;

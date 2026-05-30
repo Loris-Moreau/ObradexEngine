@@ -1,5 +1,5 @@
 // ============================================================
-//  Renderer.cpp  —  Main OpenGL Renderer
+//  Renderer.cpp  -  Main OpenGL Renderer
 // ============================================================
 
 #include "Renderer.h"

@@ -65,7 +65,7 @@ void World::ClearLevel()
     m_containers.clear();
     m_nextID = 0;
 
-    // Primitive meshes are kept — they are GPU resources that persist
+    // Primitive meshes are kept - they are GPU resources that persist
     // across level loads.  Re-reserve so we don't reallocate next time.
     ReserveComponentStorage();
 
@@ -118,7 +118,7 @@ void World::LoadTestLevel()
         }
     );
 
-    // ── Lamppost — via Interaction factory ────────────────────
+    // ── Lamppost - via Interaction factory ────────────────────
     Interaction::SpawnLamppost(*this, {6.f, 0.f, 0.f});
 
     // ── Exit marker ───────────────────────────────────────────

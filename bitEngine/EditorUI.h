@@ -1,17 +1,17 @@
 #pragma once
 
 // ============================================================
-//  EditorUI.h  —  ImGui Editor / Debug Overlay
+//  EditorUI.h  -  ImGui Editor / Debug Overlay
 // ============================================================
 //  Provides a lightweight runtime editor built with Dear ImGui.
 //  Press F1 to toggle the panel in-game.
 //
 //  Panels available:
-//    Performance  — FPS, frame time, render resolution
-//    Renderer     — post-process settings (dither, palette, etc.)
-//    World        — entity list with component inspector
-//    Player       — movement stats, position, eye-height
-//    HUD          — interact prompt, crosshair
+//    Performance  - FPS, frame time, render resolution
+//    Renderer     - post-process settings (dither, palette, etc.)
+//    World        - entity list with component inspector
+//    Player       - movement stats, position, eye-height
+//    HUD          - interact prompt, crosshair
 //
 //  The HUD elements (crosshair, interact prompt) always draw,
 //  even when the full editor panel is hidden, so the player
@@ -26,8 +26,8 @@ class  LevelEditor;
 class EditorUI
 {
 public:
-    EditorUI();   ///< Defined in EditorUI.cpp — LevelEditor must be complete
-    ~EditorUI();  ///< Defined in EditorUI.cpp — LevelEditor must be complete
+    EditorUI();   ///< Defined in EditorUI.cpp - LevelEditor must be complete
+    ~EditorUI();  ///< Defined in EditorUI.cpp - LevelEditor must be complete
 
     // ── Lifecycle ─────────────────────────────────────────────
 

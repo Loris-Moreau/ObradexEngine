@@ -1,5 +1,5 @@
 // ============================================================
-//  LevelEditor.cpp  —  ImGui Level Editor + Save/Load
+//  LevelEditor.cpp  -  ImGui Level Editor + Save/Load
 // ============================================================
 
 #include "LevelEditor.h"
@@ -18,7 +18,7 @@
 #include <cstring>
 #include <algorithm>
 
-// Windows file dialog (compile-time optional — only on Win32)
+// Windows file dialog (compile-time optional - only on Win32)
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -142,7 +142,7 @@ bool LevelEditor::SaveLevel(const World& world, const std::string& path)
             Wi1(file, "LIGHT_FLICKER",   rec.light->flicker ? 1 : 0);
         }
 
-        // Container items — one ITEM line per entry
+        // Container items - one ITEM line per entry
         // Format: ITEM <name> <quantity>
         // (names must not contain spaces; replace with _ if needed)
         if (rec.container)
@@ -205,7 +205,7 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
         if (cur.type == "lamppost")
         {
             Interaction::SpawnLamppost(world,
-                // base pos — the POS field stores base (foot) in the file
+                // base pos - the POS field stores base (foot) in the file
                 cur.pos,
                 cur.lightColor, cur.lightRadius, cur.lightIntensity, cur.lightFlicker);
         }
@@ -220,7 +220,7 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
         else if (cur.type == "pickup")
         {
             Item it;
-            // Entity name is "Pickup_ItemName" — strip prefix to recover the actual item name.
+            // Entity name is "Pickup_ItemName" - strip prefix to recover the actual item name.
             // Also restore underscores-as-spaces (same convention used on save for item names).
             static const std::string kPrefix = "Pickup_";
             it.name = (cur.name.rfind(kPrefix, 0) == 0)
@@ -236,7 +236,7 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
         }
         else
         {
-            // cube / plane / sphere / light — build manually
+            // cube / plane / sphere / light - build manually
             EntityID e = world.CreateEntity(cur.name);
 
             auto* t = world.AddTransform(e);
@@ -435,7 +435,7 @@ void LevelEditor::RenderPanel(Engine& engine)
     ImGui::InputText("##filename", m_filenameBuffer, sizeof(m_filenameBuffer));
     ImGui::SameLine();
 
-    // Browse button — opens the OS file picker, fills filename field
+    // Browse button - opens the OS file picker, fills filename field
     if (ImGui::Button("Browse"))
     {
 #ifdef _WIN32
@@ -518,13 +518,13 @@ void LevelEditor::RenderPanel(Engine& engine)
         ImGui::SliderFloat("Intensity", &m_lightIntensity, 0.f,  5.f);
         ImGui::Checkbox   ("Flicker",   &m_lightFlicker);
     }
-    if (m_spawnType == 5) // Container — item editor
+    if (m_spawnType == 5) // Container - item editor
     {
         ImGui::SeparatorText("Container Contents");
 
         // ── Item list ─────────────────────────────────────────
         if (m_containerItems.empty())
-            ImGui::TextDisabled("(empty — no items)");
+            ImGui::TextDisabled("(empty - no items)");
 
         int removeIdx = -1;
         for (int i = 0; i < (int)m_containerItems.size(); ++i)

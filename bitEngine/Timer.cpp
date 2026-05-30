@@ -1,5 +1,5 @@
 // ============================================================
-//  Timer.cpp  —  High-Resolution Frame Timing
+//  Timer.cpp  -  High-Resolution Frame Timing
 // ============================================================
 
 #include "Timer.h"

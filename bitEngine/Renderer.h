@@ -1,18 +1,18 @@
 #pragma once
 
 // ============================================================
-//  Renderer.h  —  Main OpenGL Renderer
+//  Renderer.h  -  Main OpenGL Renderer
 // ============================================================
 //  Coordinates the 3-D rendering pipeline:
 //
-//    BeginFrame()        — clear buffers, begin low-res capture
-//    RenderWorld(...)    — draw all entities in the world
-//    ApplyPostProcess()  — dither + palette pass
-//    Present(w, h)       — blit to window
+//    BeginFrame()        - clear buffers, begin low-res capture
+//    RenderWorld(...)    - draw all entities in the world
+//    ApplyPostProcess()  - dither + palette pass
+//    Present(w, h)       - blit to window
 //
 //  Rendering is deferred-ish: opaque objects first, then a
 //  simple forward pass for transparent/emissive geometry.
-//  No full deferred shading — the low-res aesthetic means we
+//  No full deferred shading - the low-res aesthetic means we
 //  can afford a simpler forward renderer.
 //
 //  Lighting model:

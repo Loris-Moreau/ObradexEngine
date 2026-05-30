@@ -1,5 +1,5 @@
 // ============================================================
-//  Engine.cpp  —  ObradexEngine Core Implementation
+//  Engine.cpp  -  ObradexEngine Core Implementation
 // ============================================================
 
 #include "Engine.h"
@@ -18,7 +18,7 @@
 // ── Singleton ─────────────────────────────────────────────────
 Engine& Engine::Get()
 {
-    // Meyer's singleton — thread-safe in C++11+
+    // Meyer's singleton - thread-safe in C++11+
     static Engine instance;
     return instance;
 }
@@ -87,7 +87,7 @@ bool Engine::Init(const EngineConfig& config)
     }
     catch (const std::exception& e)
     {
-        std::cerr << "[Engine] FATAL — " << e.what() << "\n";
+        std::cerr << "[Engine] FATAL - " << e.what() << "\n";
         return false;
     }
 
@@ -126,7 +126,7 @@ void Engine::Run()
         // glfwPollEvents() processes the WM_KEYDOWN / WM_KEYUP /
         // WM_MOUSEMOVE messages that the OS queued since the last
         // frame.  It must run BEFORE Input::Update() reads
-        // glfwGetKey() — otherwise the keyboard state is always
+        // glfwGetKey() - otherwise the keyboard state is always
         // one frame stale and keys appear unresponsive.
         m_window->PollEvents();
 
@@ -164,13 +164,13 @@ void Engine::ProcessInput()
         m_editorUI->ToggleEditorPanel();
     }
 
-    // I key — toggle inventory (only when game is running and no container open)
+    // I key - toggle inventory (only when game is running and no container open)
     if (m_input->IsKeyJustPressed(Key::I) &&
         !m_world->HasOpenContainer())
     {
         if (m_inventory->IsOpen())
         {
-            // Close inventory — resume
+            // Close inventory - resume
             m_inventory->Toggle();
             m_window->SetCursorLocked(true);
             if (m_state == EngineState::Paused)
@@ -178,7 +178,7 @@ void Engine::ProcessInput()
         }
         else if (m_state == EngineState::Running)
         {
-            // Open inventory — pause so physics freezes
+            // Open inventory - pause so physics freezes
             m_inventory->Toggle();
             m_window->SetCursorLocked(false);
             m_state = EngineState::Paused;
@@ -212,7 +212,7 @@ void Engine::ProcessInput()
         }
     }
 
-    // Interaction events — called here (once per real frame) so that
+    // Interaction events - called here (once per real frame) so that
     // IsKeyJustPressed fires exactly once per key press.
     // Calling this inside the fixed-timestep Update loop would cause
     // onInteract to fire on every physics sub-step that shares the same
@@ -242,7 +242,7 @@ void Engine::Render()
     // 3. Blit low-res framebuffer to the window at full resolution
     m_renderer->Present(m_window->GetWidth(), m_window->GetHeight());
 
-    // 4. Render ImGui on top (at native resolution — stays crisp)
+    // 4. Render ImGui on top (at native resolution - stays crisp)
     m_editorUI->Render(*this);
 }
 

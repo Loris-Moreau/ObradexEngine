@@ -35,12 +35,12 @@ void Input::Init(GLFWwindow* window)
 //
 // Pattern: flip m_cur, then overwrite m_keys[m_cur] with a
 // fresh glfwGetKey snapshot.  The opposite slot is NEVER
-// written here — it retains the previous frame's snapshot,
+// written here - it retains the previous frame's snapshot,
 // which is exactly what IsKeyJustPressed / IsKeyJustReleased
 // need for the "was it different last frame?" check.
 void Input::Update()
 {
-    // Flip current buffer — the slot we are about to overwrite
+    // Flip current buffer - the slot we are about to overwrite
     // naturally becomes "current", and the untouched slot becomes
     // "previous" (it still holds last Update()'s snapshot).
     m_cur = 1 - m_cur;

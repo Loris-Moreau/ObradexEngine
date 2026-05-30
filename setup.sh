@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-#  setup.sh  —  ObradexEngine dependency bootstrapper
+#  setup.sh  -  ObradexEngine dependency bootstrapper
 #  Works on: Linux, macOS, Windows (Git Bash)
 #
 #  Usage: bash setup.sh
@@ -22,7 +22,7 @@ case "$(uname -s)" in
     *)       OS=Unknown ;;
 esac
 
-# Download helper — uses curl or wget, whichever is available
+# Download helper - uses curl or wget, whichever is available
 download() {
     local url="$1" dest="$2"
     if command -v curl >/dev/null 2>&1; then
@@ -44,7 +44,7 @@ echo "======================================================"
 
 
 # ── [1/4] GLAD ───────────────────────────────────────────────
-# GLAD is a generated OpenGL loader — we need either Python
+# GLAD is a generated OpenGL loader - we need either Python
 # (to run the glad generator) or to download a pre-built zip
 # from the official glad.dav1d.de generator web service.
 echo ""
@@ -67,7 +67,7 @@ else
     # Strategy 1: Python + glad pip package (generates locally, no network for spec)
     if command -v python3 >/dev/null 2>&1 || command -v python >/dev/null 2>&1; then
         PY=$(command -v python3 2>/dev/null || command -v python)
-        echo "  Python found ($PY) — installing glad generator..."
+        echo "  Python found ($PY) - installing glad generator..."
         "$PY" -m pip install glad --quiet --break-system-packages 2>/dev/null \
             || "$PY" -m pip install glad --quiet
 
@@ -83,10 +83,10 @@ else
             ok "GLAD generated via Python."
             GLAD_OK=true
         else
-            warn "Python generation failed — trying web download..."
+            warn "Python generation failed - trying web download..."
         fi
     else
-        echo "  Python not found — downloading from glad.dav1d.de..."
+        echo "  Python not found - downloading from glad.dav1d.de..."
     fi
 
     # Strategy 2: download pre-generated zip from the official glad generator API

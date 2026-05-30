@@ -1,7 +1,7 @@
 #pragma once
 
 // ============================================================
-//  World.h  —  Scene / Level Container
+//  World.h  -  Scene / Level Container
 // ============================================================
 #include <vector>
 #include <string>
@@ -62,7 +62,7 @@ struct TriggerComponent
 };
 
 /// Solid AABB used by Player::ResolveCollision.
-/// halfExtents are in LOCAL space — multiplied by transform->scale at runtime.
+/// halfExtents are in LOCAL space - multiplied by transform->scale at runtime.
 struct CollisionComponent
 {
     glm::vec3 halfExtents = {0.5f, 0.5f, 0.5f};

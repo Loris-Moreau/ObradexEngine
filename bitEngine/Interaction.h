@@ -1,7 +1,7 @@
 #pragma once
 
 // ============================================================
-//  Interaction.h  —  World Interaction Factories
+//  Interaction.h  -  World Interaction Factories
 // ============================================================
 //  Factory functions that spawn pre-wired interactive entities.
 //  Each returns the root EntityID so the caller can further
@@ -9,11 +9,11 @@
 //
 //  Supported factory types
 //  -----------------------
-//    SpawnLamppost   — post + child light entity + interact toggle
-//    SpawnDoor       — openable / lockable door panel
-//    SpawnContainer  — searchable chest / drawer
-//    SpawnPickup     — collectible ground item
-//    SpawnAlarm      — armed alarm box with defuse interact
+//    SpawnLamppost   - post + child light entity + interact toggle
+//    SpawnDoor       - openable / lockable door panel
+//    SpawnContainer  - searchable chest / drawer
+//    SpawnPickup     - collectible ground item
+//    SpawnAlarm      - armed alarm box with defuse interact
 // ============================================================
 
 #include <string>

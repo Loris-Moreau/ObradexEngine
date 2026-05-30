@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  bitEngine.vcxproj  —  Visual Studio 2022
+  bitEngine.vcxproj  -  Visual Studio 2022
   =========================================
   All engine source files live flat in bitEngine/ alongside this .vcxproj.
   Third-party libraries live in ..\third_party\ (one level up, in the solution root).
@@ -68,11 +68,11 @@
     <LinkIncremental>true</LinkIncremental>
     <!--
       Include search order:
-        1. $(ProjectDir)          — flat engine headers (Engine.h, Camera.h …)
-        2. third_party\glad\…     — <glad/glad.h>
-        3. third_party\imgui\…    — <imgui.h> and backends
-        4. third_party\stb\       — <stb_image.h>
-        5. third_party\glm\       — <glm/glm.hpp>   (populated by setup.sh)
+        1. $(ProjectDir)          - flat engine headers (Engine.h, Camera.h …)
+        2. third_party\glad\…     - <glad/glad.h>
+        3. third_party\imgui\…    - <imgui.h> and backends
+        4. third_party\stb\       - <stb_image.h>
+        5. third_party\glm\       - <glm/glm.hpp>   (populated by setup.sh)
     -->
     <IncludePath>$(ProjectDir);$(SolutionDir)glad\include;$(SolutionDir)third_party\imgui;$(SolutionDir)third_party\imgui\backends;$(SolutionDir)third_party\imgui\examples\libs\glfw\include;$(SolutionDir)third_party\stb;$(SolutionDir)third_party\glm;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
   </PropertyGroup>
@@ -107,7 +107,7 @@
            only MSVCRTD (our debug CRT) is used. Fixes LNK4098/LNK4217/LNK4286. -->
       <IgnoreSpecificDefaultLibraries>MSVCRT</IgnoreSpecificDefaultLibraries>
       <!-- 4217/4286: ImGui defines vsnprintf/sscanf locally; glfw3.lib (pre-built
-           release) expects to import them from MSVCRT.dll. Benign — binary is correct. -->
+           release) expects to import them from MSVCRT.dll. Benign - binary is correct. -->
       <AdditionalOptions>/ignore:4217 /ignore:4286 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <!-- Copy Shaders/ folder next to the .exe so they're found at runtime -->
@@ -188,7 +188,7 @@ if not exist "$(OutDir)Levels" mkdir "$(OutDir)Levels"
     <ClCompile Include="LevelEditor.cpp" />
     <ClCompile Include="InventorySystem.cpp" />
 
-    <!-- GLAD — C file, needs C compiler not C++ -->
+    <!-- GLAD - C file, needs C compiler not C++ -->
     <ClCompile Include="..\glad\src\glad.c" />
 
     <!-- Dear ImGui -->

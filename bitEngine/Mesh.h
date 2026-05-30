@@ -1,13 +1,13 @@
 #pragma once
 
 // ============================================================
-//  Mesh.h  —  GPU Mesh (VAO/VBO/EBO)
+//  Mesh.h  -  GPU Mesh (VAO/VBO/EBO)
 // ============================================================
 //  Stores geometry on the GPU as interleaved vertex data.
 //  Vertex layout (each vertex = 32 bytes):
-//    Position  (vec3  — 12 bytes)
-//    Normal    (vec3  — 12 bytes)
-//    TexCoord  (vec2  —  8 bytes)
+//    Position  (vec3  - 12 bytes)
+//    Normal    (vec3  - 12 bytes)
+//    TexCoord  (vec2  -  8 bytes)
 //
 //  Supports indexed drawing via an Element Buffer Object.
 //  Static geometry only (GL_STATIC_DRAW); for dynamic meshes

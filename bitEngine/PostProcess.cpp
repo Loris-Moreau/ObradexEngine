@@ -1,5 +1,5 @@
 // ============================================================
-//  PostProcess.cpp  —  Dithering + Palette Post-Processor
+//  PostProcess.cpp  -  Dithering + Palette Post-Processor
 // ============================================================
 
 #include "PostProcess.h"
@@ -208,7 +208,7 @@ bool PostProcess::Init(int renderW, int renderH)
 // ── CreateFBO ─────────────────────────────────────────────────
 void PostProcess::CreateFBO()
 {
-    // Colour texture — scene is rendered here at low resolution
+    // Colour texture - scene is rendered here at low resolution
     glGenTextures(1, &m_colourTex);
     glBindTexture(GL_TEXTURE_2D, m_colourTex);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_renderW, m_renderH, 0,
@@ -307,7 +307,7 @@ void PostProcess::Apply(int windowW, int windowH)
     // Clear the whole window (fills the black bars around the image).
     // Must disable GL_SCISSOR_TEST first: ImGui leaves it enabled after
     // rendering, and its scissor rect would clip the clear to only part
-    // of the window — leaving stale pixels in the letterbox bars.
+    // of the window - leaving stale pixels in the letterbox bars.
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDisable(GL_SCISSOR_TEST);
     glViewport(0, 0, windowW, windowH);

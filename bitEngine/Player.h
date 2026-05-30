@@ -1,25 +1,25 @@
 #pragma once
 
 // ============================================================
-//  Player.h  —  First-Person Player Controller
+//  Player.h  -  First-Person Player Controller
 // ============================================================
 //  Implements the Deus Ex / Assassin's Creed Syndicate
 //  movement model:
 //
 //  Movement modes (state machine):
-//    Standing   — normal speed, full height
-//    Crouching  — slower, half height, quieter footsteps
-//    Sprinting  — fast, standing only, no lean
-//    Sliding    — brief burst after sprint+crouch
-//    Vaulting   — auto-climb low ledges (Syndicate-style)
+//    Standing   - normal speed, full height
+//    Crouching  - slower, half height, quieter footsteps
+//    Sprinting  - fast, standing only, no lean
+//    Sliding    - brief burst after sprint+crouch
+//    Vaulting   - auto-climb low ledges (Syndicate-style)
 //
 //  Abilities (Deus Ex style):
-//    Lean (A/E)          — peek around corners
-//    Interaction (F)     — pick up / open / activate
-//    Crouch-slide (LCtrl)— momentum preserved briefly
+//    Lean (A/E)          - peek around corners
+//    Interaction (F)     - pick up / open / activate
+//    Crouch-slide (LCtrl)- momentum preserved briefly
 //
 //  Physics:
-//    Simple kinematic controller — no rigid body, just
+//    Simple kinematic controller - no rigid body, just
 //    velocity integration + AABB vs world collision.
 //    Gravity is applied; jumping is supported.
 // ============================================================
@@ -69,8 +69,8 @@ public:
 
     // ── Lifecycle ─────────────────────────────────────────────
     void Init();
-    void Update      (float dt, const Input& input, World& world); ///< Physics tick — called N times per real frame
-    void ProcessEvents(             const Input& input, World& world); ///< Interaction events — called ONCE per real frame
+    void Update      (float dt, const Input& input, World& world); ///< Physics tick - called N times per real frame
+    void ProcessEvents(             const Input& input, World& world); ///< Interaction events - called ONCE per real frame
 
     // ── Accessors ─────────────────────────────────────────────
     const Camera&     GetCamera()    const { return m_camera;   }

@@ -1,19 +1,19 @@
 #pragma once
 
 // ============================================================
-//  PostProcess.h  —  Dithering + Palette Post-Processor
+//  PostProcess.h  -  Dithering + Palette Post-Processor
 // ============================================================
 //  Implements the distinctive "Obra Dinn meets 8-bit" look:
 //
 //  Pipeline (applied after the 3-D scene is rendered):
-//    1. Luminance calculation  — convert to greyscale
-//    2. Bayer ordered dithering — 8×8 threshold matrix
+//    1. Luminance calculation  - convert to greyscale
+//    2. Bayer ordered dithering - 8×8 threshold matrix
 //       applied in screen space to add halftone noise that
 //       simulates the limited shading of classic displays.
-//    3. Palette quantisation  — final colour snapped to the
+//    3. Palette quantisation  - final colour snapped to the
 //       nearest entry in a configurable 32-colour palette.
-//    4. Vignette              — darkening at screen edges
-//    5. Scanline overlay      — optional CRT scanline effect
+//    4. Vignette              - darkening at screen edges
+//    5. Scanline overlay      - optional CRT scanline effect
 //
 //  The scene is rendered to a low-resolution FBO (e.g. 320×180)
 //  and then upscaled via nearest-neighbour to the window size,

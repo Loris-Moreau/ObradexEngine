@@ -1,5 +1,5 @@
 // ============================================================
-//  world.frag  —  World Geometry Fragment Shader
+//  world.frag  -  World Geometry Fragment Shader
 // ============================================================
 //  Implements a simple Blinn-Phong lighting model tuned for
 //  the Obra Dinn aesthetic: low-dynamic-range, hard shadows,

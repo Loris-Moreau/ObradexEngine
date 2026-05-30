@@ -1,9 +1,9 @@
 // ============================================================
-//  main.cpp  —  ObradexEngine Entry Point
+//  main.cpp  -  ObradexEngine Entry Point
 // ============================================================
 //  Configures the engine, calls Init(), then hands control
 //  to the game loop via Run(). All cleanup is automatic
-//  (RAII — smart pointers, GLFW terminate in Window dtor).
+//  (RAII - smart pointers, GLFW terminate in Window dtor).
 //
 //  To start a new project:
 //    1. Edit EngineConfig below (resolution, title, FPS cap).
@@ -20,14 +20,14 @@ int main()
 {
     // ── Engine configuration ──────────────────────────────────
     EngineConfig config;
-    config.windowTitle  = "Obradex — Pre-Alpha";
+    config.windowTitle  = "Obradex - Pre-Alpha";
     config.windowWidth  = 1280;
     config.windowHeight = 720;
     config.fullscreen   = false;
     config.vsync        = true;
     config.targetFPS    = 60;
 
-    // Internal render resolution — the low-res pixel-art buffer.
+    // Internal render resolution - the low-res pixel-art buffer.
     // 320×180 gives exactly 4:1 pixel ratio on a 1280×720 window.
     // Increase to 640×360 for a crisper look with less pixelation.
     config.renderWidth  = 320;

@@ -1,5 +1,5 @@
 // ============================================================
-//  world.vert  —  World Geometry Vertex Shader
+//  world.vert  -  World Geometry Vertex Shader
 // ============================================================
 #version 410 core
 

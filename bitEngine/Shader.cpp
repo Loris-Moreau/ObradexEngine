@@ -1,5 +1,5 @@
 // ============================================================
-//  Shader.cpp  —  GLSL Shader Program Wrapper
+//  Shader.cpp  -  GLSL Shader Program Wrapper
 // ============================================================
 
 #include "Shader.h"

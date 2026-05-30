@@ -1,7 +1,7 @@
 #pragma once
 
 // ============================================================
-//  Input.h  —  Keyboard, Mouse & Scroll Input
+//  Input.h  -  Keyboard, Mouse & Scroll Input
 // ============================================================
 //  Frame-snapshot polling built on top of GLFW.
 //
@@ -10,7 +10,7 @@
 //  We keep two key-state arrays, indexed by m_cur (0 or 1).
 //  Each call to Update() flips m_cur, then overwrites
 //  m_keys[m_cur] with a fresh glfwGetKey() snapshot.
-//  The OTHER slot — m_keys[1-m_cur] — is NEVER touched
+//  The OTHER slot - m_keys[1-m_cur] - is NEVER touched
 //  during that Update(); it naturally holds the previous
 //  frame's snapshot from the last time it was current.
 //
@@ -19,7 +19,7 @@
 //  version copies m_keys[cur] → m_keys[prev] before querying,
 //  but after the index flip, cur and prev have swapped, so
 //  it ends up copying the STALE buffer (two frames old) over
-//  the RECENT one — making IsKeyJustPressed fire every frame
+//  the RECENT one - making IsKeyJustPressed fire every frame
 //  a key is held, not just the first.
 //
 //  Key enum
@@ -36,12 +36,12 @@ struct GLFWwindow;
 // ── Key enum ─────────────────────────────────────────────────
 enum class Key : int
 {
-    // Movement — AZERTY layout
+    // Movement - AZERTY layout
     // Z is at the W position on QWERTY (GLFW_KEY_Z = 90)
     // Q is at the A position on QWERTY (GLFW_KEY_Q = 81)
     Z = 87, Q = 65, S = 83, D = 68,
 
-    // Actions — AZERTY layout
+    // Actions - AZERTY layout
     // A is at the Q position on QWERTY (GLFW_KEY_A = 65)
     A      = 81,   // Lean left
     E      = 69,   // Lean right
@@ -59,10 +59,10 @@ enum class Key : int
     R = 82, F = 70, G = 71, Tab = 258, I = 73,
     D1 = 49, D2 = 50, D3 = 51, D4 = 52,
 
-    _Count = 350   // Must be last — sets array size
+    _Count = 350   // Must be last - sets array size
 };
 
-// ── The key bound to "interact" — change here to remap globally
+// ── The key bound to "interact" - change here to remap globally
 // Every system that needs to display or check the interact key
 // should use this constant rather than Key::E directly.
 constexpr Key INTERACT_KEY = Key::F;
@@ -107,7 +107,7 @@ private:
 
     GLFWwindow* m_window = nullptr;
 
-    // Two state arrays — m_cur flips each Update().
+    // Two state arrays - m_cur flips each Update().
     // m_keys[m_cur]   = this frame's snapshot
     // m_keys[1-m_cur] = last frame's snapshot
     std::array<int, static_cast<int>(Key::_Count)>         m_keys[2]    = {};

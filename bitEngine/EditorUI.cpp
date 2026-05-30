@@ -1,5 +1,5 @@
 // ============================================================
-//  EditorUI.cpp  —  ImGui Editor / Debug Overlay
+//  EditorUI.cpp  -  ImGui Editor / Debug Overlay
 // ============================================================
 
 #include "EditorUI.h"
@@ -28,7 +28,7 @@
 // the complete LevelEditor type when it instantiates
 // std::unique_ptr<LevelEditor>::~unique_ptr().  Defaulting
 // EditorUI() in the header would generate the destructor inline
-// with only a forward declaration — MSVC rejects this.
+// with only a forward declaration - MSVC rejects this.
 EditorUI::EditorUI() = default;
 
 // ── Init ──────────────────────────────────────────────────────
@@ -520,7 +520,7 @@ void EditorUI::DrawContainerPopup(Engine& engine)
     ImGui::SetNextWindowSize(ImVec2(330.f, 370.f), ImGuiCond_Always);
 
     char title[64];
-    std::snprintf(title, sizeof(title), "Container  —  %s", containerName.c_str());
+    std::snprintf(title, sizeof(title), "Container  -  %s", containerName.c_str());
 
     bool windowOpen = true;
     ImGui::Begin(title, &windowOpen,
@@ -576,14 +576,14 @@ void EditorUI::DrawContainerPopup(Engine& engine)
             {
                 const Item& item = items[idx];
 
-                // Item name — centred in slot, max ~10 chars before wrapping
+                // Item name - centred in slot, max ~10 chars before wrapping
                 float textW = ImGui::CalcTextSize(item.name.c_str()).x;
                 float textX = abs.x + (kSlotSize - std::min(textW, kSlotSize - 8.f)) * 0.5f;
                 dl->AddText(ImVec2(textX, abs.y + 10.f),
                             IM_COL32(240, 195, 80, 255),
                             item.name.c_str());
 
-                // Quantity badge — bottom-right corner
+                // Quantity badge - bottom-right corner
                 char qty[16];
                 std::snprintf(qty, sizeof(qty), "x%d", item.quantity);
                 ImVec2 qSize = ImGui::CalcTextSize(qty);

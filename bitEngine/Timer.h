@@ -1,7 +1,7 @@
 #pragma once
 
 // ============================================================
-//  Timer.h  —  High-Resolution Frame Timing
+//  Timer.h  -  High-Resolution Frame Timing
 // ============================================================
 //  Uses std::chrono::steady_clock for monotonic, high-res time.
 //  Tick() returns delta-time in seconds and accumulates stats

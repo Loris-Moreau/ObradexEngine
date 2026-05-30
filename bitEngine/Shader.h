@@ -1,7 +1,7 @@
 #pragma once
 
 // ============================================================
-//  Shader.h  —  GLSL Shader Program Wrapper
+//  Shader.h  -  GLSL Shader Program Wrapper
 // ============================================================
 //  Compiles vertex + fragment sources, links them into a
 //  program, and provides type-safe uniform setters.

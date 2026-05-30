@@ -1,5 +1,5 @@
 // ============================================================
-//  Camera.cpp  —  First-Person Camera
+//  Camera.cpp  -  First-Person Camera
 // ============================================================
 
 #include "Camera.h"
@@ -34,7 +34,7 @@ void Camera::Rotate(float dx, float dy, float sensitivity)
 // ── Lean ──────────────────────────────────────────────────────
 void Camera::SetLean(float amount)
 {
-    // Clamp to ±15° — enough to peek around corners
+    // Clamp to ±15° - enough to peek around corners
     m_leanTarget = std::clamp(amount, -15.f, 15.f);
 }
 
@@ -87,7 +87,7 @@ glm::mat4 Camera::GetView() const
     // If we apply the roll AFTER assembling the full V (i.e. V * R_roll or
     // R_roll * V), the rotation axis passes through the WORLD ORIGIN, not
     // the eye.  When the eye is far from the world origin this swings it
-    // through a visible arc — the distortion seen far from (0,0,0).
+    // through a visible arc - the distortion seen far from (0,0,0).
     //
     // The fix: apply the lean roll to R BEFORE appending T(-eye).
     //   V_final = R_lean * R_yawpitch * T(-eye)
@@ -107,14 +107,14 @@ glm::mat4 Camera::GetView() const
     //
     // glm::rotate(M, angle, axis) computes  M * Rw(axis, angle)
     // where Rw is a rotation about `axis` expressed in the space M maps FROM
-    // — i.e. world space for our pure-rotation R.
+    // - i.e. world space for our pure-rotation R.
     //
     // We want to roll around the camera's OWN into-screen axis.
     // In view convention, camera local +Z points OUT of the screen, so the
     // into-screen (forward) axis in world space is -m_forward.
     //
     // Passing -m_forward makes the roll axis track the camera's actual forward
-    // direction at any yaw and pitch — the tilt is always a pure screen-space
+    // direction at any yaw and pitch - the tilt is always a pure screen-space
     // roll, identical at every look direction.
     //
     // Sign: A → m_lean < 0 → top of screen tilts left  → lean left  ✓
