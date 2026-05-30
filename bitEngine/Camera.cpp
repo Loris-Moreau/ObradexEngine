@@ -103,13 +103,25 @@ glm::mat4 Camera::GetView() const
     R[1][0] =  flatRight.y;  R[1][1] =  up_view.y;  R[1][2] = -m_forward.y;
     R[2][0] =  flatRight.z;  R[2][1] =  up_view.z;  R[2][2] = -m_forward.z;
 
-    // Step 2 – lean roll applied to R (no translation yet, so rotation
-    // axis is at the origin of R's space = the eye position after T)
-    // Sign: A → m_lean < 0 → left side of screen up → lean left  ✓
-    //       E → m_lean > 0 → right side of screen up → lean right ✓
+    // Step 2 – lean roll
+    //
+    // glm::rotate(M, angle, axis) computes  M * Rw(axis, angle)
+    // where Rw is a rotation about `axis` expressed in the space M maps FROM
+    // — i.e. world space for our pure-rotation R.
+    //
+    // We want to roll around the camera's OWN into-screen axis.
+    // In view convention, camera local +Z points OUT of the screen, so the
+    // into-screen (forward) axis in world space is -m_forward.
+    //
+    // Passing -m_forward makes the roll axis track the camera's actual forward
+    // direction at any yaw and pitch — the tilt is always a pure screen-space
+    // roll, identical at every look direction.
+    //
+    // Sign: A → m_lean < 0 → top of screen tilts left  → lean left  ✓
+    //       E → m_lean > 0 → top of screen tilts right → lean right ✓
     if (std::abs(m_lean) > 0.001f)
     {
-        R = glm::rotate(R, glm::radians(m_lean), glm::vec3(0.f, 0.f, 1.f));
+        R = glm::rotate(R, glm::radians(m_lean), -m_forward);
     }
 
     // Step 3 – eye translation (column-major: last column = translation)

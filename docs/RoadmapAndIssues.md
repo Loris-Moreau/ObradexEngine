@@ -36,14 +36,12 @@
 
 ## 2. Open Issues
 
-| Bug                                                             | Status | Notes                                                                                                                                                                                                                                                                                |
-|-----------------------------------------------------------------|--------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| Crouch does not properly disable stand-up when ceiling is above | Open   | The AABB correctly shrinks to `crouchHeight = 0.85 m` when crouching. However there is no headroom check when releasing Ctrl — the player can clip through a low ceiling by standing up inside it. A sweep test upward before allowing the state transition to `Standing` is needed. |
-| Inventory UI needs some polish *(text isn't align with titles)* | Open   | Just need to move them a bit                                                                                                                                                                                                                                                         |
-| Tilt changes angle when look around                             | Open   | left and right leans up and down instead of side to side                                                                                                                                                                                                                             |
-| no collision on door open                                       | Open   | Need to check the door collision                                                                                                                                                                                                                                                     |
-| Jump Doesn't conserve velocity                                  | Open   |                                                                                                                                                                                                                                                                                      |
-
+| Bug                                                                  | Status | Notes                                                                                                                                                                                                                                                                                |
+|----------------------------------------------------------------------|--------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Crouch does not properly disable stand-up when ceiling is above      | Open   | The AABB correctly shrinks to `crouchHeight = 0.85 m` when crouching. However there is no headroom check when releasing Ctrl — the player can clip through a low ceiling by standing up inside it. A sweep test upward before allowing the state transition to `Standing` is needed. |
+| Inventory UI needs some polish *(text isn't align with titles)*      | Open   | Just need to move them a bit                                                                                                                                                                                                                                                         |
+| Jump Velocity isn't conserved when sprinting or walking then jumping | Open   | Conserve running velocity *(0.75)* when jumping                                                                                                                                                                                                                                      |
+| Weird collision when the door is open                                | Open   | Need to check that the collision properly rotates with the door                                                                                                                                                                                                                      |
 
 ---
 
@@ -329,3 +327,23 @@ Root cause: `view * roll` right-multiplies the roll rotation onto the **full** v
 Root cause: `GetWidth()` / `GetHeight()` returned the cached `m_width` / `m_height` members that are only updated by `FramebufferSizeCallback`. On Windows, GLFW fires the framebuffer-size callback correctly, but there are edge cases (minimize then maximize, certain DPI-scaling configurations, window state transitions during the same `PollEvents` call where a frame is already mid-render) where the cached value is stale. The letterbox viewport `vpX = (windowW - vpW) / 2` then receives the original window dimensions rather than the maximised ones, producing `vpX = 0, vpY = 0` — image at bottom-left with black bars only on the right and top.
 
 *Fix (`Window.cpp`, `Window.h`):* `GetWidth()`, `GetHeight()`, and `GetAspect()` now call `glfwGetFramebufferSize()` directly on every query rather than reading cached members. `glfwGetFramebufferSize` always returns the current framebuffer dimensions synchronously with no caching, so the letterbox calculation is never based on a stale size.
+
+---
+
+### 3.11 Lean axis & jump velocity
+
+**[FIX] Lean tilt still changes with look direction**
+
+Root cause (final): `glm::rotate(R, angle, vec3(0,0,1))` — even with R being the pure rotation matrix built from the yaw/pitch basis vectors — applies the rotation around `{0,0,1}` **in the space R maps from**, which is world space. World +Z is only the camera's into-screen axis when the player faces -Z (yaw 0°). At any other yaw the world-Z axis is angled relative to the screen, so the roll axis precesses.
+
+*Fix (`Camera.cpp`):* Pass `-m_forward` as the rotation axis instead of `{0,0,1}`. `-m_forward` is always the camera's actual forward / into-screen axis in world space at any yaw and pitch. `glm::rotate(R, lean, -m_forward)` therefore always rolls around the true screen-depth axis — the tilt is a pure screen-space roll identical at every look direction. The translation is still appended last (`R * T`) so the roll origin is the eye, not the world origin.
+
+---
+
+**[FIX] Jump does not conserve horizontal velocity**
+
+Root cause: `HandleMovement` set `m_velocity.x = moveDir * speed` and `m_velocity.z = moveDir * speed` unconditionally whenever `m_state != Sliding`. This included `InAir`, so the frame after a jump the horizontal velocity was overwritten with the current WASD input times walk speed — sprint-jump momentum was lost instantly.
+
+*Fix (`Player.cpp`):* Split the velocity assignment on `m_onGround`:
+- **On ground**: snap directly to `moveDir * targetSpeed` (unchanged — responsive ground movement).
+- **In air**: apply input as an acceleration nudge (`kAirControl = 4 m/s²`) so the player can steer during a jump but the horizontal speed set at jump-time is preserved. A cap at `targetSpeed` prevents unlimited air-strafe acceleration. A sprint-jump now carries the sprint velocity for the full arc; a walk-jump carries walk velocity.

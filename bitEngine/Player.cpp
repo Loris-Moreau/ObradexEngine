@@ -158,11 +158,36 @@ void Player::HandleMovement(const Input& input, float dt)
     if (glm::length(moveDir) > 0.001f)
         moveDir = glm::normalize(moveDir);
 
-    // During a slide keep the slide direction, don't let input redirect
+    // Horizontal velocity
+    // On the ground: snap directly to input direction × speed (responsive).
+    // In the air:    steer with reduced influence but preserve the velocity
+    //               from the moment of jump — no snapping to walk speed.
     if (m_state != MoveState::Sliding)
     {
-        m_velocity.x = moveDir.x * targetSpeed;
-        m_velocity.z = moveDir.z * targetSpeed;
+        if (m_onGround)
+        {
+            m_velocity.x = moveDir.x * targetSpeed;
+            m_velocity.z = moveDir.z * targetSpeed;
+        }
+        else
+        {
+            // Air control: nudge toward input direction without overriding
+            // the jump's horizontal momentum.  Scale influence so the player
+            // can steer but not instantly redirect a sprint-jump.
+            const float kAirControl = 4.0f;   // m/s² influence
+            m_velocity.x += moveDir.x * kAirControl * dt;
+            m_velocity.z += moveDir.z * kAirControl * dt;
+
+            // Cap horizontal speed in air to the current target speed so
+            // air-strafing can't infinitely accelerate.
+            float hspd = glm::length(glm::vec2(m_velocity.x, m_velocity.z));
+            if (hspd > targetSpeed)
+            {
+                float scale = targetSpeed / hspd;
+                m_velocity.x *= scale;
+                m_velocity.z *= scale;
+            }
+        }
     }
     m_speed = glm::length(glm::vec3(m_velocity.x, 0.f, m_velocity.z));
 
