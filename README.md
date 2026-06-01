@@ -21,6 +21,10 @@
 - **Point light flickering**: multi-sine candle/fire simulation
 - **Dear ImGui editor**: live post-process tuning, entity inspector, player stats, FPS sparkline
 
+---
+
+![Obradex Showcase](https://github.com/Loris-Moreau/loris-moreau.github.io/blob/main/Images/Showcase/BitEngine-4.webp)
+
 ## Full Documentation
 
 See [`docs/DOCUMENTATION.md`](docs/DOCUMENTATION.md) for the complete subsystem reference, rendering pipeline breakdown, shader uniform tables, and extension guide.
