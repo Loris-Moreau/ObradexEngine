@@ -1,6 +1,4 @@
-// ============================================================
-//  Engine.cpp  -  ObradexEngine Core Implementation
-// ============================================================
+// Engine.cpp - ObradexEngine core implementation.
 
 #include "Engine.h"
 #include "Window.h"
@@ -15,15 +13,12 @@
 #include <iostream>
 #include <stdexcept>
 
-// ── Singleton ─────────────────────────────────────────────────
 Engine& Engine::Get()
 {
-    // Meyer's singleton - thread-safe in C++11+
     static Engine instance;
     return instance;
 }
 
-// ── Init ──────────────────────────────────────────────────────
 bool Engine::Init(const EngineConfig& config)
 {
     if (m_state != EngineState::Uninitialized)
@@ -37,11 +32,9 @@ bool Engine::Init(const EngineConfig& config)
 
     try
     {
-        // ── 1. Timer (no deps) ────────────────────────────────
         m_timer = std::make_unique<Timer>();
         std::cout << "[Engine]  Timer        OK\n";
 
-        // ── 2. Window (needs GLFW) ────────────────────────────
         m_window = std::make_unique<Window>();
         if (!m_window->Init(config.windowTitle,
                             config.windowWidth,
@@ -53,12 +46,10 @@ bool Engine::Init(const EngineConfig& config)
         }
         std::cout << "[Engine]  Window       OK\n";
 
-        // ── 3. Input (needs Window) ───────────────────────────
         m_input = std::make_unique<Input>();
         m_input->Init(m_window->GetGLFWWindow());
         std::cout << "[Engine]  Input        OK\n";
 
-        // ── 4. Renderer (needs OpenGL context from Window) ────
         m_renderer = std::make_unique<Renderer>();
         if (!m_renderer->Init(config.renderWidth, config.renderHeight))
         {
@@ -66,28 +57,24 @@ bool Engine::Init(const EngineConfig& config)
         }
         std::cout << "[Engine]  Renderer     OK\n";
 
-        // ── 5. World ──────────────────────────────────────────
         m_world = std::make_unique<World>();
         m_world->Init();
         std::cout << "[Engine]  World        OK\n";
 
-        // ── 6. Player ─────────────────────────────────────────
         m_player = std::make_unique<Player>();
         m_player->Init();
         std::cout << "[Engine]  Player       OK\n";
 
-        // ── 7. Inventory ──────────────────────────────────────
         m_inventory = std::make_unique<InventorySystem>();
         std::cout << "[Engine]  Inventory    OK\n";
 
-        // ── 8. Editor UI (ImGui; needs Window + OpenGL) ───────
         m_editorUI = std::make_unique<EditorUI>();
         m_editorUI->Init(m_window->GetGLFWWindow());
         std::cout << "[Engine]  EditorUI     OK\n";
     }
     catch (const std::exception& e)
     {
-        std::cerr << "[Engine] FATAL - " << e.what() << "\n";
+        std::cerr << "[Engine] FATAL: " << e.what() << "\n";
         return false;
     }
 
@@ -96,7 +83,6 @@ bool Engine::Init(const EngineConfig& config)
     return true;
 }
 
-// ── Run (main game loop) ──────────────────────────────────────
 void Engine::Run()
 {
     if (m_state != EngineState::Running)
@@ -107,33 +93,25 @@ void Engine::Run()
 
     m_timer->Reset();
 
-    // ── Game Loop ─────────────────────────────────────────────
     // Fixed-timestep physics with variable rendering.
-    // This decouples physics stability from frame rate.
-    const float fixedDt      = 1.0f / static_cast<float>(m_config.targetFPS);
-    float       accumulator  = 0.0f;
-    
+    // Decoupling physics from frame rate keeps simulation stable.
+    const float fixedDt     = 1.0f / static_cast<float>(m_config.targetFPS);
+    float       accumulator = 0.0f;
+
     while (!m_window->ShouldClose() && m_state != EngineState::Shutdown)
     {
-        // Measure real elapsed time this frame
         float frameDt = m_timer->Tick();
 
-        // Guard against spiral-of-death on very slow frames
+        // Cap to 250 ms to prevent the spiral-of-death on very slow frames.
         if (frameDt > 0.25f) frameDt = 0.25f;
         accumulator += frameDt;
 
-        // ── Poll OS events FIRST ──────────────────────────────
-        // glfwPollEvents() processes the WM_KEYDOWN / WM_KEYUP /
-        // WM_MOUSEMOVE messages that the OS queued since the last
-        // frame.  It must run BEFORE Input::Update() reads
-        // glfwGetKey() - otherwise the keyboard state is always
-        // one frame stale and keys appear unresponsive.
+        // PollEvents must run before Input::Update so glfwGetKey reads
+        // the OS key state queued since the last frame, not stale data.
         m_window->PollEvents();
 
-        // ── Input snapshot (once per real frame) ──────────────
         ProcessInput();
 
-        // ── Fixed Update (physics / game logic) ───────────────
         while (accumulator >= fixedDt)
         {
             if (m_state == EngineState::Running)
@@ -141,36 +119,25 @@ void Engine::Run()
             accumulator -= fixedDt;
         }
 
-        // ── Render (once per real frame) ──────────────────────
-        // Alpha = how far we are into the next fixed step;
-        // used for sub-frame interpolation if desired.
-        // const float alpha = accumulator / fixedDt;
         Render();
-
         m_window->SwapBuffers();
     }
 
     Shutdown();
 }
 
-// ── ProcessInput ──────────────────────────────────────────────
 void Engine::ProcessInput()
 {
     m_input->Update();
 
-    // Engine-level hotkeys (bypass game-logic layer)
     if (m_input->IsKeyJustPressed(Key::F1))
-    {
         m_editorUI->ToggleEditorPanel();
-    }
 
-    // I key - toggle inventory (only when game is running and no container open)
-    if (m_input->IsKeyJustPressed(Key::I) &&
-        !m_world->HasOpenContainer())
+    // I key toggles the inventory. Opening pauses the game so physics stops.
+    if (m_input->IsKeyJustPressed(Key::I) && !m_world->HasOpenContainer())
     {
         if (m_inventory->IsOpen())
         {
-            // Close inventory - resume
             m_inventory->Toggle();
             m_window->SetCursorLocked(true);
             if (m_state == EngineState::Paused)
@@ -178,7 +145,6 @@ void Engine::ProcessInput()
         }
         else if (m_state == EngineState::Running)
         {
-            // Open inventory - pause so physics freezes
             m_inventory->Toggle();
             m_window->SetCursorLocked(false);
             m_state = EngineState::Paused;
@@ -187,19 +153,17 @@ void Engine::ProcessInput()
 
     if (m_input->IsKeyJustPressed(Key::Escape))
     {
-        // Priority 1: close open container
+        // Priority order: container > inventory > pause toggle.
         if (m_world && m_world->HasOpenContainer())
         {
             m_world->CloseOpenContainer();
         }
-        // Priority 2: close open inventory
         else if (m_inventory && m_inventory->IsOpen())
         {
             m_inventory->Toggle();
             m_window->SetCursorLocked(true);
             m_state = EngineState::Running;
         }
-        // Priority 3: normal pause toggle
         else if (m_state == EngineState::Running)
         {
             m_state = EngineState::Paused;
@@ -212,47 +176,42 @@ void Engine::ProcessInput()
         }
     }
 
-    // Interaction events - called here (once per real frame) so that
-    // IsKeyJustPressed fires exactly once per key press.
-    // Calling this inside the fixed-timestep Update loop would cause
-    // onInteract to fire on every physics sub-step that shares the same
-    // input snapshot, making doors/lamps toggle back to their original
-    // state and appear unresponsive.
+    // ProcessEvents is called here, once per real frame, not inside the
+    // fixed-step loop. IsKeyJustPressed would be true on every sub-step
+    // that shares the same input snapshot, causing interactions (doors,
+    // lamps) to fire multiple times and toggle back to their original state.
     if (m_player && m_world && m_state == EngineState::Running)
         m_player->ProcessEvents(*m_input, *m_world);
 }
 
-// ── Update ────────────────────────────────────────────────────
 void Engine::Update(float dt)
 {
     m_world->Update(dt);
     m_player->Update(dt, *m_input, *m_world);
 }
 
-// ── Render ────────────────────────────────────────────────────
 void Engine::Render()
 {
-    // 1. Draw the 3-D scene into the low-res framebuffer
+    // 1. Render scene into the low-res framebuffer.
     m_renderer->BeginFrame();
     m_renderer->RenderWorld(*m_world, m_player->GetCamera());
 
-    // 2. Apply post-processing (dither + palette quantisation)
+    // 2. Apply post-process (dither + palette quantisation).
     m_renderer->ApplyPostProcess();
 
-    // 3. Blit low-res framebuffer to the window at full resolution
+    // 3. Blit low-res buffer to the window with letterboxing.
     m_renderer->Present(m_window->GetWidth(), m_window->GetHeight());
 
-    // 4. Render ImGui on top (at native resolution - stays crisp)
+    // 4. Draw ImGui at native resolution so it stays sharp.
     m_editorUI->Render(*this);
 }
 
-// ── Shutdown ──────────────────────────────────────────────────
 void Engine::Shutdown()
 {
     std::cout << "[Engine] Shutting down...\n";
     m_state = EngineState::Shutdown;
 
-    // Reverse-order destruction (unique_ptr auto-destructs)
+    // Destroy in reverse initialisation order.
     m_editorUI.reset();
     m_player.reset();
     m_world.reset();
@@ -264,13 +223,11 @@ void Engine::Shutdown()
     std::cout << "[Engine] Goodbye.\n";
 }
 
-// ── RequestShutdown ───────────────────────────────────────────
 void Engine::RequestShutdown()
 {
     m_state = EngineState::Shutdown;
 }
 
-// ── Subsystem accessors ───────────────────────────────────────
 Window&          Engine::GetWindow()    const { return *m_window;    }
 Renderer&        Engine::GetRenderer()  const { return *m_renderer;  }
 Input&           Engine::GetInput()     const { return *m_input;     }

@@ -1,6 +1,4 @@
-// ============================================================
-//  EditorUI.cpp  -  ImGui Editor / Debug Overlay
-// ============================================================
+// EditorUI.cpp - Dear ImGui runtime editor and HUD.
 
 #include "EditorUI.h"
 #include "Engine.h"
@@ -23,15 +21,14 @@
 #include <cstdio>
 #include <iostream>
 
-// ── Constructor / Destructor ────────────────────────────────
-// Defined here (not in the header) so that the compiler sees
-// the complete LevelEditor type when it instantiates
-// std::unique_ptr<LevelEditor>::~unique_ptr().  Defaulting
-// EditorUI() in the header would generate the destructor inline
-// with only a forward declaration - MSVC rejects this.
-EditorUI::EditorUI() = default;
+EditorUI::EditorUI()  = default;
+EditorUI::~EditorUI()
+{
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+}
 
-// ── Init ──────────────────────────────────────────────────────
 void EditorUI::Init(GLFWwindow* window)
 {
     IMGUI_CHECKVERSION();
@@ -40,11 +37,9 @@ void EditorUI::Init(GLFWwindow* window)
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
 
-    // ── Dark theme tuned for the Obra Dinn aesthetic ──────────
+    // Dark theme with amber accents matching the engine aesthetic.
     ImGui::StyleColorsDark();
     ImGuiStyle& style = ImGui::GetStyle();
-
-    // Palette: near-black background, amber accent
     style.Colors[ImGuiCol_WindowBg]       = ImVec4(0.06f, 0.05f, 0.04f, 0.92f);
     style.Colors[ImGuiCol_TitleBg]        = ImVec4(0.10f, 0.08f, 0.05f, 1.00f);
     style.Colors[ImGuiCol_TitleBgActive]  = ImVec4(0.20f, 0.15f, 0.05f, 1.00f);
@@ -55,32 +50,23 @@ void EditorUI::Init(GLFWwindow* window)
     style.Colors[ImGuiCol_FrameBg]        = ImVec4(0.12f, 0.10f, 0.06f, 1.00f);
     style.Colors[ImGuiCol_SliderGrab]     = ImVec4(0.60f, 0.42f, 0.10f, 1.00f);
     style.Colors[ImGuiCol_CheckMark]      = ImVec4(0.80f, 0.60f, 0.18f, 1.00f);
-    style.WindowRounding  = 4.f;
-    style.FrameRounding   = 2.f;
-    style.GrabRounding    = 2.f;
+    style.WindowRounding = 4.f;
+    style.FrameRounding  = 2.f;
+    style.GrabRounding   = 2.f;
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 410");
+
     m_levelEditor = std::make_unique<LevelEditor>();
 }
 
-// ── Destructor ────────────────────────────────────────────────
-EditorUI::~EditorUI()
-{
-    ImGui_ImplOpenGL3_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
-    ImGui::DestroyContext();
-}
-
-// ── Render ────────────────────────────────────────────────────
 void EditorUI::Render(Engine& engine)
 {
     ImGui_ImplOpenGL3_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    // ── Always-on HUD (interact prompt, crosshair) ────────────
-    // ── Cursor lock / unlock when container popup opens or closes ──
+    // Unlock/lock cursor when a container popup opens or closes.
     bool containerNowOpen = engine.GetWorld().HasOpenContainer();
     if (containerNowOpen != m_wasContainerOpen)
     {
@@ -91,15 +77,14 @@ void EditorUI::Render(Engine& engine)
     DrawContainerPopup(engine);
     DrawHUD(engine);
 
-    // ── Inventory overlay (I key) ──────────────────────────────
-    ImGuiIO& io2 = ImGui::GetIO();
-    engine.GetInventory().DrawUI(io2.DisplaySize.x, io2.DisplaySize.y);
+    // Inventory overlay driven by InventorySystem::DrawUI.
+    ImGuiIO& io = ImGui::GetIO();
+    engine.GetInventory().DrawUI(io.DisplaySize.x, io.DisplaySize.y);
 
-    // ── Editor panel (F1 toggle) ──────────────────────────────
     if (m_showEditor)
     {
-        ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Once);
-        ImGui::SetNextWindowSize(ImVec2(340, 520), ImGuiCond_Once);
+        ImGui::SetNextWindowPos (ImVec2(10,  10),       ImGuiCond_Once);
+        ImGui::SetNextWindowSize(ImVec2(340, 520),      ImGuiCond_Once);
 
         if (ImGui::Begin("Obradex Engine  [F1]", &m_showEditor,
                          ImGuiWindowFlags_NoSavedSettings))
@@ -141,7 +126,6 @@ void EditorUI::Render(Engine& engine)
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
-// ── DrawHUD ───────────────────────────────────────────────────
 void EditorUI::DrawHUD(Engine& engine)
 {
     ImGuiIO& io      = ImGui::GetIO();
@@ -149,55 +133,51 @@ void EditorUI::DrawHUD(Engine& engine)
     float cx = io.DisplaySize.x * 0.5f;
     float cy = io.DisplaySize.y * 0.5f;
 
-    // ── Crosshair ─────────────────────────────────────────────
+    // Crosshair
     const float kCrossSize = 8.f;
     const float kCrossGap  = 3.f;
     ImU32 crossCol = IM_COL32(220, 210, 180, 200);
-
-    draw->AddLine(ImVec2(cx - kCrossSize, cy), ImVec2(cx - kCrossGap, cy), crossCol, 1.5f);
+    draw->AddLine(ImVec2(cx - kCrossSize, cy), ImVec2(cx - kCrossGap,  cy), crossCol, 1.5f);
     draw->AddLine(ImVec2(cx + kCrossGap,  cy), ImVec2(cx + kCrossSize, cy), crossCol, 1.5f);
-    draw->AddLine(ImVec2(cx, cy - kCrossSize), ImVec2(cx, cy - kCrossGap), crossCol, 1.5f);
+    draw->AddLine(ImVec2(cx, cy - kCrossSize), ImVec2(cx, cy - kCrossGap),  crossCol, 1.5f);
     draw->AddLine(ImVec2(cx, cy + kCrossGap),  ImVec2(cx, cy + kCrossSize), crossCol, 1.5f);
 
-    // ── Interact prompt ───────────────────────────────────────
+    // Interact prompt: amber badge centred below the crosshair.
     const std::string& prompt = engine.GetPlayer().GetInteractPrompt();
     if (!prompt.empty())
     {
-        // Semi-transparent amber badge below the crosshair
         ImVec2 textSize = ImGui::CalcTextSize(prompt.c_str());
         float  px = cx - textSize.x * 0.5f;
         float  py = cy + 30.f;
-
         draw->AddRectFilled(ImVec2(px - 8, py - 4),
                             ImVec2(px + textSize.x + 8, py + textSize.y + 4),
                             IM_COL32(20, 15, 5, 200), 3.f);
         draw->AddText(ImVec2(px, py), IM_COL32(220, 180, 80, 255), prompt.c_str());
     }
 
-    // ── Movement state badge (top-left corner) ─────────────────
-    const char* stateStr = "STANDING";
-    switch (engine.GetPlayer().GetMoveState())
+    // Movement state badge in the top-left corner; hidden when the editor is open.
+    if (!m_showEditor)
     {
-        case MoveState::Crouching: stateStr = "CROUCHING"; break;
-        case MoveState::Sprinting: stateStr = "SPRINTING"; break;
-        case MoveState::Sliding:   stateStr = "SLIDING";   break;
-        case MoveState::InAir:     stateStr = "IN AIR";    break;
-        case MoveState::Vaulting:  stateStr = "VAULTING";  break;
-        default: break;
-    }
-    if (!m_showEditor)  // Only show state badge when editor is hidden
-    {
+        const char* stateStr = "STANDING";
+        switch (engine.GetPlayer().GetMoveState())
+        {
+            case MoveState::Crouching: stateStr = "CROUCHING"; break;
+            case MoveState::Sprinting: stateStr = "SPRINTING"; break;
+            case MoveState::Sliding:   stateStr = "SLIDING";   break;
+            case MoveState::InAir:     stateStr = "IN AIR";    break;
+            case MoveState::Vaulting:  stateStr = "VAULTING";  break;
+            default: break;
+        }
         draw->AddText(ImVec2(12, 12), IM_COL32(160, 140, 80, 160), stateStr);
     }
 }
 
-// ── DrawPerformancePanel ──────────────────────────────────────
 void EditorUI::DrawPerformancePanel(Engine& engine)
 {
     const Timer& timer = engine.GetTimer();
 
     ImGui::SeparatorText("Frame");
-    ImGui::Text("FPS        : %.1f", timer.GetFPS());
+    ImGui::Text("FPS        : %.1f",    timer.GetFPS());
     ImGui::Text("Frame time : %.2f ms", timer.GetDeltaTime() * 1000.f);
     ImGui::Text("Total time : %.1f s",  timer.GetTotalTime());
     ImGui::Text("Frame #    : %d",      timer.GetFrameCount());
@@ -209,9 +189,9 @@ void EditorUI::DrawPerformancePanel(Engine& engine)
                 engine.GetWindow().GetWidth(),
                 engine.GetWindow().GetHeight());
 
-    // Simple FPS sparkline using a ring buffer
-    static float  fpsHistory[90] = {};
-    static int    fpsIdx = 0;
+    // Rolling FPS sparkline using a fixed-size ring buffer.
+    static float fpsHistory[90] = {};
+    static int   fpsIdx = 0;
     fpsHistory[fpsIdx] = timer.GetFPS();
     fpsIdx = (fpsIdx + 1) % 90;
 
@@ -221,96 +201,73 @@ void EditorUI::DrawPerformancePanel(Engine& engine)
                      overlay, 0.f, 200.f, ImVec2(0, 50));
 }
 
-// ── DrawRendererPanel ─────────────────────────────────────────
 void EditorUI::DrawRendererPanel(Engine& engine)
 {
     PostProcessSettings& pp = engine.GetRenderer().GetPostProcess().Settings();
 
     ImGui::SeparatorText("Dithering");
-    ImGui::SliderFloat("Strength##dith",  &pp.ditherStrength, 0.f, 2.f);
-    ImGui::SliderInt  ("Palette size",    &pp.paletteSize,    2,   32);
+    ImGui::SliderFloat("Strength##dith", &pp.ditherStrength, 0.f, 2.f);
+    ImGui::SliderInt  ("Palette size",   &pp.paletteSize,    2,   32);
 
     ImGui::SeparatorText("Vignette");
     ImGui::SliderFloat("Radius##vig",  &pp.vignetteRadius,  0.f, 1.5f);
     ImGui::SliderFloat("Feather##vig", &pp.vignetteFeather, 0.f, 1.f);
 
     ImGui::SeparatorText("Scanlines");
-    ImGui::Checkbox  ("Enable##scan",  &pp.scanlines);
+    ImGui::Checkbox("Enable##scan", &pp.scanlines);
     if (pp.scanlines)
         ImGui::SliderFloat("Alpha##scan", &pp.scanlineAlpha, 0.f, 0.5f);
-    
+
     ImGui::SeparatorText("Color Grading");
-    ImGui::SliderFloat("Contrast",   &pp.contrast,    0.5f, 3.f);
-    ImGui::SliderFloat("Brightness", &pp.brightness, -0.5f, 0.5f);
+    ImGui::SliderFloat("Contrast",   &pp.contrast,    0.5f,  3.f);
+    ImGui::SliderFloat("Brightness", &pp.brightness, -0.5f,  0.5f);
 
     ImGui::SeparatorText("Aesthetic");
     ImGui::Checkbox("Obra Dinn Mode (Monochrome)", &pp.obraDinnMode);
-    
+
     ImGui::SeparatorText("Presets");
     if (ImGui::Button("Obra Dinn"))
     {
-        pp.ditherStrength  = 1.45f;
-        pp.paletteSize     = 6;
-        pp.vignetteRadius  = 0.885f;
-        pp.vignetteFeather = 0.325f;
-        pp.scanlines       = false;
-        pp.scanlineAlpha   = 0.12f;
-        pp.contrast        = 1.75f;
-        pp.brightness      = 0.32f;
+        pp.ditherStrength  = 1.45f;  pp.paletteSize     = 6;
+        pp.vignetteRadius  = 0.885f; pp.vignetteFeather = 0.325f;
+        pp.scanlines       = false;  pp.scanlineAlpha   = 0.12f;
+        pp.contrast        = 1.75f;  pp.brightness      = 0.32f;
         pp.obraDinnMode    = true;
     }
     ImGui::SameLine();
     if (ImGui::Button("8-bit"))
     {
-        pp.ditherStrength  = 1.0f;
-        pp.paletteSize     = 16;
-        pp.vignetteRadius  = 0.9f;
-        pp.vignetteFeather = 0.575f;
-        pp.scanlines       = true;
-        pp.scanlineAlpha   = 0.09f;
-        pp.contrast        = 1.1f;
-        pp.brightness      = 0.25f;
+        pp.ditherStrength  = 1.0f;   pp.paletteSize     = 16;
+        pp.vignetteRadius  = 0.9f;   pp.vignetteFeather = 0.575f;
+        pp.scanlines       = true;   pp.scanlineAlpha   = 0.09f;
+        pp.contrast        = 1.1f;   pp.brightness      = 0.25f;
         pp.obraDinnMode    = false;
     }
-    //ImGui::SameLine();
     if (ImGui::Button("Bright Colored"))
     {
-        pp.ditherStrength  = 1.815f;
-        pp.paletteSize     = 32;
-        pp.vignetteRadius  = 1.025f;
-        pp.vignetteFeather = 0.25f;
-        pp.scanlines       = true;
-        pp.scanlineAlpha   = 0.12f;
-        pp.scanlineAlpha   = 0.12f;
-        pp.contrast        = 2.155f;
-        pp.brightness      = 0.5f;
+        pp.ditherStrength  = 1.815f; pp.paletteSize     = 32;
+        pp.vignetteRadius  = 1.025f; pp.vignetteFeather = 0.25f;
+        pp.scanlines       = true;   pp.scanlineAlpha   = 0.12f;
+        pp.contrast        = 2.155f; pp.brightness      = 0.5f;
         pp.obraDinnMode    = false;
     }
     ImGui::SameLine();
     if (ImGui::Button("Dark Colored"))
     {
-        pp.ditherStrength  = 0.275f;
-        pp.paletteSize     = 24;
-        pp.vignetteRadius  = 1.025f;
-        pp.vignetteFeather = 0.25f;
-        pp.scanlines       = true;
-        pp.scanlineAlpha   = 0.12f;
-        pp.contrast        = 2.13f;
-        pp.brightness      = 0.45f;
+        pp.ditherStrength  = 0.275f; pp.paletteSize     = 24;
+        pp.vignetteRadius  = 1.025f; pp.vignetteFeather = 0.25f;
+        pp.scanlines       = true;   pp.scanlineAlpha   = 0.12f;
+        pp.contrast        = 2.13f;  pp.brightness      = 0.45f;
         pp.obraDinnMode    = false;
     }
-    //ImGui::SameLine();
     if (ImGui::Button("Reset"))
-    {
         pp = PostProcessSettings{};
-    }
 }
 
-// ── DrawPlayerPanel ───────────────────────────────────────────
 void EditorUI::DrawPlayerPanel(Engine& engine)
 {
-    Player& player = engine.GetPlayer();
-    PlayerStats& stats = player.GetStats();
+    Player&      player = engine.GetPlayer();
+    PlayerStats& stats  = player.GetStats();
     const glm::vec3& pos = player.GetPosition();
 
     ImGui::SeparatorText("State");
@@ -324,27 +281,27 @@ void EditorUI::DrawPlayerPanel(Engine& engine)
         case MoveState::Vaulting:  stateStr = "Vaulting";  break;
         default: break;
     }
-    ImGui::Text("State     : %s", stateStr);
-    ImGui::Text("Position  : %.2f, %.2f, %.2f", pos.x, pos.y, pos.z);
-    ImGui::Text("Speed     : %.2f m/s", player.GetSpeed());
+    ImGui::Text("State    : %s",              stateStr);
+    ImGui::Text("Position : %.2f, %.2f, %.2f", pos.x, pos.y, pos.z);
+    ImGui::Text("Speed    : %.2f m/s",         player.GetSpeed());
 
     ImGui::SeparatorText("Stats");
-    ImGui::SliderFloat("Walk speed",        &stats.walkSpeed,           1.0f,  10.0f);
-    ImGui::SliderFloat("Sprint speed",      &stats.sprintSpeed,         4.0f,  20.0f);
-    ImGui::SliderFloat("Crouch speed",      &stats.crouchSpeed,         0.5f,   5.0f);
-    ImGui::SliderFloat("Slide Speed",       &stats.slideSpeed,          0.25f, 20.0f);
-    ImGui::SliderFloat("Jump height",       &stats.jumpHeight,          0.3f,   4.0f);
-    ImGui::SliderFloat("Gravity",           &stats.gravity,            -20.0f,  0.2f);
-    ImGui::SliderFloat("Mouse sens.",       &stats.mouseSensitivity,    0.02f,  0.5f);
-    ImGui::SliderFloat("Eye height",        &stats.eyeHeight,           0.5f,   2.5f);
-    ImGui::SliderFloat("Crouch height",     &stats.crouchHeight,        0.3f,   1.5f);
-    ImGui::SliderFloat("Interact range",    &stats.interactRange,       0.5f,   6.0f);
+    ImGui::SliderFloat("Walk speed",     &stats.walkSpeed,        1.0f,  10.0f);
+    ImGui::SliderFloat("Sprint speed",   &stats.sprintSpeed,      4.0f,  20.0f);
+    ImGui::SliderFloat("Crouch speed",   &stats.crouchSpeed,      0.5f,   5.0f);
+    ImGui::SliderFloat("Slide Speed",    &stats.slideSpeed,       0.25f, 20.0f);
+    ImGui::SliderFloat("Jump height",    &stats.jumpHeight,       0.3f,   4.0f);
+    ImGui::SliderFloat("Gravity",        &stats.gravity,         -20.0f,  0.2f);
+    ImGui::SliderFloat("Mouse sens.",    &stats.mouseSensitivity, 0.02f,  0.5f);
+    ImGui::SliderFloat("Eye height",     &stats.eyeHeight,        0.5f,   2.5f);
+    ImGui::SliderFloat("Crouch height",  &stats.crouchHeight,     0.3f,   1.5f);
+    ImGui::SliderFloat("Interact range", &stats.interactRange,    0.5f,   6.0f);
 
     ImGui::SeparatorText("Air Movement");
-    ImGui::SliderFloat("Air control",       &stats.airControl,          0.0f,  20.0f);
+    ImGui::SliderFloat("Air control",      &stats.airControl,         0.0f, 20.0f);
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("m/s^2 horizontal nudge while airborne");
-    ImGui::SliderFloat("Jump vel. retain",  &stats.jumpVelocityRetain,  0.0f,   1.0f);
+    ImGui::SliderFloat("Jump vel. retain", &stats.jumpVelocityRetain, 0.0f,  1.0f);
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Fraction of horizontal speed kept at jump\n0 = stop, 0.85 = default, 1 = full");
 
@@ -353,48 +310,32 @@ void EditorUI::DrawPlayerPanel(Engine& engine)
     float fov = cam.GetFOV();
     if (ImGui::SliderFloat("FOV", &fov, 50.f, 110.f))
         cam.SetFOV(fov);
-    ImGui::Text("Yaw / Pitch: %.1f° / %.1f°", cam.GetYaw(), cam.GetPitch());
+    ImGui::Text("Yaw / Pitch: %.1f / %.1f deg", cam.GetYaw(), cam.GetPitch());
 
     ImGui::SeparatorText("Presets");
     if (ImGui::Button("Base"))
     {
-        stats.walkSpeed           = 4.0f;
-        stats.sprintSpeed         = 8.0f;
-        stats.crouchSpeed         = 1.8f;
-        stats.slideSpeed          = 10.0f;
-        stats.jumpHeight          = 1.2f;
-        stats.gravity             = -15.0f;
-        stats.mouseSensitivity    = 0.12f;
-        stats.eyeHeight           = 1.75f;
-        stats.crouchHeight        = 0.85f;
-        stats.interactRange       = 2.5f;
-        stats.airControl          = 4.0f;
-        stats.jumpVelocityRetain  = 0.75f;
+        stats.walkSpeed          = 4.0f;   stats.sprintSpeed       = 8.0f;
+        stats.crouchSpeed        = 1.8f;   stats.slideSpeed        = 10.0f;
+        stats.jumpHeight         = 1.2f;   stats.gravity           = -15.0f;
+        stats.mouseSensitivity   = 0.12f;  stats.eyeHeight         = 1.75f;
+        stats.crouchHeight       = 0.85f;  stats.interactRange     = 2.5f;
+        stats.airControl         = 4.0f;   stats.jumpVelocityRetain = 0.75f;
     }
     ImGui::SameLine();
     if (ImGui::Button("SpeedRun"))
     {
-        stats.walkSpeed           = 3.0f;
-        stats.sprintSpeed         = 8.0f;
-        stats.crouchSpeed         = 1.75f;
-        stats.slideSpeed          = 15.0f;
-        stats.jumpHeight          = 1.25f;
-        stats.gravity             = -12.0f;
-        stats.mouseSensitivity    = 0.24f;
-        stats.eyeHeight           = 1.9f;
-        stats.crouchHeight        = 0.9f;
-        stats.interactRange       = 2.75f;
-        stats.airControl          = 6.0f;
-        stats.jumpVelocityRetain  = 0.95f;
+        stats.walkSpeed          = 3.0f;   stats.sprintSpeed       = 8.0f;
+        stats.crouchSpeed        = 1.75f;  stats.slideSpeed        = 15.0f;
+        stats.jumpHeight         = 1.25f;  stats.gravity           = -12.0f;
+        stats.mouseSensitivity   = 0.24f;  stats.eyeHeight         = 1.9f;
+        stats.crouchHeight       = 0.9f;   stats.interactRange     = 2.75f;
+        stats.airControl         = 6.0f;   stats.jumpVelocityRetain = 0.95f;
     }
-    
     if (ImGui::Button("Reset"))
-    {
         stats = PlayerStats{};
-    }
 }
 
-// ── DrawWorldPanel ────────────────────────────────────────────
 void EditorUI::DrawWorldPanel(Engine& engine)
 {
     World& world = engine.GetWorld();
@@ -409,14 +350,12 @@ void EditorUI::DrawWorldPanel(Engine& engine)
         if (!rec.active) continue;
         char label[64];
         std::snprintf(label, sizeof(label), "[%u] %s", rec.id, rec.name.c_str());
-
         bool selected = (m_selectedEntity == (int)rec.id);
         if (ImGui::Selectable(label, selected))
             m_selectedEntity = (int)rec.id;
     }
     ImGui::EndChild();
 
-    // ── Component Inspector ───────────────────────────────────
     if (m_selectedEntity >= 0)
     {
         auto* rec = world.GetRecord((EntityID)m_selectedEntity);
@@ -424,76 +363,51 @@ void EditorUI::DrawWorldPanel(Engine& engine)
         {
             ImGui::SeparatorText(rec->name.c_str());
 
-            if (rec->transform)
+            if (rec->transform && ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                if (ImGui::CollapsingHeader("Transform", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    ImGui::DragFloat3("Position##t", &rec->transform->position.x, 0.05f);
-                    ImGui::DragFloat3("Scale##t",    &rec->transform->scale.x,    0.05f);
-                }
+                ImGui::DragFloat3("Position##t", &rec->transform->position.x, 0.05f);
+                ImGui::DragFloat3("Scale##t",    &rec->transform->scale.x,    0.05f);
             }
-            if (rec->mesh)
+            if (rec->mesh && ImGui::CollapsingHeader("Mesh", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                if (ImGui::CollapsingHeader("Mesh", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    ImGui::ColorEdit3("Albedo",    &rec->mesh->albedoColour.x);
-                    ImGui::SliderFloat("Specular", &rec->mesh->specular, 0.f, 1.f);
-                    ImGui::SliderFloat("Roughness",&rec->mesh->roughness, 0.f, 1.f);
-                }
+                ImGui::ColorEdit3 ("Albedo",    &rec->mesh->albedoColour.x);
+                ImGui::SliderFloat("Specular",  &rec->mesh->specular,  0.f, 1.f);
+                ImGui::SliderFloat("Roughness", &rec->mesh->roughness, 0.f, 1.f);
             }
-            if (rec->light)
+            if (rec->light && ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                if (ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    ImGui::ColorEdit3("Colour",    &rec->light->colour.x);
-                    ImGui::SliderFloat("Radius",   &rec->light->radius,   0.1f, 30.f);
-                    ImGui::SliderFloat("Intensity",&rec->light->intensity, 0.f,  5.f);
-                    ImGui::Checkbox   ("Flicker",  &rec->light->flicker);
-                }
+                ImGui::ColorEdit3 ("Colour",    &rec->light->colour.x);
+                ImGui::SliderFloat("Radius",    &rec->light->radius,    0.1f, 30.f);
+                ImGui::SliderFloat("Intensity", &rec->light->intensity, 0.f,   5.f);
+                ImGui::Checkbox   ("Flicker",   &rec->light->flicker);
             }
-            if (rec->interactable)
+            if (rec->interactable && ImGui::CollapsingHeader("Interactable", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                if (ImGui::CollapsingHeader("Interactable", ImGuiTreeNodeFlags_DefaultOpen))
-                {
-                    ImGui::Text("Prompt: %s", rec->interactable->promptText.c_str());
-                    ImGui::SliderFloat("Range", &rec->interactable->range, 0.5f, 10.f);
-                    ImGui::Checkbox("Enabled", &rec->interactable->enabled);
-                }
+                ImGui::Text       ("Prompt: %s", rec->interactable->promptText.c_str());
+                ImGui::SliderFloat("Range",      &rec->interactable->range, 0.5f, 10.f);
+                ImGui::Checkbox   ("Enabled",    &rec->interactable->enabled);
             }
         }
     }
 }
 
-// ── DrawLevelEditorPanel ──────────────────────────────────────
 void EditorUI::DrawLevelEditorPanel(Engine& engine)
 {
     if (m_levelEditor)
         m_levelEditor->RenderPanel(engine);
 }
 
-// ── DrawContainerPopup ────────────────────────────────────────
-// Shows a 3x3 item grid whenever a ContainerComponent has isOpen==true.
-// The popup is styled with the engine's amber/dark palette.
-//
-//  ┌──────────────────────────┐
-//  │  Container  [Name]       │
-//  │  ┌────┬────┬────┐        │
-//  │  │Item│Item│    │        │
-//  │  ├────┼────┼────┤        │
-//  │  │    │    │    │        │
-//  │  ├────┼────┼────┤        │
-//  │  │    │    │    │        │
-//  │  └────┴────┴────┘        │
-//  │  [Grab All]  [Close]     │
-//  └──────────────────────────┘
+// 3x3 item grid shown whenever a ContainerComponent has isOpen == true.
+// Clicking a slot moves the item to the player's inventory.
+// "Grab All" moves every item at once and closes the popup.
 void EditorUI::DrawContainerPopup(Engine& engine)
 {
     World& world = engine.GetWorld();
 
-    // Find first open container
-    ContainerComponent* container = nullptr;
+    ContainerComponent* container   = nullptr;
     EntityID            containerID = kNullEntity;
     std::string         containerName;
+
     for (auto& rec : world.GetAllRecords())
     {
         if (!rec.active || !rec.container || !rec.container->isOpen) continue;
@@ -504,16 +418,14 @@ void EditorUI::DrawContainerPopup(Engine& engine)
     }
     if (!container) return;
 
-    // ── Style ─────────────────────────────────────────────────
-    ImGui::PushStyleColor(ImGuiCol_WindowBg,    ImVec4(0.08f, 0.08f, 0.08f, 0.97f));
-    ImGui::PushStyleColor(ImGuiCol_Border,      ImVec4(0.55f, 0.40f, 0.10f, 0.90f));
-    ImGui::PushStyleColor(ImGuiCol_TitleBg,     ImVec4(0.18f, 0.12f, 0.03f, 1.00f));
-    ImGui::PushStyleColor(ImGuiCol_TitleBgActive,ImVec4(0.28f, 0.18f, 0.04f, 1.00f));
+    ImGui::PushStyleColor(ImGuiCol_WindowBg,     ImVec4(0.08f,0.08f,0.08f,0.97f));
+    ImGui::PushStyleColor(ImGuiCol_Border,       ImVec4(0.55f,0.40f,0.10f,0.90f));
+    ImGui::PushStyleColor(ImGuiCol_TitleBg,      ImVec4(0.18f,0.12f,0.03f,1.00f));
+    ImGui::PushStyleColor(ImGuiCol_TitleBgActive,ImVec4(0.28f,0.18f,0.04f,1.00f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 6.f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,  ImVec2(12.f, 12.f));
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,    ImVec2(6.f, 6.f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,  ImVec2(12.f,12.f));
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,    ImVec2(6.f,6.f));
 
-    // Centre popup on screen
     ImGuiIO& io = ImGui::GetIO();
     ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f),
                             ImGuiCond_Always, ImVec2(0.5f, 0.5f));
@@ -529,42 +441,31 @@ void EditorUI::DrawContainerPopup(Engine& engine)
 
     auto& items = container->items;
 
-    // ── 3x3 grid ──────────────────────────────────────────────
-    const float kSlotSize  = 82.f;
-    const float kSlotPad   =  6.f;
-    ImDrawList* dl         = ImGui::GetWindowDrawList();
-    ImVec2      winPos     = ImGui::GetWindowPos();
-    ImVec2      contentOff = ImGui::GetCursorPos();  // start of content area
+    const float kSlotSize = 82.f;
+    const float kSlotPad  =  6.f;
+    ImDrawList* dl        = ImGui::GetWindowDrawList();
+    ImVec2      winPos    = ImGui::GetWindowPos();
 
-    int  grabbedIdx = -1;  // index of item clicked this frame
+    int grabbedIdx = -1;
 
     for (int row = 0; row < 3; ++row)
     {
         for (int col = 0; col < 3; ++col)
         {
             if (col > 0) ImGui::SameLine(0.f, kSlotPad);
-
-            int idx = row * 3 + col;
+            int  idx     = row * 3 + col;
+            bool hasItem = (idx < (int)items.size());
             ImGui::PushID(idx);
 
             ImVec2 slotCursor = ImGui::GetCursorPos();
-            // Absolute position for the draw list
-            ImVec2 abs = ImVec2(winPos.x + slotCursor.x,
-                                winPos.y + slotCursor.y);
+            ImVec2 abs = ImVec2(winPos.x + slotCursor.x, winPos.y + slotCursor.y);
 
-            bool hasItem = (idx < (int)items.size());
-
-            // ── Slot background ───────────────────────────────
-            ImVec4 slotBg = hasItem
-                ? ImVec4(0.22f, 0.16f, 0.06f, 1.f)   // Amber tint if occupied
-                : ImVec4(0.10f, 0.10f, 0.10f, 0.8f);  // Dark empty
-
-            ImGui::PushStyleColor(ImGuiCol_Button,        slotBg);
+            ImVec4 slotBg = hasItem ? ImVec4(0.22f,0.16f,0.06f,1.f)
+                                    : ImVec4(0.10f,0.10f,0.10f,0.8f);
+            ImGui::PushStyleColor(ImGuiCol_Button,       slotBg);
             ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
-                hasItem ? ImVec4(0.38f, 0.25f, 0.05f, 1.f)
-                        : ImVec4(0.15f, 0.15f, 0.15f, 1.f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive,
-                ImVec4(0.55f, 0.35f, 0.05f, 1.f));
+                hasItem ? ImVec4(0.38f,0.25f,0.05f,1.f) : ImVec4(0.15f,0.15f,0.15f,1.f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.55f,0.35f,0.05f,1.f));
             ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 4.f);
 
             bool clicked = ImGui::Button("##slot", ImVec2(kSlotSize, kSlotSize));
@@ -575,41 +476,33 @@ void EditorUI::DrawContainerPopup(Engine& engine)
             if (hasItem)
             {
                 const Item& item = items[idx];
-
-                // Item name - centred in slot, max ~10 chars before wrapping
                 float textW = ImGui::CalcTextSize(item.name.c_str()).x;
                 float textX = abs.x + (kSlotSize - std::min(textW, kSlotSize - 8.f)) * 0.5f;
                 dl->AddText(ImVec2(textX, abs.y + 10.f),
-                            IM_COL32(240, 195, 80, 255),
-                            item.name.c_str());
+                            IM_COL32(240,195,80,255), item.name.c_str());
 
-                // Quantity badge - bottom-right corner
                 char qty[16];
                 std::snprintf(qty, sizeof(qty), "x%d", item.quantity);
                 ImVec2 qSize = ImGui::CalcTextSize(qty);
                 dl->AddText(ImVec2(abs.x + kSlotSize - qSize.x - 6.f,
                                    abs.y + kSlotSize - qSize.y - 6.f),
-                            IM_COL32(180, 180, 180, 200),
-                            qty);
+                            IM_COL32(180,180,180,200), qty);
 
                 if (clicked) grabbedIdx = idx;
             }
 
-            // Slot border
             dl->AddRect(abs, ImVec2(abs.x + kSlotSize, abs.y + kSlotSize),
-                        hasItem ? IM_COL32(140, 100, 20, 180)
-                                : IM_COL32(60,  60,  60, 120),
+                        hasItem ? IM_COL32(140,100,20,180) : IM_COL32(60,60,60,120),
                         4.f, 0, 1.5f);
 
             ImGui::PopID();
         }
     }
 
-    // ── Handle grab (outside the loop to avoid iterator invalidation) ──
+    // Handle grab outside the loop to avoid iterator invalidation.
     if (grabbedIdx >= 0 && grabbedIdx < (int)items.size())
     {
-        const Item& it = items[grabbedIdx];
-        engine.GetInventory().AddItem(it);
+        engine.GetInventory().AddItem(items[grabbedIdx]);
         items.erase(items.begin() + grabbedIdx);
     }
 
@@ -617,28 +510,25 @@ void EditorUI::DrawContainerPopup(Engine& engine)
     ImGui::Separator();
     ImGui::Spacing();
 
-    // ── Status line ───────────────────────────────────────────
     if (items.empty())
         ImGui::TextColored(ImVec4(0.5f,0.5f,0.5f,1.f), "Container is empty.");
     else
-        ImGui::TextColored(ImVec4(0.7f,0.7f,0.7f,1.f),
-                           "%d item(s) remaining", (int)items.size());
+        ImGui::TextColored(ImVec4(0.7f,0.7f,0.7f,1.f), "%d item(s) remaining", (int)items.size());
 
     ImGui::Spacing();
 
-    // ── Buttons ───────────────────────────────────────────────
     float btnW = (ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
 
-    ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.30f, 0.20f, 0.04f, 1.f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.50f, 0.32f, 0.06f, 1.f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.70f, 0.45f, 0.08f, 1.f));
+    ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.30f,0.20f,0.04f,1.f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.50f,0.32f,0.06f,1.f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.70f,0.45f,0.08f,1.f));
 
     if (ImGui::Button("Grab All", ImVec2(btnW, 0.f)) && !items.empty())
     {
         for (auto& it : items)
             engine.GetInventory().AddItem(it);
         items.clear();
-        // Update prompt and close
+
         auto* rec = world.GetRecord(containerID);
         if (rec && rec->interactable)
             rec->interactable->promptText =
@@ -647,13 +537,13 @@ void EditorUI::DrawContainerPopup(Engine& engine)
     }
 
     ImGui::SameLine();
-
     if (ImGui::Button("Close", ImVec2(btnW, 0.f)))
         windowOpen = false;
 
-    // Escape closes the container without pausing the game
+    // Escape closes the container (Engine::ProcessInput also handles this,
+    // but checking here too prevents a one-frame delay on the popup close).
     ImGuiIO& escIO = ImGui::GetIO();
-    if (escIO.KeysDown[256] /* GLFW_KEY_ESCAPE */ && !escIO.WantCaptureKeyboard)
+    if (escIO.KeysDown[256] && !escIO.WantCaptureKeyboard)
         windowOpen = false;
 
     ImGui::PopStyleColor(3);
@@ -662,7 +552,6 @@ void EditorUI::DrawContainerPopup(Engine& engine)
     ImGui::PopStyleVar(3);
     ImGui::PopStyleColor(4);
 
-    // Close on X button or explicit Close click
     if (!windowOpen)
         container->isOpen = false;
 }

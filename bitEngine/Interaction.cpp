@@ -1,6 +1,4 @@
-// ============================================================
-//  Interaction.cpp  -  World Interaction Factories
-// ============================================================
+// Interaction.cpp - Factory functions for interactive world entities.
 
 #include "Interaction.h"
 #include "World.h"
@@ -9,17 +7,11 @@
 namespace Interaction
 {
 
-// ── GetInteractionKey ─────────────────────────────────────────
 std::string GetInteractionKey()
 {
     return std::string("[") + Input::GetKeyName(INTERACT_KEY) + "] ";
 }
 
-// ── SpawnLamppost ─────────────────────────────────────────────
-// Creates two entities:
-//   1. The post (visible mesh + interactable + collision)
-//   2. A child light entity at the top
-// The post's onInteract toggles the child light on/off.
 EntityID SpawnLamppost(World&           world,
                        const glm::vec3& basePosition,
                        glm::vec3        lightColour,
@@ -29,35 +21,28 @@ EntityID SpawnLamppost(World&           world,
 {
     const float kPostHeight = 4.0f;
 
-    // ── Post entity ───────────────────────────────────────────
     EntityID postE = world.CreateEntity("Lamppost");
-
     auto* t = world.AddTransform(postE);
     t->position = basePosition + glm::vec3(0.f, kPostHeight * 0.5f, 0.f);
     t->scale    = {0.15f, kPostHeight, 0.15f};
-
     auto* m = world.AddMesh(postE);
-    m->albedoColour = {0.45f, 0.44f, 0.43f};  // Gunmetal grey
+    m->albedoColour = {0.45f, 0.44f, 0.43f};
     m->roughness    = 0.6f;
     m->specular     = 0.4f;
-    m->mesh         = world.GetCubeMesh();     // assigned by World
-
+    m->mesh         = world.GetCubeMesh();
     auto* col = world.AddCollision(postE);
-    col->halfExtents = {0.5f, 0.5f, 0.5f};    // scaled by t->scale at runtime
+    col->halfExtents = {0.5f, 0.5f, 0.5f};
 
-    // ── Light entity (child of the post) ─────────────────────
+    // Child light entity positioned at the top of the post.
     EntityID lightE = world.CreateEntity("LampostLight");
-
     auto* lt = world.AddTransform(lightE);
     lt->position = basePosition + glm::vec3(0.f, kPostHeight + 0.5f, 0.f);
-
     auto* lc = world.AddLight(lightE);
     lc->colour    = lightColour;
     lc->radius    = lightRadius;
     lc->intensity = intensity;
     lc->flicker   = flicker;
 
-    // ── Interact: toggle light on / off ───────────────────────
     auto* ia = world.AddInteractable(postE);
     ia->range      = 3.0f;
     ia->promptText = GetInteractionKey() + "Toggle lamp";
@@ -70,12 +55,12 @@ EntityID SpawnLamppost(World&           world,
 
         if (lc2.intensity > 0.f)
         {
-            lc2.intensity = 0.f;
+            lc2.intensity  = 0.f;
             ia->promptText = GetInteractionKey() + "Turn on lamp";
         }
         else
         {
-            lc2.intensity = 1.5f;
+            lc2.intensity  = 1.5f;
             ia->promptText = GetInteractionKey() + "Turn off lamp";
         }
     };
@@ -83,50 +68,38 @@ EntityID SpawnLamppost(World&           world,
     return postE;
 }
 
-// ── SpawnDoor ─────────────────────────────────────────────────
-// The door panel pivots 90° around a hinge at one end.
-//
-// Geometry (scale = {0.05, 2.2, 1.0}):
-//   Closed: panel width (1 m) runs along Z, centred at `position`.
-//   Hinge : Z-negative end of the panel → position - {0, 0, 0.5}
-//   Open  : panel rotates 90° CCW around Y at the hinge point.
-//           New centre = hinge + {+0.5, 0, 0}
-//           (right-hand 90° rotation maps local +Z to global +X)
 EntityID SpawnDoor(World&            world,
                    const glm::vec3&  position,
                    bool              locked,
                    std::function<void()> onOpen)
 {
     EntityID e = world.CreateEntity("Door");
-
     auto* t = world.AddTransform(e);
     t->position = position;
     t->scale    = {0.05f, 2.2f, 1.0f};
-
     auto* m = world.AddMesh(e);
     m->albedoColour = {0.30f, 0.22f, 0.10f};
     m->roughness    = 0.85f;
     m->mesh         = world.GetCubeMesh();
-
     auto* col = world.AddCollision(e);
     col->halfExtents = {0.5f, 0.5f, 0.5f};
 
-    // DoorState stores the hinge and initial centre so the pivot
-    // calculation works correctly regardless of where the door is placed.
+    // Stores pivot data so the hinge calculation is independent of spawn position.
     struct DoorState
     {
         bool      open      = false;
         bool      locked    = false;
-        glm::vec3 closedPos;   ///< Original centre position (closed)
-        glm::vec3 openPos;     ///< Centre position when fully open
+        glm::vec3 closedPos;
+        glm::vec3 openPos;
     };
     auto state       = std::make_shared<DoorState>();
     state->locked    = locked;
     state->closedPos = position;
-    // Hinge at Z-negative end of the panel (position.z - 0.5)
-    // After 90° CCW rotation around Y: new centre = hinge + {+0.5, 0, 0}
-    glm::vec3 hinge  = position - glm::vec3(0.f, 0.f, 0.5f);
-    state->openPos   = hinge + glm::vec3(0.5f, 0.f, 0.f);
+    // Hinge at the Z-negative end of the panel.
+    // 90-degree CCW rotation around Y maps local +Z to global +X,
+    // so the new centre is hinge + {+0.5, 0, 0}.
+    glm::vec3 hinge = position - glm::vec3(0.f, 0.f, 0.5f);
+    state->openPos  = hinge + glm::vec3(0.5f, 0.f, 0.f);
 
     auto* ia = world.AddInteractable(e);
     ia->range      = 2.5f;
@@ -151,20 +124,16 @@ EntityID SpawnDoor(World&            world,
         {
             if (state->open)
             {
-                // Pivot 90° CCW around Y at the hinge point
                 tr->rotation = glm::angleAxis(glm::radians(90.f),
                                               glm::vec3(0.f, 1.f, 0.f));
                 tr->position = state->openPos;
-                // Door is out of the doorway - disable collision so the
-                // player can walk through the opening.
+                // Door has swung out of the doorway; disable collision.
                 if (rec && rec->collision) rec->collision->solid = false;
             }
             else
             {
-                // Return to closed pose
                 tr->rotation = glm::identity<glm::quat>();
                 tr->position = state->closedPos;
-                // Restore collision for the closed door.
                 if (rec && rec->collision) rec->collision->solid = true;
             }
         }
@@ -177,33 +146,25 @@ EntityID SpawnDoor(World&            world,
     return e;
 }
 
-// ── SpawnContainer ────────────────────────────────────────────
-// The onInteract callback just sets container->isOpen = true.
-// The actual item grid + grab logic is handled by EditorUI::DrawContainerPopup,
-// which renders a 3x3 ImGui grid and removes items as the player grabs them.
 EntityID SpawnContainer(World&                world,
                         const glm::vec3&      position,
                         std::vector<Item>     items,
                         std::function<void(const std::vector<Item>&)> onOpen)
 {
     EntityID e = world.CreateEntity("Container");
-
     auto* t = world.AddTransform(e);
     t->position = position;
     t->scale    = {0.6f, 0.4f, 0.4f};
-
     auto* m = world.AddMesh(e);
     m->albedoColour = {0.35f, 0.25f, 0.12f};
     m->roughness    = 0.9f;
     m->mesh         = world.GetCubeMesh();
 
-    // ContainerComponent holds the item list.
-    // EditorUI reads isOpen and renders the grid popup.
-    auto* container    = world.AddContainer(e);
-    // Enforce the 3×3 grid cap - silently drop items beyond index 8.
+    auto* container = world.AddContainer(e);
+    // Enforce the 3x3 grid cap; silently drop items beyond index 8.
     if (items.size() > 9) items.resize(9);
-    container->items   = std::move(items);
-    container->isOpen  = false;
+    container->items  = std::move(items);
+    container->isOpen = false;
 
     auto* ia = world.AddInteractable(e);
     ia->range      = 2.25f;
@@ -215,30 +176,23 @@ EntityID SpawnContainer(World&                world,
         if (!rec || !rec->container) return;
 
         if (rec->container->items.empty())
-        {
-            // Already looted - update prompt so player knows
             ia->promptText = GetInteractionKey() + "Search  (empty)";
-            rec->container->isOpen = true;   // still show the empty grid
-            return;
-        }
+
         rec->container->isOpen = true;
     };
 
     return e;
 }
 
-// ── SpawnPickup ───────────────────────────────────────────────
 EntityID SpawnPickup(World&           world,
                      const glm::vec3& position,
                      const Item&      item,
                      std::function<void(const Item&)> onPickup)
 {
     EntityID e = world.CreateEntity("Pickup_" + item.name);
-
     auto* t = world.AddTransform(e);
     t->position = position;
     t->scale    = {0.15f, 0.15f, 0.15f};
-
     auto* m = world.AddMesh(e);
     m->albedoColour = {0.75f, 0.65f, 0.25f};
     m->specular     = 0.7f;
@@ -260,18 +214,15 @@ EntityID SpawnPickup(World&           world,
     return e;
 }
 
-// ── SpawnAlarm ────────────────────────────────────────────────
 EntityID SpawnAlarm(World&            world,
                     const glm::vec3&  position,
                     std::function<void()> onTrigger,
                     std::function<void()> onDefuse)
 {
     EntityID e = world.CreateEntity("AlarmBox");
-
     auto* t = world.AddTransform(e);
     t->position = position;
     t->scale    = {0.2f, 0.2f, 0.1f};
-
     auto* m = world.AddMesh(e);
     m->albedoColour = {0.7f, 0.07f, 0.07f};
     m->roughness    = 0.5f;

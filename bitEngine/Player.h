@@ -1,28 +1,24 @@
 #pragma once
 
-// ============================================================
-//  Player.h  -  First-Person Player Controller
-// ============================================================
-//  Implements the Deus Ex / Assassin's Creed Syndicate
-//  movement model:
+// Player.h - First-person player controller.
 //
-//  Movement modes (state machine):
-//    Standing   - normal speed, full height
-//    Crouching  - slower, half height, quieter footsteps
-//    Sprinting  - fast, standing only, no lean
-//    Sliding    - brief burst after sprint+crouch
-//    Vaulting   - auto-climb low ledges (Syndicate-style)
+// Implements a Deus Ex / Assassin's Creed Syndicate-style movement model.
 //
-//  Abilities (Deus Ex style):
-//    Lean (A/E)          - peek around corners
-//    Interaction (F)     - pick up / open / activate
-//    Crouch-slide (LCtrl)- momentum preserved briefly
+// Movement states:
+//   Standing   - default, full height
+//   Crouching  - slower, reduced height
+//   Sprinting  - fast, no lean available
+//   Sliding    - brief burst after sprint + crouch input
+//   InAir      - jumping or falling
+//   Vaulting   - stub for auto-climbing low ledges
 //
-//  Physics:
-//    Simple kinematic controller - no rigid body, just
-//    velocity integration + AABB vs world collision.
-//    Gravity is applied; jumping is supported.
-// ============================================================
+// Physics:
+//   Kinematic velocity integration + AABB vs world collision.
+//   No rigid-body solver. Gravity is explicit.
+//
+// Input is processed in two places:
+//   Update()        - movement, gravity, collision (fixed-step, N times per frame)
+//   ProcessEvents() - interactions (once per real frame, safe for IsKeyJustPressed)
 
 #include <string>
 #include <glm/glm.hpp>
@@ -32,7 +28,6 @@
 class Input;
 class World;
 
-// ── Player movement state ─────────────────────────────────────
 enum class MoveState
 {
     Standing,
@@ -43,79 +38,75 @@ enum class MoveState
     Vaulting
 };
 
-// ── Player stats (tweak-able from the editor) ─────────────────
+// Runtime-tunable movement parameters. Exposed in the editor Player tab.
 struct PlayerStats
 {
-    float walkSpeed          = 2.25f;  // m/s
-    float sprintSpeed        = 8.0f;   // m/s
-    float crouchSpeed        = walkSpeed / 2.0f; // m/s
-    float slideSpeed         = 10.0f;  // m/s initial
-    float jumpHeight         = 1.2f;   // metres
-    float gravity            = -12.0f; // m/s²
+    float walkSpeed          = 2.25f;   // m/s
+    float sprintSpeed        = 8.0f;    // m/s
+    float crouchSpeed        = walkSpeed / 2.0f;
+    float slideSpeed         = 10.0f;   // Initial m/s burst
+    float jumpHeight         = 1.2f;    // metres
+    float gravity            = -12.0f;  // m/s^2
     float mouseSensitivity   = 0.12f;
-    float eyeHeight          = 1.8f;   // Standing eye height (m)
-    float crouchHeight       = 0.85f;  // Crouching eye height (m)
-    float interactRange      = 2.25f;  // Reach distance (m)
-    float airControl         = 4.0f;   // m/s² horizontal influence while airborne
-    float jumpVelocityRetain = 0.8f;  // Fraction of horizontal speed kept at jump (0–1)
+    float eyeHeight          = 1.8f;    // Standing eye height (m)
+    float crouchHeight       = 0.85f;   // Crouching eye height (m)
+    float interactRange      = 2.25f;   // Maximum interact reach (m)
+    float airControl         = 4.0f;    // m/s^2 horizontal nudge while airborne
+    float jumpVelocityRetain = 0.8f;    // Fraction of horizontal speed kept at jump (0 to 1)
 };
 
-// ── Player ───────────────────────────────────────────────────
 class Player
 {
 public:
     Player()  = default;
     ~Player() = default;
 
-    // ── Lifecycle ─────────────────────────────────────────────
     void Init();
-    void Update      (float dt, const Input& input, World& world); ///< Physics tick - called N times per real frame
-    void ProcessEvents(             const Input& input, World& world); ///< Interaction events - called ONCE per real frame
 
-    // ── Accessors ─────────────────────────────────────────────
-    const Camera&     GetCamera()    const { return m_camera;   }
-    Camera&           GetCamera()          { return m_camera;   }
-    const glm::vec3&  GetPosition()  const { return m_position; }
-    MoveState         GetMoveState() const { return m_state;    }
-    float             GetSpeed()     const { return m_speed;    }
-    PlayerStats&      GetStats()           { return m_stats;    }
+    // Physics tick. Called N times per real frame inside the fixed-step loop.
+    void Update(float dt, const Input& input, World& world);
 
-    /// The prompt text of the interactable the player is looking at.
-    /// Empty string if none in range.
+    // Interaction events. Called exactly once per real frame from Engine::ProcessInput.
+    void ProcessEvents(const Input& input, World& world);
+
+    const Camera&    GetCamera()       const { return m_camera;   }
+    Camera&          GetCamera()             { return m_camera;   }
+    const glm::vec3& GetPosition()     const { return m_position; }
+    MoveState        GetMoveState()    const { return m_state;    }
+    float            GetSpeed()        const { return m_speed;    }
+    PlayerStats&     GetStats()              { return m_stats;    }
+
+    // Prompt text of the nearest interactable in range. Empty if none.
     const std::string& GetInteractPrompt() const { return m_interactPrompt; }
 
-    /// True if the player is currently hidden (crouching in shadow).
     bool IsHidden() const { return m_isHidden; }
 
 private:
-    // ── Per-frame updates ─────────────────────────────────────
-    void HandleMouseLook(const Input& input, float dt);
-    void HandleMovement(const Input& input, float dt);
-    void HandleActions(const Input& input, World& world);
+    void HandleMouseLook  (const Input& input, float dt);
+    void HandleMovement   (const Input& input, float dt);
+    void HandleActions    (const Input& input, World& world);
     void HandleInteraction(const Input& input, World& world);
-    void UpdateMoveState(const Input& input, float dt);  ///< Evaluate and transition movement states
-    void ApplyGravity(float dt);
+    void UpdateMoveState  (const Input& input, float dt);
+    void ApplyGravity     (float dt);
     void UpdateCameraHeight(float dt, bool suppressBob = false);
-    void CheckTriggers(World& world);
+    void CheckTriggers    (World& world);
+    void ResolveCollision (World& world);
 
-    // ── Physics helpers ───────────────────────────────────────
-    void ResolveCollision(World& world);
-
-    // ── State ─────────────────────────────────────────────────
-    glm::vec3   m_position  = {0.f, 0.f, 0.f};
-    glm::vec3   m_velocity  = {0.f, 0.f, 0.f};
+    glm::vec3   m_position = {0.f, 0.f, 0.f};
+    glm::vec3   m_velocity = {0.f, 0.f, 0.f};
     Camera      m_camera;
     PlayerStats m_stats;
-    MoveState   m_state     = MoveState::Standing;
+    MoveState   m_state    = MoveState::Standing;
 
-    float m_speed           = 0.f;
-    float m_currentEyeH     = 1.7f;
-    float m_slideTimer      = 0.0f;
-    float m_vaultTimer      = 0.0f;
-    float m_airSpeedCap     = 0.0f;   ///< Horizontal speed captured at jump time; used as in-air cap
-    bool  m_onGround        = true;
-    bool  m_jumpConsumed    = false;  ///< Set on jump frame; prevents re-fire within same key press
-    bool  m_isHidden        = false;
+    float m_speed       = 0.f;
+    float m_currentEyeH = 1.7f;
+    float m_slideTimer  = 0.f;
+    float m_vaultTimer  = 0.f;
+    float m_airSpeedCap = 0.f;    // Horizontal speed at jump time; used as in-air cap
+
+    bool m_onGround     = true;
+    bool m_jumpConsumed = false;  // Prevents re-firing the jump within the same key press
+    bool m_isHidden     = false;
 
     std::string m_interactPrompt;
 };

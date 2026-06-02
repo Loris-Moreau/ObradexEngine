@@ -1,24 +1,20 @@
-// ============================================================
-//  main.cpp  -  ObradexEngine Entry Point
-// ============================================================
-//  Configures the engine, calls Init(), then hands control
-//  to the game loop via Run(). All cleanup is automatic
-//  (RAII - smart pointers, GLFW terminate in Window dtor).
+// main.cpp - Entry point.
 //
-//  To start a new project:
-//    1. Edit EngineConfig below (resolution, title, FPS cap).
-//    2. Add your own level-loading code in World::LoadTestLevel()
-//       or replace it with a proper JSON/binary loader.
-//    3. Extend Player::Update() or add new systems as needed.
-// ============================================================
+// Configure the engine, call Init(), then hand control to Run().
+// All cleanup is automatic via RAII (unique_ptr, Window destructor).
+//
+// To start a new project:
+//   1. Adjust EngineConfig below (resolution, title, FPS cap).
+//   2. Populate World::LoadTestLevel() with your level content,
+//      or replace it with a proper save-file or procedural loader.
+//   3. Extend Player::Update() or add new systems to Engine as needed.
 
 #include "Engine.h"
-#include "Window.h"   // needed to call methods on the Window returned by GetWindow()
+#include "Window.h"
 #include <iostream>
 
 int main()
 {
-    // ── Engine configuration ──────────────────────────────────
     EngineConfig config;
     config.windowTitle  = "Obradex - Pre-Alpha";
     config.windowWidth  = 1280;
@@ -27,25 +23,20 @@ int main()
     config.vsync        = true;
     config.targetFPS    = 60;
 
-    // Internal render resolution - the low-res pixel-art buffer.
-    // 320×180 gives exactly 4:1 pixel ratio on a 1280×720 window.
-    // Increase to 640×360 for a crisper look with less pixelation.
+    // Internal render resolution. 320x180 gives a 4:1 pixel ratio on a
+    // 1280x720 window. Use 640x360 for a crisper look with less dithering.
     config.renderWidth  = 320;
     config.renderHeight = 180;
 
-    // ── Bootstrap ─────────────────────────────────────────────
     Engine& engine = Engine::Get();
 
     if (!engine.Init(config))
     {
-        std::cerr << "[main] Engine initialisation failed. Exiting.\n";
+        std::cerr << "[main] Engine init failed.\n";
         return 1;
     }
 
-    // Capture the mouse immediately (FPS mode)
     engine.GetWindow().SetCursorLocked(true);
-
-    // ── Game loop (blocking until window is closed) ────────────
     engine.Run();
 
     return 0;

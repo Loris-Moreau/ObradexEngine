@@ -1,68 +1,44 @@
 #pragma once
 
-// ============================================================
-//  InventorySystem.h  -  Player Inventory
-// ============================================================
-//  Stores the player's collected items as a flat list of
-//  InventoryEntry values (item + stack count).
+// InventorySystem.h - Player inventory.
 //
-//  The UI follows the Deus Ex: Mankind Divided aesthetic:
-//  a dark panel with amber accents, drawn as a full-screen
-//  overlay when the player presses I.
+// Stores collected items as a flat list of stacks keyed by name.
+// Items arrive via container grabs (EditorUI::DrawContainerPopup) and
+// standalone pickups (Interaction::SpawnPickup callback).
 //
-//  Items arrive here via:
-//    - Container grab (EditorUI::DrawContainerPopup calls AddItem)
-//    - Standalone pickup (Interaction::SpawnPickup callback)
-//
-//  The inventory does NOT enforce a size limit at this stage;
-//  that constraint will be re-evaluated once item categories
-//  (weapons, ammo, consumables) are designed.
-// ============================================================
+// The UI renders a Deus Ex Mankind Divided-style overlay toggled by I.
+// No size limit is enforced yet; that will follow weapon/ammo/consumable design.
 
-#include "World.h"   // for Item
+#include "World.h"
 #include <vector>
 #include <string>
 
-// ── InventoryEntry ────────────────────────────────────────────
-/// An item stack in the player's inventory.
 struct InventoryEntry
 {
     Item item;
-    int  stackCount = 1;  ///< Total carried across all stacks
+    int  stackCount = 1;
 };
 
-// ── InventorySystem ───────────────────────────────────────────
 class InventorySystem
 {
 public:
     InventorySystem() = default;
 
-    // ── Item management ───────────────────────────────────────
-
-    /// Add an item (stacks with existing entries by name).
+    // Add item, stacking with an existing entry of the same name.
     void AddItem(const Item& item);
 
-    /// Remove `quantity` units of the named item.
-    /// Returns true if the full amount was available.
+    // Remove quantity units of the named item. Returns false if not enough.
     bool RemoveItem(const std::string& name, int quantity = 1);
 
-    /// Total quantity of the named item currently held.
     int  GetQuantity(const std::string& name) const;
+    bool HasItem    (const std::string& name, int quantity = 1) const;
 
-    /// True if at least `quantity` units of the item are held.
-    bool HasItem(const std::string& name, int quantity = 1) const;
-
-    /// All current inventory entries (read-only).
     const std::vector<InventoryEntry>& GetEntries() const { return m_entries; }
 
-    // ── UI ────────────────────────────────────────────────────
+    void Toggle()         { m_open = !m_open; }
+    bool IsOpen()   const { return m_open;     }
 
-    /// Toggle the inventory panel open/closed (bound to I).
-    void Toggle() { m_open = !m_open; }
-    bool IsOpen() const { return m_open; }
-
-    /// Draw the inventory UI.  Call from EditorUI::Render each frame.
-    /// @param displayW / displayH  Current window pixel dimensions.
+    // Draw the full-screen inventory overlay. Call from EditorUI::Render each frame.
     void DrawUI(float displayW, float displayH);
 
 private:

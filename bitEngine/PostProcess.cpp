@@ -1,6 +1,4 @@
-// ============================================================
-//  PostProcess.cpp  -  Dithering + Palette Post-Processor
-// ============================================================
+// PostProcess.cpp - Dithering, palette, and blit pass.
 
 #include "PostProcess.h"
 #include "Shader.h"
@@ -8,9 +6,8 @@
 #include <glm/glm.hpp>
 #include <iostream>
 
-// ── Embedded GLSL source ──────────────────────────────────────
-// Kept here so the engine has zero external shader file deps
-// for the post-process pass (world shaders are still external).
+// The vertex and fragment shaders are embedded here so the post-process pass
+// has no external file dependencies.
 
 static const char* kPostVertSrc = R"(
 #version 410 core
@@ -29,25 +26,23 @@ static const char* kPostFragSrc = R"(
 in  vec2 v_UV;
 out vec4 FragColor;
 
-uniform sampler2D u_Scene;       // Low-res scene texture
-uniform sampler1D u_Palette;     // Colour palette (32 entries)
-uniform int       u_PaletteSize; // Active palette entries
-uniform float     u_Dither;      // Dither strength 0–1
+uniform sampler2D u_Scene;
+uniform sampler1D u_Palette;
+uniform int       u_PaletteSize;
+uniform float     u_Dither;
 uniform float     u_Contrast;
 uniform float     u_Brightness;
 uniform float     u_VigRadius;
 uniform float     u_VigFeather;
 uniform bool      u_Scanlines;
 uniform float     u_ScanAlpha;
-uniform bool      u_ObraDinn;    // Monochrome 1-bit mode
-uniform vec2      u_Resolution;  // Low-res size (for screen-space Bayer)
+uniform bool      u_ObraDinn;
+uniform vec2      u_Resolution;
 
-// ── 8×8 Bayer matrix (normalised to 0..1) ────────────────────
-// Pre-divided by 65 (max value + 1) for direct threshold use.
+// 8x8 Bayer ordered dither matrix normalised to [0, 1].
+// GLSL forbids multi-dimensional arrays, so stored as float[64] indexed by row*8+col.
 float BayerMatrix(ivec2 p)
 {
-    // GLSL forbids multi-dimensional arrays; store the 8x8 Bayer matrix
-    // as a flat float[64] and index it as row*8 + col.
     const float B[64] = float[64](
          0.0,32.0, 8.0,40.0, 2.0,34.0,10.0,42.0,
         48.0,16.0,56.0,24.0,50.0,18.0,58.0,26.0,
@@ -63,7 +58,7 @@ float BayerMatrix(ivec2 p)
     return (B[row * 8 + col] + 0.5) / 64.0;
 }
 
-// ── Find nearest palette colour (brute-force, 32 entries max) ─
+// Brute-force nearest-colour search across the active palette entries.
 vec3 NearestPalette(vec3 col)
 {
     vec3  best    = vec3(0.0);
@@ -71,7 +66,7 @@ vec3 NearestPalette(vec3 col)
     for (int i = 0; i < u_PaletteSize; ++i)
     {
         vec3  p = texelFetch(u_Palette, i, 0).rgb;
-        float d = dot(col - p, col - p); // Squared L2 distance
+        float d = dot(col - p, col - p);
         if (d < bestDst) { bestDst = d; best = p; }
     }
     return best;
@@ -79,45 +74,35 @@ vec3 NearestPalette(vec3 col)
 
 void main()
 {
-    // ── 1. Sample scene ───────────────────────────────────────
     vec3 col = texture(u_Scene, v_UV).rgb;
 
-    // ── 2. Contrast / brightness ──────────────────────────────
     col = (col - 0.5) * u_Contrast + 0.5 + u_Brightness;
     col = clamp(col, 0.0, 1.0);
 
-    // ── 3. Obra Dinn monochrome conversion ────────────────────
     if (u_ObraDinn)
     {
         float lum = dot(col, vec3(0.299, 0.587, 0.114));
         col = vec3(lum);
     }
 
-    // ── 4. Bayer ordered dithering ────────────────────────────
     if (u_Dither > 0.001)
     {
         ivec2 screenPos = ivec2(v_UV * u_Resolution);
         float threshold = BayerMatrix(screenPos);
-        // Spread is proportional to the quantisation step size
-        float spread = u_Dither / float(u_PaletteSize);
+        float spread    = u_Dither / float(u_PaletteSize);
         col += (threshold - 0.5) * spread;
         col  = clamp(col, 0.0, 1.0);
     }
 
-    // ── 5. Palette quantisation ───────────────────────────────
     col = NearestPalette(col);
 
-    // ── 6. Vignette ───────────────────────────────────────────
     vec2  centred = v_UV * 2.0 - 1.0;
     float dist    = length(centred);
-    float vig     = 1.0 - smoothstep(u_VigRadius,
-                                      u_VigRadius + u_VigFeather, dist);
+    float vig     = 1.0 - smoothstep(u_VigRadius, u_VigRadius + u_VigFeather, dist);
     col *= vig;
 
-    // ── 7. Scanlines ──────────────────────────────────────────
     if (u_Scanlines)
     {
-        // One dark bar every 2 pixels in low-res space
         float scanline = mod(floor(v_UV.y * u_Resolution.y), 2.0);
         col *= mix(1.0, 1.0 - u_ScanAlpha, scanline);
     }
@@ -126,46 +111,43 @@ void main()
 }
 )";
 
-// ── Built-in palettes ─────────────────────────────────────────
-// "Obra-Dinn" inspired: 16-colour limited palette
-// mix of high-contrast blacks, off-whites, and amber/teal accents
+// Default 32-colour Obra Dinn-inspired palette.
+// First 16 entries are the standard low-contrast set; entries 17-32 extend
+// the palette with additional hues for non-monochrome modes.
 static const glm::vec3 kDefaultPalette[32] = {
-    {0.047f,0.043f,0.055f}, // Almost black
-    {0.122f,0.114f,0.133f}, // Dark grey
-    {0.220f,0.212f,0.235f}, // Mid grey
-    {0.380f,0.368f,0.392f}, // Light grey
-    {0.600f,0.592f,0.608f}, // Silver
-    {0.820f,0.816f,0.824f}, // Near-white
-    {0.980f,0.976f,0.980f}, // White
-    {0.824f,0.820f,0.706f}, // Parchment
-    {0.698f,0.631f,0.412f}, // Aged paper
-    {0.545f,0.420f,0.196f}, // Warm amber
-    {0.380f,0.275f,0.094f}, // Dark amber
-    {0.200f,0.125f,0.027f}, // Mahogany
-    {0.094f,0.200f,0.282f}, // Deep teal
-    {0.165f,0.349f,0.431f}, // Teal
-    {0.259f,0.529f,0.584f}, // Cyan-teal
-    {0.008f,0.094f,0.157f}, // Navy
-    // Extended palette (only used when paletteSize > 16)
-    {0.549f,0.067f,0.067f}, // Blood red
-    {0.400f,0.051f,0.051f}, // Dark red
-    {0.200f,0.031f,0.031f}, // Very dark red
-    {0.847f,0.753f,0.376f}, // Gold
-    {0.573f,0.478f,0.098f}, // Dark gold
-    {0.208f,0.431f,0.204f}, // Mossgreen
-    {0.110f,0.259f,0.110f}, // Dark moss
-    {0.047f,0.133f,0.051f}, // Very dark green
-    {0.471f,0.353f,0.624f}, // Lavender
-    {0.302f,0.208f,0.471f}, // Purple
-    {0.157f,0.094f,0.282f}, // Dark purple
-    {0.600f,0.200f,0.400f}, // Mauve
-    {0.800f,0.400f,0.200f}, // Terracotta
-    {0.600f,0.271f,0.118f}, // Rust
-    {0.824f,0.631f,0.506f}, // Skin
-    {0.700f,0.510f,0.380f}, // Tan
+    {0.047f,0.043f,0.055f},
+    {0.122f,0.114f,0.133f},
+    {0.220f,0.212f,0.235f},
+    {0.380f,0.368f,0.392f},
+    {0.600f,0.592f,0.608f},
+    {0.820f,0.816f,0.824f},
+    {0.980f,0.976f,0.980f},
+    {0.824f,0.820f,0.706f},
+    {0.698f,0.631f,0.412f},
+    {0.545f,0.420f,0.196f},
+    {0.380f,0.275f,0.094f},
+    {0.200f,0.125f,0.027f},
+    {0.094f,0.200f,0.282f},
+    {0.165f,0.349f,0.431f},
+    {0.259f,0.529f,0.584f},
+    {0.008f,0.094f,0.157f},
+    {0.549f,0.067f,0.067f},
+    {0.400f,0.051f,0.051f},
+    {0.200f,0.031f,0.031f},
+    {0.847f,0.753f,0.376f},
+    {0.573f,0.478f,0.098f},
+    {0.208f,0.431f,0.204f},
+    {0.110f,0.259f,0.110f},
+    {0.047f,0.133f,0.051f},
+    {0.471f,0.353f,0.624f},
+    {0.302f,0.208f,0.471f},
+    {0.157f,0.094f,0.282f},
+    {0.600f,0.200f,0.400f},
+    {0.800f,0.400f,0.200f},
+    {0.600f,0.271f,0.118f},
+    {0.824f,0.631f,0.506f},
+    {0.700f,0.510f,0.380f},
 };
-
-// ============================================================
 
 PostProcess::~PostProcess()
 {
@@ -178,7 +160,6 @@ PostProcess::~PostProcess()
     delete m_shader;
 }
 
-// ── Init ──────────────────────────────────────────────────────
 bool PostProcess::Init(int renderW, int renderH)
 {
     m_renderW = renderW;
@@ -187,7 +168,6 @@ bool PostProcess::Init(int renderW, int renderH)
     CreateFBO();
     CreateFullscreenQuad();
 
-    // Compile the embedded post-process shader
     m_shader = new Shader();
     if (!m_shader->LoadFromSource(kPostVertSrc, kPostFragSrc))
     {
@@ -195,35 +175,28 @@ bool PostProcess::Init(int renderW, int renderH)
         return false;
     }
 
-    // Initialise palette from built-in default
     m_palette = {};
-    std::copy(std::begin(kDefaultPalette),
-              std::end(kDefaultPalette),
-              m_palette.begin());
+    std::copy(std::begin(kDefaultPalette), std::end(kDefaultPalette), m_palette.begin());
     BuildPalette();
 
     return true;
 }
 
-// ── CreateFBO ─────────────────────────────────────────────────
 void PostProcess::CreateFBO()
 {
-    // Colour texture - scene is rendered here at low resolution
+    // Colour texture for the low-res scene. Nearest-neighbour filtering
+    // preserves sharp pixel edges when upscaled to the window.
     glGenTextures(1, &m_colourTex);
     glBindTexture(GL_TEXTURE_2D, m_colourTex);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, m_renderW, m_renderH, 0,
                  GL_RGB, GL_UNSIGNED_BYTE, nullptr);
-    // Nearest-neighbour filtering preserves sharp pixel edges
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-    // Depth renderbuffer
     glGenRenderbuffers(1, &m_depthRBO);
     glBindRenderbuffer(GL_RENDERBUFFER, m_depthRBO);
-    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8,
-                          m_renderW, m_renderH);
+    glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, m_renderW, m_renderH);
 
-    // Framebuffer assembly
     glGenFramebuffers(1, &m_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
     glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
@@ -237,18 +210,16 @@ void PostProcess::CreateFBO()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-// ── CreateFullscreenQuad ──────────────────────────────────────
 void PostProcess::CreateFullscreenQuad()
 {
-    // NDC quad covering [-1,1]×[-1,1] with UV [0,1]×[0,1]
+    // NDC quad covering [-1,1]x[-1,1] with UV [0,1]x[0,1].
     const float quad[] = {
-        // position  UV
-        -1.f,-1.f,   0.f,0.f,
-         1.f,-1.f,   1.f,0.f,
-         1.f, 1.f,   1.f,1.f,
-        -1.f,-1.f,   0.f,0.f,
-         1.f, 1.f,   1.f,1.f,
-        -1.f, 1.f,   0.f,1.f,
+        -1.f,-1.f,  0.f,0.f,
+         1.f,-1.f,  1.f,0.f,
+         1.f, 1.f,  1.f,1.f,
+        -1.f,-1.f,  0.f,0.f,
+         1.f, 1.f,  1.f,1.f,
+        -1.f, 1.f,  0.f,1.f,
     };
 
     glGenVertexArrays(1, &m_quadVAO);
@@ -266,7 +237,6 @@ void PostProcess::CreateFullscreenQuad()
     glBindVertexArray(0);
 }
 
-// ── BuildPalette ──────────────────────────────────────────────
 void PostProcess::BuildPalette()
 {
     if (!m_paletteTex) glGenTextures(1, &m_paletteTex);
@@ -278,7 +248,6 @@ void PostProcess::BuildPalette()
     glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 }
 
-// ── BeginCapture / EndCapture ─────────────────────────────────
 void PostProcess::BeginCapture()
 {
     glBindFramebuffer(GL_FRAMEBUFFER, m_fbo);
@@ -292,10 +261,10 @@ void PostProcess::EndCapture()
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
 
-// ── Apply ─────────────────────────────────────────────────────
 void PostProcess::Apply(int windowW, int windowH)
 {
-    // ── Letterbox: preserve render aspect ratio, centre in window ──
+    // Compute a letterbox viewport: the largest rect with the same aspect
+    // ratio as the render target that fits inside the window.
     float scaleX = static_cast<float>(windowW) / static_cast<float>(m_renderW);
     float scaleY = static_cast<float>(windowH) / static_cast<float>(m_renderH);
     float scale  = std::min(scaleX, scaleY);
@@ -304,10 +273,9 @@ void PostProcess::Apply(int windowW, int windowH)
     int vpX = (windowW - vpW) / 2;
     int vpY = (windowH - vpH) / 2;
 
-    // Clear the whole window (fills the black bars around the image).
-    // Must disable GL_SCISSOR_TEST first: ImGui leaves it enabled after
-    // rendering, and its scissor rect would clip the clear to only part
-    // of the window - leaving stale pixels in the letterbox bars.
+    // GL_SCISSOR_TEST is left enabled by ImGui after its render pass.
+    // Without disabling it first, glClear is clipped to ImGui's last scissor
+    // rect and the letterbox bars retain stale pixel content from prior frames.
     glBindFramebuffer(GL_FRAMEBUFFER, 0);
     glDisable(GL_SCISSOR_TEST);
     glViewport(0, 0, windowW, windowH);
@@ -315,22 +283,18 @@ void PostProcess::Apply(int windowW, int windowH)
     glClear(GL_COLOR_BUFFER_BIT);
     glDisable(GL_DEPTH_TEST);
 
-    // Blit into the centred, aspect-correct region
     glViewport(vpX, vpY, vpW, vpH);
 
     m_shader->Bind();
 
-    // Bind scene texture to unit 0
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, m_colourTex);
     m_shader->SetInt("u_Scene", 0);
 
-    // Bind palette texture to unit 1
     glActiveTexture(GL_TEXTURE1);
     glBindTexture(GL_TEXTURE_1D, m_paletteTex);
     m_shader->SetInt("u_Palette", 1);
 
-    // Upload settings as uniforms
     m_shader->SetInt  ("u_PaletteSize", m_settings.paletteSize);
     m_shader->SetFloat("u_Dither",      m_settings.ditherStrength);
     m_shader->SetFloat("u_Contrast",    m_settings.contrast);
@@ -342,7 +306,6 @@ void PostProcess::Apply(int windowW, int windowH)
     m_shader->SetInt  ("u_ObraDinn",    m_settings.obraDinnMode ? 1 : 0);
     m_shader->SetVec2 ("u_Resolution",  {(float)m_renderW, (float)m_renderH});
 
-    // Draw fullscreen quad
     glBindVertexArray(m_quadVAO);
     glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);

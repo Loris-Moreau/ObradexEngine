@@ -1,15 +1,14 @@
 #pragma once
 
-// ============================================================
-//  Window.h  -  GLFW Window & OpenGL Context
-// ============================================================
-//  Wraps GLFW for window creation, OpenGL context management,
-//  and basic window queries. Owns the GLFW lifecycle.
-// ============================================================
+// Window.h - GLFW window and OpenGL context wrapper.
+//
+// Owns the GLFW lifecycle. Destructor calls glfwTerminate.
+// GetWidth/GetHeight query the framebuffer live via glfwGetFramebufferSize
+// each call to avoid stale cached values after a maximize or DPI change.
 
 #include <string>
 
-struct GLFWwindow;  // Forward-declare; avoids including GLFW here
+struct GLFWwindow;
 
 class Window
 {
@@ -17,43 +16,34 @@ public:
     Window()  = default;
     ~Window();
 
-    // ── Lifecycle ─────────────────────────────────────────────
-
-    /// Create the OS window and an OpenGL 4.1 core context.
-    /// @param title       Window title bar string.
-    /// @param width Client area dimensions in pixels.
-    /// @param height Client area dimensions in pixels.
-    /// @param fullscreen  Borderless fullscreen on primary monitor.
-    /// @param vsync       Enable vertical sync (limits frame rate).
+    // Create the OS window and an OpenGL 4.1 Core context.
+    // width/height are the client area in pixels.
+    // fullscreen uses the primary monitor's native resolution.
     bool Init(const std::string& title,
               int width, int height,
               bool fullscreen, bool vsync);
 
-    /// Poll OS events (keyboard, mouse, resize, close).
-    void PollEvents();
+    void PollEvents();   // Process queued OS events (keyboard, mouse, resize)
+    void SwapBuffers();  // Present the back-buffer to the screen
 
-    /// Swap the back-buffer to the screen.
-    void SwapBuffers();
+    bool  ShouldClose() const;  // True when the user has requested close
+    int   GetWidth()    const;  // Live framebuffer width in pixels
+    int   GetHeight()   const;  // Live framebuffer height in pixels
+    float GetAspect()   const;  // width / height
 
-    // ── Queries ───────────────────────────────────────────────
-    bool  ShouldClose() const;   ///< True when the user closes the window
-    int   GetWidth()    const;   ///< Current framebuffer width  (live query)
-    int   GetHeight()   const;   ///< Current framebuffer height (live query)
-    float GetAspect()   const;   ///< width / height (live query)
-
-    /// Raw GLFW handle (needed by ImGui, Input callbacks).
+    // Raw GLFW handle required by ImGui and Input callbacks.
     GLFWwindow* GetGLFWWindow() const { return m_window; }
 
-    /// Lock the mouse cursor to the window centre (FPS mode).
+    // Capture the mouse cursor for FPS look (GLFW_CURSOR_DISABLED).
     void SetCursorLocked(bool locked);
     bool IsCursorLocked() const { return m_cursorLocked; }
 
 private:
-    // Called by GLFW when the window is resized
+    // GLFW callback registered via glfwSetFramebufferSizeCallback.
     static void FramebufferSizeCallback(GLFWwindow*, int w, int h);
 
-    GLFWwindow* m_window      = nullptr;
-    int         m_width       = 0;
-    int         m_height      = 0;
+    GLFWwindow* m_window       = nullptr;
+    int         m_width        = 0;
+    int         m_height       = 0;
     bool        m_cursorLocked = false;
 };

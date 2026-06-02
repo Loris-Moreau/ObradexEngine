@@ -1,107 +1,80 @@
 #pragma once
 
-// ============================================================
-//  PostProcess.h  -  Dithering + Palette Post-Processor
-// ============================================================
-//  Implements the distinctive "Obra Dinn meets 8-bit" look:
+// PostProcess.h - Dithering and palette post-processor.
 //
-//  Pipeline (applied after the 3-D scene is rendered):
-//    1. Luminance calculation  - convert to greyscale
-//    2. Bayer ordered dithering - 8×8 threshold matrix
-//       applied in screen space to add halftone noise that
-//       simulates the limited shading of classic displays.
-//    3. Palette quantisation  - final colour snapped to the
-//       nearest entry in a configurable 32-colour palette.
-//    4. Vignette              - darkening at screen edges
-//    5. Scanline overlay      - optional CRT scanline effect
+// Pipeline applied after the 3-D scene is rendered into the low-res FBO:
+//   1. Contrast / brightness colour grading
+//   2. Optional greyscale conversion (Obra Dinn mode)
+//   3. Bayer 8x8 ordered dithering in screen space
+//   4. Nearest-palette-colour quantisation
+//   5. Radial vignette
+//   6. Optional CRT scanline overlay
 //
-//  The scene is rendered to a low-resolution FBO (e.g. 320×180)
-//  and then upscaled via nearest-neighbour to the window size,
-//  preserving the crisp pixel-art look.
-// ============================================================
+// The scene is rendered at a low internal resolution (e.g. 320x180) and
+// upscaled to the window with nearest-neighbour filtering for a crisp
+// pixel-art look. Apply() computes a letterbox viewport each frame so the
+// image is always centred and never stretched at any window size.
 
 #include <array>
 #include <glm/glm.hpp>
 
 class Shader;
 
-// ── PostProcessSettings ───────────────────────────────────────
-/// Tweak-able parameters exposed in the editor UI.
+// Runtime-tunable settings; exposed in the Renderer editor tab.
 struct PostProcessSettings
 {
-    // Dithering
-    float ditherStrength = 0.92f;  ///< 0 = off, 1 = full Bayer dither
-    int   paletteSize    = 24;    ///< Number of palette colours to use (2–32)
-
-    // Vignette
-    float vignetteRadius  = 1.025f; ///< Normalised distance from centre (higher = smaller vignette)
-    float vignetteFeather = 0.25f; ///< Soft-edge width (lower = tighter fade)
-
-    // Scanlines
+    float ditherStrength  = 0.92f;  // 0 = off, 1 = full Bayer dither
+    int   paletteSize     = 24;     // Active palette entries (2 to 32)
+    float vignetteRadius  = 1.025f;
+    float vignetteFeather = 0.25f;
     bool  scanlines       = true;
-    float scanlineAlpha   = 0.12f; ///< How dark the scanline bars are
-
-    // Colour grading
+    float scanlineAlpha   = 0.12f;
     float contrast        = 1.1f;
-    float brightness      = 0.1f;  ///< Additive offset [-1..1]
-
-    // Obra Dinn mode: forces monochrome + 1-bit dither
-    bool  obraDinnMode    = false;
+    float brightness      = 0.1f;   // Additive offset, range -1 to 1
+    bool  obraDinnMode    = false;  // Forces monochrome + heavy dither
 };
 
-// ── PostProcess ───────────────────────────────────────────────
 class PostProcess
 {
 public:
     PostProcess()  = default;
     ~PostProcess();
 
-    // ── Lifecycle ─────────────────────────────────────────────
-
-    /// Create the FBO and compile the post-process shader.
-    /// @param renderW / renderH   Low-res internal resolution.
+    // Create the FBO and compile the embedded post-process shader.
+    // renderW / renderH set the low-res internal resolution.
     bool Init(int renderW, int renderH);
 
-    // ── Frame usage ───────────────────────────────────────────
-
-    /// Redirect subsequent draw calls into the low-res FBO.
+    // Redirect draw calls to the low-res FBO.
     void BeginCapture();
 
-    /// Stop capturing; restore the default framebuffer.
+    // Stop writing to the FBO and restore the default framebuffer.
     void EndCapture();
 
-    /// Apply the dither + palette pass and blit to the window.
-    /// @param windowW / windowH   Actual window pixel size (upscale target).
+    // Apply the dither + palette pass, then blit to the window with
+    // letterboxing. windowW / windowH are the current framebuffer dimensions.
     void Apply(int windowW, int windowH);
 
-    // ── Settings ─────────────────────────────────────────────
     PostProcessSettings& Settings() { return m_settings; }
 
 private:
-    void BuildPalette();   ///< Upload current palette to GPU
-    void CreateFBO();      ///< Allocate framebuffer objects
-    void CreateFullscreenQuad();
+    void BuildPalette();         // Upload m_palette to the GPU 1D texture
+    void CreateFBO();            // Allocate the low-res FBO and colour texture
+    void CreateFullscreenQuad(); // Build the NDC quad VAO for the blit
 
     PostProcessSettings m_settings;
 
-    // Framebuffer
-    unsigned m_fbo          = 0;
-    unsigned m_colourTex    = 0;
-    unsigned m_depthRBO     = 0;
-    int      m_renderW      = 0;
-    int      m_renderH      = 0;
+    unsigned m_fbo       = 0;
+    unsigned m_colourTex = 0;
+    unsigned m_depthRBO  = 0;
+    int      m_renderW   = 0;
+    int      m_renderH   = 0;
 
-    // Fullscreen quad
-    unsigned m_quadVAO      = 0;
-    unsigned m_quadVBO      = 0;
+    unsigned m_quadVAO   = 0;
+    unsigned m_quadVBO   = 0;
 
-    // Palette texture (32-entry 1D RGBA texture uploaded to GPU)
-    unsigned m_paletteTex   = 0;
+    unsigned m_paletteTex = 0;  // 1D texture with kMaxPaletteSize RGB entries
+    Shader*  m_shader     = nullptr;
 
-    // The post-process shader (compiled from embedded GLSL)
-    Shader*  m_shader       = nullptr;
-
-    // Built-in palettes
     static constexpr int kMaxPaletteSize = 32;
     std::array<glm::vec3, kMaxPaletteSize> m_palette;
 };

@@ -1,8 +1,12 @@
 #pragma once
 
-// ============================================================
-//  World.h  -  Scene / Level Container
-// ============================================================
+// World.h - Scene and level container.
+//
+// Stores all entities as EntityRecord values, each holding optional raw
+// pointers to the corresponding component slots in pre-reserved vectors.
+// Pointers stay valid as long as no reallocation occurs; Init() and
+// ClearLevel() both reserve capacity to 1024 to prevent this.
+
 #include <vector>
 #include <string>
 #include <functional>
@@ -17,7 +21,7 @@ class Mesh;
 using EntityID = uint32_t;
 constexpr EntityID kNullEntity = 0xFFFFFFFF;
 
-// ── Components ───────────────────────────────────────────────
+// Components
 
 struct TransformComponent
 {
@@ -29,11 +33,11 @@ struct TransformComponent
 
 struct MeshComponent
 {
-    Mesh*     mesh          = nullptr;
-    glm::vec3 albedoColour  = {0.8f, 0.8f, 0.8f};
-    float     specular      = 0.2f;
-    float     roughness     = 0.8f;
-    bool      castsShadow   = true;
+    Mesh*     mesh         = nullptr;
+    glm::vec3 albedoColour = {0.8f, 0.8f, 0.8f};
+    float     specular     = 0.2f;
+    float     roughness    = 0.8f;
+    bool      castsShadow  = true;
 };
 
 struct InteractableComponent
@@ -61,17 +65,15 @@ struct TriggerComponent
     std::function<void()> onExit;
 };
 
-/// Solid AABB used by Player::ResolveCollision.
-/// halfExtents are in LOCAL space - multiplied by transform->scale at runtime.
+// halfExtents are in local space; multiplied by transform->scale at runtime.
 struct CollisionComponent
 {
     glm::vec3 halfExtents = {0.5f, 0.5f, 0.5f};
     bool      solid       = true;
 };
 
-// ── Item ─────────────────────────────────────────────────────
-// Defined here (not in Interaction.h) so World, EditorUI, and
-// Interaction all share one type without circular includes.
+// Defined here (not Interaction.h) so World, EditorUI, and Interaction
+// can all use Item without circular includes.
 struct Item
 {
     std::string name;
@@ -79,15 +81,13 @@ struct Item
     int         quantity = 1;
 };
 
-/// Attached to searchable entities (crates, chests, drawers).
-/// The UI reads isOpen and renders the grid popup.
+// Used by searchable entities. UI reads isOpen to render the grid popup.
 struct ContainerComponent
 {
-    std::vector<Item> items;       ///< Remaining items; elements removed as player grabs them
-    bool              isOpen = false;  ///< Set true by onInteract; cleared by the UI on close
+    std::vector<Item> items;
+    bool              isOpen = false;
 };
 
-// ── EntityRecord ─────────────────────────────────────────────
 struct EntityRecord
 {
     EntityID               id           = kNullEntity;
@@ -100,10 +100,9 @@ struct EntityRecord
     LightComponent*        light        = nullptr;
     TriggerComponent*      trigger      = nullptr;
     CollisionComponent*    collision    = nullptr;
-    ContainerComponent*    container    = nullptr;  ///< nullptr = not a container
+    ContainerComponent*    container    = nullptr;
 };
 
-// ── World ─────────────────────────────────────────────────────
 class World
 {
 public:
@@ -114,16 +113,13 @@ public:
     void Update(float dt);
     void Render(Shader& sh) const;
 
-    // ── Entity lifecycle ──────────────────────────────────────
     EntityID      CreateEntity (const std::string& name = "Entity");
     void          DestroyEntity(EntityID id);
     EntityRecord* GetRecord    (EntityID id);
 
-    /// Remove ALL entities and component data, keeping primitive meshes.
-    /// Call before LoadLevel to start fresh.
+    // Remove all entities and component data; keep primitive GPU meshes.
     void ClearLevel();
 
-    // ── Component attachment ──────────────────────────────────
     TransformComponent*    AddTransform    (EntityID id);
     MeshComponent*         AddMesh         (EntityID id);
     InteractableComponent* AddInteractable (EntityID id);
@@ -132,34 +128,29 @@ public:
     CollisionComponent*    AddCollision    (EntityID id);
     ContainerComponent*    AddContainer    (EntityID id);
 
-    // ── Component query ───────────────────────────────────────
     TransformComponent*    GetTransform    (EntityID id);
     MeshComponent*         GetMesh         (EntityID id);
     InteractableComponent* GetInteractable (EntityID id);
 
+    // Returns the nearest enabled interactable within range of point.
     EntityID FindNearestInteractable(const glm::vec3& point, float range) const;
 
     const std::vector<EntityRecord>& GetAllRecords() const { return m_records; }
 
-    /// True if any container entity currently has isOpen == true.
-    /// Used by Player::Update to suppress movement while the grid popup is shown.
+    // Returns true if any container currently has isOpen == true.
     bool HasOpenContainer() const;
 
-    /// Close any open container (called when Escape is pressed).
+    // Set isOpen = false on the first open container found.
     void CloseOpenContainer();
 
-    // ── Primitive mesh accessors ──────────────────────────────
-    // Used by Interaction factories and the Level Editor to assign
-    // meshes to newly spawned entities without duplicating GPU data.
     Mesh* GetCubeMesh()   { return m_cubeMesh.get();   }
     Mesh* GetPlaneMesh()  { return m_planeMesh.get();  }
     Mesh* GetSphereMesh() { return m_sphereMesh.get(); }
 
 private:
     void LoadTestLevel();
-    void UpdateLights  (float dt);
-
-    void ReserveComponentStorage();  // Called in Init + ClearLevel
+    void UpdateLights(float dt);
+    void ReserveComponentStorage();
 
     std::vector<EntityRecord>          m_records;
     std::vector<TransformComponent>    m_transforms;

@@ -1,27 +1,22 @@
-// ============================================================
-//  Input.cpp
-// ============================================================
+// Input.cpp - Frame-snapshot input implementation.
 
 #include "Input.h"
 #include <GLFW/glfw3.h>
 #include <iostream>
 
-// ── Init ──────────────────────────────────────────────────────
 void Input::Init(GLFWwindow* window)
 {
     m_window = window;
 
-    // Register scroll accumulator callback
     glfwSetWindowUserPointer(window, this);
     glfwSetScrollCallback(window, ScrollCallback);
 
-    // Seed cursor position so the first delta isn't a huge jump
+    // Seed cursor position so the first frame delta is not a large jump.
     double x, y;
     glfwGetCursorPos(window, &x, &y);
     m_mousePos  = { static_cast<float>(x), static_cast<float>(y) };
     m_mousePrev = m_mousePos;
 
-    // Zero both key buffers
     m_keys[0].fill(0);
     m_keys[1].fill(0);
     m_buttons[0].fill(0);
@@ -29,45 +24,31 @@ void Input::Init(GLFWwindow* window)
     m_cur = 0;
 }
 
-// ── Update ───────────────────────────────────────────────────
-// Call once per frame AFTER glfwPollEvents() and BEFORE any
-// IsKey* queries.
-//
-// Pattern: flip m_cur, then overwrite m_keys[m_cur] with a
-// fresh glfwGetKey snapshot.  The opposite slot is NEVER
-// written here - it retains the previous frame's snapshot,
-// which is exactly what IsKeyJustPressed / IsKeyJustReleased
-// need for the "was it different last frame?" check.
+// Call once per frame after glfwPollEvents() and before any IsKey* queries.
+// Flips m_cur, then overwrites only m_keys[m_cur] with fresh glfwGetKey data.
+// The opposite slot is untouched, so it always holds last frame's snapshot.
 void Input::Update()
 {
-    // Flip current buffer - the slot we are about to overwrite
-    // naturally becomes "current", and the untouched slot becomes
-    // "previous" (it still holds last Update()'s snapshot).
     m_cur = 1 - m_cur;
 
-    // ── Keyboard snapshot ────────────────────────────────────
     const int keyCount = static_cast<int>(Key::_Count);
     for (int i = 0; i < keyCount; ++i)
         m_keys[m_cur][i] = glfwGetKey(m_window, i);
 
-    // ── Mouse button snapshot ────────────────────────────────
     const int btnCount = static_cast<int>(MouseButton::_Count);
     for (int i = 0; i < btnCount; ++i)
         m_buttons[m_cur][i] = glfwGetMouseButton(m_window, i);
 
-    // ── Cursor delta ─────────────────────────────────────────
     m_mousePrev = m_mousePos;
     double x, y;
     glfwGetCursorPos(m_window, &x, &y);
     m_mousePos   = { static_cast<float>(x), static_cast<float>(y) };
     m_mouseDelta = m_mousePos - m_mousePrev;
 
-    // ── Scroll ───────────────────────────────────────────────
     m_scrollDelta = m_scrollAccum;
     m_scrollAccum = 0.f;
 }
 
-// ── Keyboard queries ─────────────────────────────────────────
 bool Input::IsKeyHeld(Key k) const
 {
     int idx = static_cast<int>(k);
@@ -93,7 +74,6 @@ bool Input::IsKeyJustReleased(Key k) const
            m_keys[prev][idx]   == GLFW_PRESS;
 }
 
-// ── Mouse button queries ─────────────────────────────────────
 bool Input::IsButtonHeld(MouseButton b) const
 {
     int idx = static_cast<int>(b);
@@ -110,7 +90,6 @@ bool Input::IsButtonJustPressed(MouseButton b) const
            m_buttons[prev][idx]  == GLFW_RELEASE;
 }
 
-// ── GetKeyName ───────────────────────────────────────────────
 const char* Input::GetKeyName(Key k)
 {
     switch (k)
@@ -121,7 +100,6 @@ const char* Input::GetKeyName(Key k)
         case Key::D:      return "D";
         case Key::A:      return "A";
         case Key::E:      return "E";
-        //case Key::W:      return "W";
         case Key::Space:  return "Space";
         case Key::LShift: return "Shift";
         case Key::LCtrl:  return "Ctrl";
@@ -136,7 +114,6 @@ const char* Input::GetKeyName(Key k)
     }
 }
 
-// ── Scroll callback ───────────────────────────────────────────
 void Input::ScrollCallback(GLFWwindow* window, double /*xOff*/, double yOff)
 {
     auto* self = static_cast<Input*>(glfwGetWindowUserPointer(window));

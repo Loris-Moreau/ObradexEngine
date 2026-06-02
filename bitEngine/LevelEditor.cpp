@@ -1,6 +1,4 @@
-// ============================================================
-//  LevelEditor.cpp  -  ImGui Level Editor + Save/Load
-// ============================================================
+// LevelEditor.cpp - Runtime level editor and save/load.
 
 #include "LevelEditor.h"
 #include "Engine.h"
@@ -18,7 +16,6 @@
 #include <cstring>
 #include <algorithm>
 
-// Windows file dialog (compile-time optional - only on Win32)
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -30,32 +27,24 @@
 namespace fs = std::filesystem;
 static constexpr const char* kLevelsDir = "Levels";
 
-// ── Build the full path: Levels/<filename> ───────────────────
+// Resolve filename to Levels/<basename>, stripping any directory the user typed.
 static std::string LevelPath(const char* filename)
 {
-    // Strip any directory component the user may have typed
-    // so the file always lands in the Levels/ folder.
-    fs::path p(filename);
-    return (fs::path(kLevelsDir) / p.filename()).string();
+    return (fs::path(kLevelsDir) / fs::path(filename).filename()).string();
 }
 
-// ── Save format helpers ───────────────────────────────────────
+// Compact helpers for writing key-value pairs to the .lvl file.
 static void Wf3(std::ofstream& f, const char* k, float x, float y, float z)
 { f << "  " << k << " " << x << " " << y << " " << z << "\n"; }
-
 static void Wf1(std::ofstream& f, const char* k, float v)
 { f << "  " << k << " " << v << "\n"; }
-
 static void Wi1(std::ofstream& f, const char* k, int v)
 { f << "  " << k << " " << v << "\n"; }
-
-static void Ws(std::ofstream& f, const char* k, const std::string& v)
+static void Ws(std::ofstream& f,  const char* k, const std::string& v)
 { f << "  " << k << " " << v << "\n"; }
 
-// ── SaveLevel ─────────────────────────────────────────────────
 bool LevelEditor::SaveLevel(const World& world, const std::string& path)
 {
-    // Ensure the Levels/ directory exists
     fs::create_directories(kLevelsDir);
     std::string fullPath = LevelPath(path.c_str());
     std::ofstream file(fullPath);
@@ -72,67 +61,57 @@ bool LevelEditor::SaveLevel(const World& world, const std::string& path)
     {
         if (!rec.active || !rec.transform) continue;
 
-        // ── Skip child entities FIRST (before type detection) ───────
-        // LampostLight and AlarmLight are created by their parent factories
-        // (SpawnLamppost / SpawnAlarm) when the parent entity is loaded.
-        // If we save them as standalone "light" entities they get duplicated
-        // because the factory also re-creates them on load.
+        // LampostLight and AlarmLight are child entities created by their parent
+        // factory on load. Saving them separately would duplicate them at load time.
         bool isFactoryChild =
             (rec.name == "LampostLight" || rec.name == "AlarmLight") && !rec.mesh;
         if (isFactoryChild) continue;
 
-        // ── Determine entity type string ───────────────────────
         std::string type = "cube";
         if (!rec.mesh && rec.light)
             type = "light";
-        else if (rec.name == "Ground" || (rec.mesh && rec.mesh->mesh == const_cast<World&>(world).GetPlaneMesh()))
+        else if (rec.name == "Ground" ||
+                 (rec.mesh && rec.mesh->mesh == const_cast<World&>(world).GetPlaneMesh()))
             type = "plane";
         else if (rec.mesh && rec.mesh->mesh == const_cast<World&>(world).GetSphereMesh())
             type = "sphere";
         else if (rec.name.find("Lamppost") != std::string::npos ||
                  rec.name.find("LampPost") != std::string::npos)
             type = "lamppost";
-        else if (rec.name.find("Door") != std::string::npos)
-            type = "door";
-        else if (rec.name.find("Container") != std::string::npos)
-            type = "container";
-        else if (rec.name.find("Pickup") != std::string::npos)
-            type = "pickup";
-        else if (rec.name.find("Alarm") != std::string::npos)
-            type = "alarm";
+        else if (rec.name.find("Door")      != std::string::npos) type = "door";
+        else if (rec.name.find("Container") != std::string::npos) type = "container";
+        else if (rec.name.find("Pickup")    != std::string::npos) type = "pickup";
+        else if (rec.name.find("Alarm")     != std::string::npos) type = "alarm";
 
         file << "ENTITY\n";
         Ws(file, "TYPE", type);
         Ws(file, "NAME", rec.name);
 
-        // Transform
         auto& t = *rec.transform;
-        // For lamppost the transform is at the post CENTER (base + halfHeight).
-        // SpawnLamppost expects the BASE, so we subtract halfHeight on save
-        // so the round-trip is: save base → load base → SpawnLamppost(base) → center stored.
+        // Lamppost transform is stored at the post centre (base + halfHeight).
+        // SpawnLamppost takes the foot position, so subtract halfHeight on save
+        // so the round-trip is lossless.
         float saveY = (type == "lamppost") ? t.position.y - t.scale.y * 0.5f
                                            : t.position.y;
         Wf3(file, "POS",   t.position.x, saveY, t.position.z);
-        Wf3(file, "SCALE", t.scale.x,    t.scale.y,    t.scale.z);
+        Wf3(file, "SCALE", t.scale.x, t.scale.y, t.scale.z);
 
-        // Mesh
         if (rec.mesh)
         {
-            Wf3(file, "ALBEDO", rec.mesh->albedoColour.x,
-                                rec.mesh->albedoColour.y,
-                                rec.mesh->albedoColour.z);
+            Wf3(file, "ALBEDO",
+                rec.mesh->albedoColour.x,
+                rec.mesh->albedoColour.y,
+                rec.mesh->albedoColour.z);
             Wf1(file, "SPECULAR",  rec.mesh->specular);
             Wf1(file, "ROUGHNESS", rec.mesh->roughness);
         }
 
-        // Collision
         if (rec.collision)
             Wf3(file, "COLLISION",
                 rec.collision->halfExtents.x,
                 rec.collision->halfExtents.y,
                 rec.collision->halfExtents.z);
 
-        // Light (for standalone lights or lamppost overrides)
         if (rec.light)
         {
             Wf3(file, "LIGHT_COLOR",
@@ -142,14 +121,12 @@ bool LevelEditor::SaveLevel(const World& world, const std::string& path)
             Wi1(file, "LIGHT_FLICKER",   rec.light->flicker ? 1 : 0);
         }
 
-        // Container items - one ITEM line per entry
-        // Format: ITEM <name> <quantity>
-        // (names must not contain spaces; replace with _ if needed)
         if (rec.container)
         {
+            // Spaces in item names are stored as underscores so the parser
+            // can split on whitespace. Restored on load.
             for (const auto& item : rec.container->items)
             {
-                // Replace spaces with underscores so the parser can split on whitespace
                 std::string safeName = item.name;
                 for (char& c : safeName) if (c == ' ') c = '_';
                 file << "  ITEM " << safeName << " " << item.quantity << "\n";
@@ -166,7 +143,6 @@ bool LevelEditor::SaveLevel(const World& world, const std::string& path)
     return true;
 }
 
-// ── LoadLevel ─────────────────────────────────────────────────
 bool LevelEditor::LoadLevel(World& world, const std::string& path)
 {
     std::string fullPath = LevelPath(path.c_str());
@@ -180,23 +156,22 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
 
     world.ClearLevel();
 
-    std::string line;
-    // Per-entity state
-    struct EData {
+    struct EData
+    {
         std::string type, name;
         glm::vec3   pos{0,0,0}, scale{1,1,1};
         glm::vec3   albedo{0.7f,0.7f,0.7f};
-        float       specular=0.2f, roughness=0.8f;
-        bool        hasCollision=false;
+        float       specular = 0.2f, roughness = 0.8f;
+        bool        hasCollision = false;
         glm::vec3   collHalf{0.5f,0.5f,0.5f};
-        bool        hasLight=false;
-        glm::vec3   lightColor{1,0.85f,0.5f};
-        float       lightRadius=10.f, lightIntensity=1.5f;
-        bool        lightFlicker=true;
-        std::vector<Item> items;  // for container entities
+        bool        hasLight = false;
+        glm::vec3   lightColor{1.f,0.85f,0.5f};
+        float       lightRadius = 10.f, lightIntensity = 1.5f;
+        bool        lightFlicker = true;
+        std::vector<Item> items;
     };
 
-    bool inEntity = false;
+    bool inEntity  = false;
     EData cur;
     int entityCount = 0;
 
@@ -204,9 +179,7 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
     {
         if (cur.type == "lamppost")
         {
-            Interaction::SpawnLamppost(world,
-                // base pos - the POS field stores base (foot) in the file
-                cur.pos,
+            Interaction::SpawnLamppost(world, cur.pos,
                 cur.lightColor, cur.lightRadius, cur.lightIntensity, cur.lightFlicker);
         }
         else if (cur.type == "door")
@@ -220,8 +193,7 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
         else if (cur.type == "pickup")
         {
             Item it;
-            // Entity name is "Pickup_ItemName" - strip prefix to recover the actual item name.
-            // Also restore underscores-as-spaces (same convention used on save for item names).
+            // Entity name is "Pickup_ItemName"; strip prefix and restore spaces.
             static const std::string kPrefix = "Pickup_";
             it.name = (cur.name.rfind(kPrefix, 0) == 0)
                       ? cur.name.substr(kPrefix.size())
@@ -236,9 +208,7 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
         }
         else
         {
-            // cube / plane / sphere / light - build manually
             EntityID e = world.CreateEntity(cur.name);
-
             auto* t = world.AddTransform(e);
             t->position = cur.pos;
             t->scale    = cur.scale;
@@ -246,12 +216,9 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
             if (cur.type != "light")
             {
                 auto* m = world.AddMesh(e);
-                if (cur.type == "plane")
-                    m->mesh = world.GetPlaneMesh();
-                else if (cur.type == "sphere")
-                    m->mesh = world.GetSphereMesh();
-                else
-                    m->mesh = world.GetCubeMesh();
+                if      (cur.type == "plane")  m->mesh = world.GetPlaneMesh();
+                else if (cur.type == "sphere") m->mesh = world.GetSphereMesh();
+                else                           m->mesh = world.GetCubeMesh();
                 m->albedoColour = cur.albedo;
                 m->specular     = cur.specular;
                 m->roughness    = cur.roughness;
@@ -275,9 +242,9 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
         ++entityCount;
     };
 
+    std::string line;
     while (std::getline(file, line))
     {
-        // Strip carriage return (Windows line endings)
         if (!line.empty() && line.back() == '\r') line.pop_back();
         if (line.empty() || line[0] == '#') continue;
 
@@ -297,13 +264,13 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
         }
         else if (inEntity)
         {
-            if      (token == "TYPE")    ss >> cur.type;
-            else if (token == "NAME")    ss >> cur.name;
-            else if (token == "POS")     ss >> cur.pos.x >> cur.pos.y >> cur.pos.z;
-            else if (token == "SCALE")   ss >> cur.scale.x >> cur.scale.y >> cur.scale.z;
-            else if (token == "ALBEDO")  ss >> cur.albedo.x >> cur.albedo.y >> cur.albedo.z;
-            else if (token == "SPECULAR")  ss >> cur.specular;
-            else if (token == "ROUGHNESS") ss >> cur.roughness;
+            if      (token == "TYPE")     ss >> cur.type;
+            else if (token == "NAME")     ss >> cur.name;
+            else if (token == "POS")      ss >> cur.pos.x   >> cur.pos.y   >> cur.pos.z;
+            else if (token == "SCALE")    ss >> cur.scale.x >> cur.scale.y >> cur.scale.z;
+            else if (token == "ALBEDO")   ss >> cur.albedo.x >> cur.albedo.y >> cur.albedo.z;
+            else if (token == "SPECULAR") ss >> cur.specular;
+            else if (token == "ROUGHNESS")ss >> cur.roughness;
             else if (token == "COLLISION")
             {
                 cur.hasCollision = true;
@@ -314,15 +281,13 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
                 cur.hasLight = true;
                 ss >> cur.lightColor.x >> cur.lightColor.y >> cur.lightColor.z;
             }
-            else if (token == "LIGHT_RADIUS")    { cur.hasLight=true; ss>>cur.lightRadius; }
-            else if (token == "LIGHT_INTENSITY")  { cur.hasLight=true; ss>>cur.lightIntensity; }
-            else if (token == "LIGHT_FLICKER")    { int v=0; ss>>v; cur.lightFlicker=(v!=0); cur.hasLight=true; }
+            else if (token == "LIGHT_RADIUS")    { cur.hasLight=true; ss>>cur.lightRadius;    }
+            else if (token == "LIGHT_INTENSITY") { cur.hasLight=true; ss>>cur.lightIntensity; }
+            else if (token == "LIGHT_FLICKER")   { int v=0; ss>>v; cur.lightFlicker=(v!=0); cur.hasLight=true; }
             else if (token == "ITEM")
             {
-                // Format: ITEM <name_no_spaces> <quantity>
                 Item it;
                 ss >> it.name >> it.quantity;
-                // Restore underscores-as-spaces convention
                 for (char& c : it.name) if (c == '_') c = ' ';
                 cur.items.push_back(it);
             }
@@ -331,17 +296,17 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
 
     m_statusMsg   = "Loaded: " + fullPath + " (" + std::to_string(entityCount) + " entities)";
     m_statusTimer = 3.f;
-    std::cout << "[LevelEditor] Loaded " << entityCount << " entities from " << fullPath << "\n";
+    std::cout << "[LevelEditor] Loaded " << entityCount
+              << " entities from " << fullPath << "\n";
     return true;
 }
 
-// ── SpawnCurrent ─────────────────────────────────────────────
 void LevelEditor::SpawnCurrent(Engine& engine)
 {
     World& world = engine.GetWorld();
-    glm::vec3 pos(m_spawnPos[0], m_spawnPos[1], m_spawnPos[2]);
-    glm::vec3 scale(m_spawnScale[0], m_spawnScale[1], m_spawnScale[2]);
-    glm::vec3 color(m_spawnColor[0], m_spawnColor[1], m_spawnColor[2]);
+    glm::vec3 pos   (m_spawnPos[0],   m_spawnPos[1],   m_spawnPos[2]);
+    glm::vec3 scale (m_spawnScale[0], m_spawnScale[1], m_spawnScale[2]);
+    glm::vec3 color (m_spawnColor[0], m_spawnColor[1], m_spawnColor[2]);
     glm::vec3 lcolor(m_lightColor[0], m_lightColor[1], m_lightColor[2]);
 
     switch (m_spawnType)
@@ -353,10 +318,8 @@ void LevelEditor::SpawnCurrent(Engine& engine)
             auto* m = world.AddMesh(e);
             m->mesh=world.GetCubeMesh(); m->albedoColour=color;
             m->specular=m_spawnSpecular; m->roughness=m_spawnRoughness;
-            if (m_spawnCollision) {
-                auto* col = world.AddCollision(e);
-                col->halfExtents = {0.5f,0.5f,0.5f};
-            }
+            if (m_spawnCollision)
+                world.AddCollision(e)->halfExtents = {0.5f,0.5f,0.5f};
             break;
         }
         case 1: // Plane
@@ -375,33 +338,24 @@ void LevelEditor::SpawnCurrent(Engine& engine)
             auto* m = world.AddMesh(e);
             m->mesh=world.GetSphereMesh(); m->albedoColour=color;
             m->specular=m_spawnSpecular; m->roughness=m_spawnRoughness;
-            if (m_spawnCollision) {
-                auto* col = world.AddCollision(e);
-                col->halfExtents = {0.5f,0.5f,0.5f};
-            }
+            if (m_spawnCollision)
+                world.AddCollision(e)->halfExtents = {0.5f,0.5f,0.5f};
             break;
         }
-        case 3: // Lamppost
-            Interaction::SpawnLamppost(world, pos, lcolor,
-                                       m_lightRadius, m_lightIntensity, m_lightFlicker);
-            break;
-        case 4: // Door
-            Interaction::SpawnDoor(world, pos);
-            break;
-        case 5: // Container
+        case 3: Interaction::SpawnLamppost(world, pos, lcolor, m_lightRadius, m_lightIntensity, m_lightFlicker); break;
+        case 4: Interaction::SpawnDoor    (world, pos); break;
+        case 5:
             Interaction::SpawnContainer(world, pos, m_containerItems);
             if (m_clearItemsAfterPlace) m_containerItems.clear();
             break;
-        case 6: // Pickup
+        case 6:
         {
             Item it; it.name=m_pickupName; it.quantity=1;
             Interaction::SpawnPickup(world, pos, it);
             break;
         }
-        case 7: // Alarm
-            Interaction::SpawnAlarm(world, pos);
-            break;
-        case 8: // Point Light
+        case 7: Interaction::SpawnAlarm(world, pos); break;
+        case 8:
         {
             EntityID e = world.CreateEntity("Light");
             auto* t = world.AddTransform(e); t->position=pos;
@@ -413,13 +367,11 @@ void LevelEditor::SpawnCurrent(Engine& engine)
     }
 }
 
-// ── RenderPanel ───────────────────────────────────────────────
 void LevelEditor::RenderPanel(Engine& engine)
 {
     World&  world  = engine.GetWorld();
     Player& player = engine.GetPlayer();
 
-    // ── Status message ────────────────────────────────────────
     if (m_statusTimer > 0.f)
     {
         m_statusTimer -= ImGui::GetIO().DeltaTime;
@@ -428,37 +380,33 @@ void LevelEditor::RenderPanel(Engine& engine)
                            "%s", m_statusMsg.c_str());
     }
 
-    // ── File I/O ──────────────────────────────────────────────
     ImGui::SeparatorText("Level File  [Levels/ folder]");
     ImGui::TextDisabled("Files are stored in:  Levels/<filename>");
     ImGui::SetNextItemWidth(160.f);
     ImGui::InputText("##filename", m_filenameBuffer, sizeof(m_filenameBuffer));
     ImGui::SameLine();
 
-    // Browse button - opens the OS file picker, fills filename field
+    // Browse button opens the OS native file picker filtered to *.lvl.
+    // On Windows: GetOpenFileNameA. On Linux/macOS: zenity (if installed).
+    // Either way, only the basename is stored; LevelPath() enforces Levels/.
     if (ImGui::Button("Browse"))
     {
 #ifdef _WIN32
         char path[MAX_PATH] = {};
-        OPENFILENAMEA ofn   = {};
-        ofn.lStructSize     = sizeof(ofn);
-        ofn.hwndOwner       = nullptr;
-        ofn.lpstrFilter     = "Level Files (*.lvl)\0*.lvl\0All Files (*.*)\0*.*\0";
-        ofn.lpstrFile       = path;
-        ofn.nMaxFile        = MAX_PATH;
+        OPENFILENAMEA ofn = {};
+        ofn.lStructSize  = sizeof(ofn);
+        ofn.lpstrFilter  = "Level Files (*.lvl)\0*.lvl\0All Files (*.*)\0*.*\0";
+        ofn.lpstrFile    = path;
+        ofn.nMaxFile     = MAX_PATH;
         ofn.lpstrInitialDir = kLevelsDir;
-        ofn.Flags           = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
+        ofn.Flags        = OFN_PATHMUSTEXIST | OFN_FILEMUSTEXIST | OFN_NOCHANGEDIR;
         if (GetOpenFileNameA(&ofn))
         {
-            // Store only the basename so LevelPath() keeps it in Levels/
-            fs::path picked(path);
-            std::string name = picked.filename().string();
+            std::string name = fs::path(path).filename().string();
             strncpy_s(m_filenameBuffer, sizeof(m_filenameBuffer),
                       name.c_str(), sizeof(m_filenameBuffer) - 1);
         }
 #else
-        // Non-Windows: open a native dialog via zenity/kdialog if available,
-        // falling back to a console hint.
         FILE* f = popen("zenity --file-selection --file-filter='Level files | *.lvl' "
                         "--filename=Levels/ 2>/dev/null", "r");
         if (f)
@@ -466,11 +414,9 @@ void LevelEditor::RenderPanel(Engine& engine)
             char buf[512] = {};
             if (fgets(buf, sizeof(buf), f))
             {
-                // Strip trailing newline
                 size_t len = strlen(buf);
-                if (len && buf[len - 1] == '\n') buf[len - 1] = '\0';
-                fs::path picked(buf);
-                std::string name = picked.filename().string();
+                if (len && buf[len-1] == '\n') buf[len-1] = '\0';
+                std::string name = fs::path(buf).filename().string();
                 strncpy_s(m_filenameBuffer, sizeof(m_filenameBuffer),
                           name.c_str(), sizeof(m_filenameBuffer) - 1);
             }
@@ -480,13 +426,9 @@ void LevelEditor::RenderPanel(Engine& engine)
     }
     ImGui::SameLine();
 
-    if (ImGui::Button("Save"))
-        SaveLevel(world, m_filenameBuffer);
-
+    if (ImGui::Button("Save")) SaveLevel(world, m_filenameBuffer);
     ImGui::SameLine();
-    if (ImGui::Button("Load"))
-        LoadLevel(world, m_filenameBuffer);
-
+    if (ImGui::Button("Load")) LoadLevel(world, m_filenameBuffer);
     ImGui::SameLine();
     if (ImGui::Button("New"))
     {
@@ -495,43 +437,39 @@ void LevelEditor::RenderPanel(Engine& engine)
         m_statusTimer = 2.f;
     }
 
-    // ── Spawn entity ──────────────────────────────────────────
     ImGui::SeparatorText("Place Entity");
-
     ImGui::Combo("Type", &m_spawnType, kSpawnTypeNames, kSpawnTypeCount);
-    ImGui::DragFloat3("Position##sp", m_spawnPos,   0.1f);
+    ImGui::DragFloat3("Position##sp", m_spawnPos, 0.1f);
 
-    // Show relevant params per type
-    if (m_spawnType == 0 || m_spawnType == 1 || m_spawnType == 2) // cube / plane / sphere
+    if (m_spawnType == 0 || m_spawnType == 1 || m_spawnType == 2)
     {
-        ImGui::DragFloat3("Scale##sp",    m_spawnScale,  0.05f, 0.01f, 100.f);
-        ImGui::ColorEdit3("Colour##sp",   m_spawnColor);
-        ImGui::SliderFloat("Roughness##sp",&m_spawnRoughness, 0.f, 1.f);
-        ImGui::SliderFloat("Specular##sp", &m_spawnSpecular,  0.f, 1.f);
-        if (m_spawnType == 0 || m_spawnType == 2) // cube / sphere
+        ImGui::DragFloat3("Scale##sp",      m_spawnScale,       0.05f, 0.01f, 100.f);
+        ImGui::ColorEdit3("Colour##sp",     m_spawnColor);
+        ImGui::SliderFloat("Roughness##sp", &m_spawnRoughness,  0.f, 1.f);
+        ImGui::SliderFloat("Specular##sp",  &m_spawnSpecular,   0.f, 1.f);
+        if (m_spawnType == 0 || m_spawnType == 2)
             ImGui::Checkbox("Solid collision", &m_spawnCollision);
     }
-    if (m_spawnType == 3 || m_spawnType == 8) // lamppost / light
+    if (m_spawnType == 3 || m_spawnType == 8)
     {
-        ImGui::ColorEdit3("Light colour", m_lightColor);
+        ImGui::ColorEdit3("Light colour",  m_lightColor);
         ImGui::SliderFloat("Radius",    &m_lightRadius,    0.5f, 40.f);
-        ImGui::SliderFloat("Intensity", &m_lightIntensity, 0.f,  5.f);
+        ImGui::SliderFloat("Intensity", &m_lightIntensity, 0.f,   5.f);
         ImGui::Checkbox   ("Flicker",   &m_lightFlicker);
     }
-    if (m_spawnType == 5) // Container - item editor
+    if (m_spawnType == 5)
     {
         ImGui::SeparatorText("Container Contents");
 
-        // ── Item list ─────────────────────────────────────────
         if (m_containerItems.empty())
-            ImGui::TextDisabled("(empty - no items)");
+            ImGui::TextDisabled("(empty)");
 
         int removeIdx = -1;
         for (int i = 0; i < (int)m_containerItems.size(); ++i)
         {
             ImGui::PushID(i);
-            auto& it = m_containerItems[i];
-            ImGui::Text("%-20s x%d", it.name.c_str(), it.quantity);
+            ImGui::Text("%-20s x%d", m_containerItems[i].name.c_str(),
+                                     m_containerItems[i].quantity);
             ImGui::SameLine();
             if (ImGui::SmallButton("x")) removeIdx = i;
             ImGui::PopID();
@@ -539,7 +477,6 @@ void LevelEditor::RenderPanel(Engine& engine)
         if (removeIdx >= 0)
             m_containerItems.erase(m_containerItems.begin() + removeIdx);
 
-        // ── Add item form ─────────────────────────────────────
         ImGui::Spacing();
         ImGui::SetNextItemWidth(130.f);
         ImGui::InputText("##iname", m_newItemName, sizeof(m_newItemName));
@@ -550,42 +487,31 @@ void LevelEditor::RenderPanel(Engine& engine)
         ImGui::SameLine();
         if (ImGui::SmallButton("Add Item"))
         {
-            Item it;
-            it.name     = m_newItemName;
-            it.quantity = m_newItemQty;
+            Item it; it.name=m_newItemName; it.quantity=m_newItemQty;
             m_containerItems.push_back(it);
         }
-
         if (!m_containerItems.empty())
         {
             ImGui::SameLine();
-            if (ImGui::SmallButton("Clear All"))
-                m_containerItems.clear();
+            if (ImGui::SmallButton("Clear All")) m_containerItems.clear();
         }
-
         ImGui::Checkbox("Clear list after placing", &m_clearItemsAfterPlace);
     }
-
-    if (m_spawnType == 6) // pickup
-    {
+    if (m_spawnType == 6)
         ImGui::InputText("Item name", m_pickupName, sizeof(m_pickupName));
-    }
 
-    // Snap to player position helper
     if (ImGui::Button("Use Player Pos"))
     {
-        const glm::vec3& pp = player.GetPosition();
+        const glm::vec3& pp  = player.GetPosition();
         const glm::vec3& fwd = player.GetCamera().GetForward();
         glm::vec3 target = pp + fwd * 3.f;
         m_spawnPos[0] = target.x;
-        m_spawnPos[1] = 0.5f;     // sensible default Y
+        m_spawnPos[1] = 0.5f;
         m_spawnPos[2] = target.z;
     }
     ImGui::SameLine();
-    if (ImGui::Button("Place"))
-        SpawnCurrent(engine);
+    if (ImGui::Button("Place")) SpawnCurrent(engine);
 
-    // ── Entity list ───────────────────────────────────────────
     ImGui::SeparatorText("Scene Entities");
     ImGui::Text("%d active", (int)world.GetAllRecords().size());
 
@@ -593,16 +519,12 @@ void LevelEditor::RenderPanel(Engine& engine)
     for (auto& rec : world.GetAllRecords())
     {
         if (!rec.active) continue;
-
         char label[80];
         std::snprintf(label, sizeof(label), "[%u] %s", rec.id, rec.name.c_str());
-
         ImGui::Text("%s", label);
         ImGui::SameLine();
 
         ImGui::PushID((int)rec.id);
-
-        // Inline position display / edit
         if (rec.transform)
         {
             char posLabel[32];
@@ -613,15 +535,8 @@ void LevelEditor::RenderPanel(Engine& engine)
             ImGui::TextDisabled("%s", posLabel);
             ImGui::SameLine();
         }
-
-        if (ImGui::SmallButton("Del"))
-            world.DestroyEntity(rec.id);
-
+        if (ImGui::SmallButton("Del")) world.DestroyEntity(rec.id);
         ImGui::PopID();
     }
     ImGui::EndChild();
-
-    // ── Quick inline transform editor for hovered entity ──────
-    ImGui::SeparatorText("Quick Edit");
-    ImGui::TextDisabled("Select an entity in the World tab to edit it");
 }

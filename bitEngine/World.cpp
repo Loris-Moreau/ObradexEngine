@@ -1,6 +1,4 @@
-// ============================================================
-//  World.cpp
-// ============================================================
+// World.cpp - Scene and level container.
 
 #include "World.h"
 #include "Shader.h"
@@ -15,7 +13,6 @@
 #include <algorithm>
 #include <iostream>
 
-// ── TransformComponent::GetMatrix ────────────────────────────
 glm::mat4 TransformComponent::GetMatrix() const
 {
     glm::mat4 m = glm::mat4_cast(rotation);
@@ -24,11 +21,11 @@ glm::mat4 TransformComponent::GetMatrix() const
     return m;
 }
 
-// ── ReserveComponentStorage ───────────────────────────────────
 void World::ReserveComponentStorage()
 {
     // EntityRecord stores raw pointers into these vectors.
-    // Reserving up-front prevents reallocation, which would dangle them.
+    // Reserving before any entities are created prevents reallocation,
+    // which would invalidate all existing pointers.
     constexpr size_t MAX = 1024;
     m_records.reserve(MAX);
     m_transforms.reserve(MAX);
@@ -40,7 +37,6 @@ void World::ReserveComponentStorage()
     m_containers.reserve(MAX);
 }
 
-// ── Init ──────────────────────────────────────────────────────
 void World::Init()
 {
     ReserveComponentStorage();
@@ -52,7 +48,6 @@ void World::Init()
     LoadTestLevel();
 }
 
-// ── ClearLevel ────────────────────────────────────────────────
 void World::ClearLevel()
 {
     m_records.clear();
@@ -65,30 +60,27 @@ void World::ClearLevel()
     m_containers.clear();
     m_nextID = 0;
 
-    // Primitive meshes are kept - they are GPU resources that persist
-    // across level loads.  Re-reserve so we don't reallocate next time.
+    // Primitive meshes are GPU resources kept alive across level loads.
     ReserveComponentStorage();
 
     std::cout << "[World] Level cleared.\n";
 }
 
-// ── LoadTestLevel ─────────────────────────────────────────────
 void World::LoadTestLevel()
 {
-    // ── Ground ────────────────────────────────────────────────
+    // Ground plane
     {
         EntityID e = CreateEntity("Ground");
         auto* t = AddTransform(e);
         t->position = {0.f, 0.f, 0.f};
         t->scale    = {40.f, 1.f, 40.f};
-
         auto* m = AddMesh(e);
         m->mesh         = m_planeMesh.get();
         m->albedoColour = {0.0f, 0.7f, 0.7f};
         m->roughness    = 0.95f;
     }
 
-    // ── Crates ────────────────────────────────────────────────
+    // Static crates
     const glm::vec3 cratePos[] = {
         {3.f,0.5f,5.f}, {-2.f,0.5f,8.f}, {5.f,0.5f,2.f},
         {-5.f,0.5f,3.f},{0.f,0.5f,10.f}
@@ -99,17 +91,15 @@ void World::LoadTestLevel()
         auto* t = AddTransform(e);
         t->position = pos;
         t->scale    = {1.f, 1.f, 1.f};
-
         auto* m = AddMesh(e);
         m->mesh         = m_cubeMesh.get();
         m->albedoColour = {0.69f, 0.39f, 0.098f};
         m->roughness    = 0.9f;
-
         auto* col = AddCollision(e);
         col->halfExtents = {0.5f, 0.5f, 0.5f};
     }
 
-    // ── Searchable container with starter loot ───────────────
+    // Starter loot container
     Interaction::SpawnContainer(*this, {-1.f, 0.2f, 4.f},
         {
             {"Lockpick",  "A steel pick",  3},
@@ -118,31 +108,28 @@ void World::LoadTestLevel()
         }
     );
 
-    // ── Lamppost - via Interaction factory ────────────────────
+    // Lamppost
     Interaction::SpawnLamppost(*this, {6.f, 0.f, 0.f});
 
-    // ── Exit marker ───────────────────────────────────────────
+    // Exit marker
     {
         EntityID e = CreateEntity("EndMarker");
         auto* t = AddTransform(e);
         t->position = {0.f, 1.f, -15.f};
         t->scale    = {0.5f, 0.5f, 0.5f};
-
         auto* m = AddMesh(e);
         m->mesh         = m_cubeMesh.get();
         m->albedoColour = {1.0f, 0.0f, 0.0f};
         m->roughness    = 0.75f;
-
         auto* col = AddCollision(e);
         col->halfExtents = {0.25f, 0.25f, 0.25f};
     }
 
-    // ── Exit trigger ──────────────────────────────────────────
+    // Exit trigger zone
     {
         EntityID trigger = CreateEntity("ExitZone");
         auto* t = AddTransform(trigger);
         t->position = {0.f, 1.f, -15.f};
-
         auto* tri = AddTrigger(trigger);
         tri->halfExtents = {3.f, 2.f, 1.f};
         tri->onEnter     = []() {
@@ -153,7 +140,6 @@ void World::LoadTestLevel()
     std::cout << "[World] Test level loaded (" << m_records.size() << " entities).\n";
 }
 
-// ── Update ────────────────────────────────────────────────────
 void World::Update(float dt)
 {
     UpdateLights(dt);
@@ -168,6 +154,8 @@ void World::UpdateLights(float dt)
         if (!lc.flicker || lc.intensity <= 0.f) continue;
 
         lc.flickerAccum += dt;
+        // Three overlapping sine waves at different frequencies produce
+        // a convincing organic candle-flicker.
         float noise = std::sin(lc.flickerAccum * 7.3f)
                     + std::sin(lc.flickerAccum * 17.1f) * 0.3f
                     + std::sin(lc.flickerAccum * 3.7f)  * 0.6f;
@@ -175,7 +163,6 @@ void World::UpdateLights(float dt)
     }
 }
 
-// ── Render ────────────────────────────────────────────────────
 void World::Render(Shader& sh) const
 {
     for (const auto& rec : m_records)
@@ -193,7 +180,6 @@ void World::Render(Shader& sh) const
     }
 }
 
-// ── Entity management ─────────────────────────────────────────
 EntityID World::CreateEntity(const std::string& name)
 {
     EntityID id = m_nextID++;
@@ -216,7 +202,6 @@ EntityRecord* World::GetRecord(EntityID id)
     return nullptr;
 }
 
-// ── Component attachment ──────────────────────────────────────
 TransformComponent* World::AddTransform(EntityID id)
 {
     m_transforms.push_back({});
@@ -271,7 +256,6 @@ TransformComponent*    World::GetTransform   (EntityID id) { auto* r=GetRecord(i
 MeshComponent*         World::GetMesh        (EntityID id) { auto* r=GetRecord(id); return r?r->mesh        :nullptr; }
 InteractableComponent* World::GetInteractable(EntityID id) { auto* r=GetRecord(id); return r?r->interactable:nullptr; }
 
-// ── CloseOpenContainer ───────────────────────────────────────
 void World::CloseOpenContainer()
 {
     for (auto& rec : m_records)
@@ -282,7 +266,6 @@ void World::CloseOpenContainer()
         }
 }
 
-// ── HasOpenContainer ─────────────────────────────────────────
 bool World::HasOpenContainer() const
 {
     for (const auto& rec : m_records)
@@ -291,7 +274,6 @@ bool World::HasOpenContainer() const
     return false;
 }
 
-// ── FindNearestInteractable ───────────────────────────────────
 EntityID World::FindNearestInteractable(const glm::vec3& point, float range) const
 {
     EntityID best     = kNullEntity;

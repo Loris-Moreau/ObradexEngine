@@ -1,38 +1,33 @@
-// ============================================================
-//  Window.cpp  -  GLFW Window & OpenGL Context
-// ============================================================
+// Window.cpp - GLFW window and OpenGL context.
 
 #include "Window.h"
 
-// GLAD must be included before GLFW (provides OpenGL headers)
+// GLAD must be included before GLFW.
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 #include <iostream>
 #include <stdexcept>
 
-// ── Init ──────────────────────────────────────────────────────
 bool Window::Init(const std::string& title,
                   int width, int height,
                   bool fullscreen, bool vsync)
 {
-    // ── GLFW initialisation ───────────────────────────────────
     if (!glfwInit())
     {
         std::cerr << "[Window] glfwInit() failed.\n";
         return false;
     }
 
-    // Request OpenGL 4.1 Core Profile (broadly supported, incl. macOS)
+    // Request OpenGL 4.1 Core Profile (supported on Windows, Linux, and macOS).
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 #ifdef __APPLE__
-    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // Required on macOS
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 #endif
     glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 
-    // ── Monitor selection for fullscreen ──────────────────────
     GLFWmonitor* monitor = fullscreen ? glfwGetPrimaryMonitor() : nullptr;
     if (fullscreen)
     {
@@ -41,7 +36,6 @@ bool Window::Init(const std::string& title,
         height = mode->height;
     }
 
-    // ── Create window ─────────────────────────────────────────
     m_window = glfwCreateWindow(width, height, title.c_str(), monitor, nullptr);
     if (!m_window)
     {
@@ -52,24 +46,20 @@ bool Window::Init(const std::string& title,
 
     glfwMakeContextCurrent(m_window);
 
-    // ── Load OpenGL function pointers via GLAD ─────────────────
     if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress)))
     {
         std::cerr << "[Window] GLAD failed to load OpenGL functions.\n";
         return false;
     }
 
-    // ── VSync ─────────────────────────────────────────────────
     glfwSwapInterval(vsync ? 1 : 0);
 
-    // ── Framebuffer resize callback ───────────────────────────
     glfwSetWindowUserPointer(m_window, this);
     glfwSetFramebufferSizeCallback(m_window, FramebufferSizeCallback);
 
     m_width  = width;
     m_height = height;
 
-    // Print OpenGL info for diagnostics
     std::cout << "[Window] OpenGL "
               << glGetString(GL_VERSION) << " on "
               << glGetString(GL_RENDERER) << "\n";
@@ -77,7 +67,6 @@ bool Window::Init(const std::string& title,
     return true;
 }
 
-// ── Destructor ────────────────────────────────────────────────
 Window::~Window()
 {
     if (m_window)
@@ -88,13 +77,14 @@ Window::~Window()
     glfwTerminate();
 }
 
-// ── PollEvents / SwapBuffers ──────────────────────────────────
 void Window::PollEvents()  { glfwPollEvents(); }
 void Window::SwapBuffers() { glfwSwapBuffers(m_window); }
+bool Window::ShouldClose() const { return glfwWindowShouldClose(m_window); }
 
-// ── Queries ───────────────────────────────────────────────────
-bool  Window::ShouldClose() const { return glfwWindowShouldClose(m_window); }
-
+// Query the framebuffer size live on each call.
+// Relying on a cached m_width/m_height value set by the resize callback can
+// be stale after a maximize or DPI-scaling transition, causing the letterbox
+// calculation in PostProcess::Apply to use the wrong dimensions.
 int Window::GetWidth() const
 {
     int w, h;
@@ -117,7 +107,6 @@ float Window::GetAspect() const
     return static_cast<float>(w) / static_cast<float>(h);
 }
 
-// ── Cursor lock (FPS capture) ─────────────────────────────────
 void Window::SetCursorLocked(bool locked)
 {
     m_cursorLocked = locked;
@@ -125,13 +114,12 @@ void Window::SetCursorLocked(bool locked)
                      locked ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
 }
 
-// ── Framebuffer resize callback ───────────────────────────────
 void Window::FramebufferSizeCallback(GLFWwindow* win, int w, int h)
 {
-    // Only update stored dimensions.
-    // PostProcess::Apply recomputes the letterbox viewport every frame from
-    // these values - calling glViewport here would override that and stretch
-    // the image for one frame (or permanently if Apply doesn't reset it).
+    // Update the cached dimensions. GetWidth/GetHeight query live via
+    // glfwGetFramebufferSize so these values are mainly used for fallback;
+    // do NOT call glViewport here as it would override PostProcess::Apply's
+    // letterbox viewport on the same frame.
     auto* self   = static_cast<Window*>(glfwGetWindowUserPointer(win));
     self->m_width  = w;
     self->m_height = h;
