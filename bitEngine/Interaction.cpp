@@ -127,14 +127,11 @@ EntityID SpawnDoor(World&            world,
                 tr->rotation = glm::angleAxis(glm::radians(90.f),
                                               glm::vec3(0.f, 1.f, 0.f));
                 tr->position = state->openPos;
-                // Door has swung out of the doorway; disable collision.
-                if (rec && rec->collision) rec->collision->solid = false;
             }
             else
             {
                 tr->rotation = glm::identity<glm::quat>();
                 tr->position = state->closedPos;
-                if (rec && rec->collision) rec->collision->solid = true;
             }
         }
 
