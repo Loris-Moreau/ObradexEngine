@@ -54,6 +54,7 @@ private:
     float m_spawnSpecular  = 0.2f;
     float m_spawnRoughness = 0.8f;
     bool  m_spawnCollision = true;
+    bool  m_spawnSlippery  = false;
 
     float m_lightColor[3]  = {1.0f, 0.85f, 0.5f};
     float m_lightRadius    = 10.f;

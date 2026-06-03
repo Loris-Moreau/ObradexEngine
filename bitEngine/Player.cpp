@@ -269,14 +269,26 @@ void Player::ResolveCollision(World& world)
 
         if (ox <= oy && ox <= oz)
         {
-            if (pMax.x - bMin.x < bMax.x - pMin.x) m_position.x -= ox;
-            else                                     m_position.x += ox;
+            if (pMax.x - bMin.x < bMax.x - pMin.x)
+            {
+                m_position.x -= ox;
+            }
+            else
+            {
+                m_position.x += ox;
+            }
             m_velocity.x = 0.f;
         }
         else if (oz <= ox && oz <= oy)
         {
-            if (pMax.z - bMin.z < bMax.z - pMin.z) m_position.z -= oz;
-            else                                     m_position.z += oz;
+            if (pMax.z - bMin.z < bMax.z - pMin.z)
+            {
+                m_position.z -= oz;
+            }
+            else
+            {
+                m_position.z += oz;
+            }
             m_velocity.z = 0.f;
         }
         else
@@ -284,14 +296,24 @@ void Player::ResolveCollision(World& world)
             if (pMax.y - bMin.y < bMax.y - pMin.y)
             {
                 m_position.y -= oy;  // Ceiling hit
-                if (m_velocity.y > 0.f) m_velocity.y = 0.f;
+                if (m_velocity.y > 0.f)
+                {
+                    m_velocity.y = 0.f;
+                }
             }
             else
             {
-                m_position.y  += oy;  // Landed on top
+                m_position.y  += oy;
                 m_velocity.y   = 0.f;
                 m_onGround     = true;
                 m_jumpConsumed = false;
+                // By default, boxes behave like the floor - kill horizontal momentum on landing so the player can use them for traversal.
+                // Mark a CollisionComponent slippery to keep the old sliding behaviour.
+                if (!rec.collision->slippery)
+                {
+                    m_velocity.x = 0.f;
+                    m_velocity.z = 0.f;
+                }
             }
         }
 

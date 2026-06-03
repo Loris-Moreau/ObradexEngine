@@ -107,10 +107,14 @@ bool LevelEditor::SaveLevel(const World& world, const std::string& path)
         }
 
         if (rec.collision)
+        {
             Wf3(file, "COLLISION",
                 rec.collision->halfExtents.x,
                 rec.collision->halfExtents.y,
                 rec.collision->halfExtents.z);
+            if (rec.collision->slippery)
+                Wi1(file, "SLIPPERY", 1);
+        }
 
         if (rec.light)
         {
@@ -162,8 +166,9 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
         glm::vec3   pos{0,0,0}, scale{1,1,1};
         glm::vec3   albedo{0.7f,0.7f,0.7f};
         float       specular = 0.2f, roughness = 0.8f;
-        bool        hasCollision = false;
+        bool        hasCollision  = false;
         glm::vec3   collHalf{0.5f,0.5f,0.5f};
+        bool        collSlippery  = false;
         bool        hasLight = false;
         glm::vec3   lightColor{1.f,0.85f,0.5f};
         float       lightRadius = 10.f, lightIntensity = 1.5f;
@@ -227,6 +232,7 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
                 {
                     auto* col = world.AddCollision(e);
                     col->halfExtents = cur.collHalf;
+                    col->slippery    = cur.collSlippery;
                 }
             }
 
@@ -276,6 +282,11 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
                 cur.hasCollision = true;
                 ss >> cur.collHalf.x >> cur.collHalf.y >> cur.collHalf.z;
             }
+            else if (token == "SLIPPERY")
+            {
+                int v = 0; ss >> v;
+                cur.collSlippery = (v != 0);
+            }
             else if (token == "LIGHT_COLOR")
             {
                 cur.hasLight = true;
@@ -319,7 +330,11 @@ void LevelEditor::SpawnCurrent(Engine& engine)
             m->mesh=world.GetCubeMesh(); m->albedoColour=color;
             m->specular=m_spawnSpecular; m->roughness=m_spawnRoughness;
             if (m_spawnCollision)
-                world.AddCollision(e)->halfExtents = {0.5f,0.5f,0.5f};
+            {
+                auto* col = world.AddCollision(e);
+                col->halfExtents = {0.5f,0.5f,0.5f};
+                col->slippery    = m_spawnSlippery;
+            }
             break;
         }
         case 1: // Plane
@@ -339,7 +354,11 @@ void LevelEditor::SpawnCurrent(Engine& engine)
             m->mesh=world.GetSphereMesh(); m->albedoColour=color;
             m->specular=m_spawnSpecular; m->roughness=m_spawnRoughness;
             if (m_spawnCollision)
-                world.AddCollision(e)->halfExtents = {0.5f,0.5f,0.5f};
+            {
+                auto* col = world.AddCollision(e);
+                col->halfExtents = {0.5f,0.5f,0.5f};
+                col->slippery    = m_spawnSlippery;
+            }
             break;
         }
         case 3: Interaction::SpawnLamppost(world, pos, lcolor, m_lightRadius, m_lightIntensity, m_lightFlicker); break;
@@ -448,7 +467,16 @@ void LevelEditor::RenderPanel(Engine& engine)
         ImGui::SliderFloat("Roughness##sp", &m_spawnRoughness,  0.f, 1.f);
         ImGui::SliderFloat("Specular##sp",  &m_spawnSpecular,   0.f, 1.f);
         if (m_spawnType == 0 || m_spawnType == 2)
+        {
             ImGui::Checkbox("Solid collision", &m_spawnCollision);
+            if (m_spawnCollision)
+            {
+                ImGui::SameLine();
+                ImGui::Checkbox("Slippery", &m_spawnSlippery);
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("Allows the player to slide off on landing (off = floor-like default)");
+            }
+        }
     }
     if (m_spawnType == 3 || m_spawnType == 8)
     {

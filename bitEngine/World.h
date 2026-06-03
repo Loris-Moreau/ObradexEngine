@@ -70,6 +70,7 @@ struct CollisionComponent
 {
     glm::vec3 halfExtents = {0.5f, 0.5f, 0.5f};
     bool      solid       = true;
+    bool      slippery    = false;  // If false (default), zeroes horizontal velocity on landing like the floor
 };
 
 // Defined here (not Interaction.h) so World, EditorUI, and Interaction

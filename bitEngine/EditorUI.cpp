@@ -394,6 +394,14 @@ void EditorUI::DrawWorldPanel(Engine& engine)
                 ImGui::SliderFloat("Range",      &rec->interactable->range, 0.5f, 10.f);
                 ImGui::Checkbox   ("Enabled",    &rec->interactable->enabled);
             }
+            if (rec->collision && ImGui::CollapsingHeader("Collision"))
+            {
+                ImGui::DragFloat3("Half extents", &rec->collision->halfExtents.x, 0.01f, 0.01f, 10.f);
+                ImGui::Checkbox("Solid",    &rec->collision->solid);
+                ImGui::Checkbox("Slippery", &rec->collision->slippery);
+                if (ImGui::IsItemHovered())
+                    ImGui::SetTooltip("When off (default), landing zeroes horizontal velocity like the floor.\nTurn on to let the player slide off on landing.");
+            }
         }
     }
 }
@@ -530,7 +538,8 @@ void EditorUI::DrawContainerPopup(Engine& engine)
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.50f,0.32f,0.06f,1.f));
     ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.70f,0.45f,0.08f,1.f));
 
-    if (ImGui::Button("Grab All", ImVec2(btnW, 0.f)) && !items.empty())
+    bool grabAll = ImGui::Button("Grab All", ImVec2(btnW, 0.f));
+    if (grabAll)
     {
         for (auto& it : items)
             engine.GetInventory().AddItem(it);
