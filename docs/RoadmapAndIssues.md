@@ -42,6 +42,7 @@
 | Inventory UI needs some polish *(text isn't align with titles)* | Open   | Just need to move them a bit                                                                                                                                                                                                                                                         |
 | Missing collision when the door is open                         | Open   | Need to check that the collision properly rotates with the door                                                                                                                                                                                                                      |
 | Sliding off boxes                                               | open   | ground check                                                                                                                                                                                                                                                                         |
+| empty crate doesn't exit when click grab all                    | open   |                                                                                                                                                                                                                                                                                      |
 
 ---
 
