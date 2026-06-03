@@ -218,6 +218,11 @@ void Player::ApplyGravity(float dt)
 // Two-pass collision: floor plane at y=0, then all solid CollisionComponents.
 void Player::ResolveCollision(World& world)
 {
+    // Capture grounded state from last frame before the floor check clears it.
+    // The floor check sets m_onGround=false when position.y > 0.01, which is
+    // always true while standing on a box. Without this snapshot, wasGrounded
+    // would always be false and velocity would be zeroed every frame.
+    bool wasGrounded = m_onGround;
     // Floor plane.
     if (m_position.y < 0.f)
     {
@@ -269,11 +274,11 @@ void Player::ResolveCollision(World& world)
 
         if (ox <= oy && ox <= oz)
         {
-            if (pMax.x - bMin.x < bMax.x - pMin.x)
+            if (pMax.x - bMin.x < bMax.x - pMin.x) 
             {
                 m_position.x -= ox;
             }
-            else
+            else                                     
             {
                 m_position.x += ox;
             }
@@ -296,10 +301,7 @@ void Player::ResolveCollision(World& world)
             if (pMax.y - bMin.y < bMax.y - pMin.y)
             {
                 m_position.y -= oy;  // Ceiling hit
-                if (m_velocity.y > 0.f)
-                {
-                    m_velocity.y = 0.f;
-                }
+                if (m_velocity.y > 0.f) m_velocity.y = 0.f;
             }
             else
             {
@@ -307,9 +309,11 @@ void Player::ResolveCollision(World& world)
                 m_velocity.y   = 0.f;
                 m_onGround     = true;
                 m_jumpConsumed = false;
-                // By default, boxes behave like the floor - kill horizontal momentum on landing so the player can use them for traversal.
-                // Mark a CollisionComponent slippery to keep the old sliding behaviour.
-                if (!rec.collision->slippery)
+                // Zero horizontal velocity only on the frame the player actually
+                // lands (was airborne last frame). Grounded-every-frame gravity
+                // micro-dips would otherwise re-zero velocity each tick and make
+                // the player unable to move while standing on the box.
+                if (!wasGrounded && !rec.collision->slippery)
                 {
                     m_velocity.x = 0.f;
                     m_velocity.z = 0.f;
