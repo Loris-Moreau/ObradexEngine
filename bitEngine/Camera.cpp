@@ -63,9 +63,20 @@ glm::mat4 Camera::GetView() const
     // so the eye stays level regardless of pitch direction.
     glm::vec3 worldUp   = {0.f, 1.f, 0.f};
     glm::vec3 flatRight = glm::normalize(glm::cross(m_forward, worldUp));
+
+    // Physical lean: shift the eye sideways so the player can peek around
+    // corners, not just tilt the view in place.
+    // leanFraction is in [-1, 1], mapping m_lean to the configured distance.
+    // A small upward offset (5% of the lateral shift) counters the slight
+    // downward drift that a real sideways lean produces — without it the
+    // horizon appears to drop noticeably at full lean.
+    float leanFraction  = m_lean / 15.f;
+    float lateralOffset = leanFraction * m_leanDistance;
+    float verticalCorr  = std::abs(lateralOffset) * 0.05f;
+
     glm::vec3 eye = m_position
-                  + worldUp   * m_bobY
-                  + flatRight * m_bobX;
+                  + worldUp   * (m_bobY + verticalCorr)
+                  + flatRight * (m_bobX + lateralOffset);
 
     // Build the view as V = R * T(-eye) rather than using lookAt, so the
     // lean roll can be applied to R before the eye translation is appended.

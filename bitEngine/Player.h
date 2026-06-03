@@ -53,6 +53,7 @@ struct PlayerStats
     float interactRange      = 2.25f;   // Maximum interact reach (m)
     float airControl         = 4.0f;    // m/s^2 horizontal nudge while airborne
     float jumpVelocityRetain = 0.8f;    // Fraction of horizontal speed kept at jump (0 to 1)
+    float leanDistance       = 0.25f;    // Max lateral eye offset at full lean (m)
 };
 
 class Player

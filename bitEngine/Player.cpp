@@ -174,6 +174,7 @@ void Player::HandleMovement(const Input& input, float dt)
         if (input.IsKeyHeld(Key::A)) lean = -1.f;
         if (input.IsKeyHeld(Key::E)) lean =  1.f;
     }
+    m_camera.SetLeanDistance(m_stats.leanDistance);
     m_camera.SetLean(lean * 12.f);
 
     // Jump.

@@ -23,6 +23,10 @@ public:
     // Set the target lean angle in degrees. Clamped to +-15. Lerped each frame.
     void SetLean(float amount);
 
+    // Maximum lateral eye offset at full lean (metres).
+    void  SetLeanDistance(float d) { m_leanDistance = d; }
+    float GetLeanDistance()  const { return m_leanDistance; }
+
     // Advance the head-bob simulation. Call every physics tick with current speed.
     void UpdateHeadBob(float speed, float dt);
 
@@ -55,8 +59,9 @@ private:
     float m_yaw   = -90.f;  // Default facing -Z
     float m_pitch =   0.f;
 
-    float m_lean       = 0.f;  // Current lean angle (degrees), lerped
-    float m_leanTarget = 0.f;  // Requested lean angle
+    float m_lean          = 0.f;   // Current lean angle (degrees), lerped
+    float m_leanTarget    = 0.f;   // Requested lean angle
+    float m_leanDistance  = 0.25f;  // Max lateral eye offset at full lean (m)
 
     float m_bobTime = 0.f;
     float m_bobY    = 0.f;  // Vertical bob offset (m)
