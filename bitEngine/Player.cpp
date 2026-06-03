@@ -50,9 +50,6 @@ void Player::Update(float dt, const Input& input, World& world)
     ResolveCollision(world);
     UpdateCameraHeight(dt, containerOpen);
     CheckTriggers(world);
-    ResolveCollision(world);
-    UpdateCameraHeight(dt, containerOpen);
-    CheckTriggers(world);
 }
 
 // Called once per real frame from Engine::ProcessInput, after Input::Update().
