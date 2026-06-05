@@ -385,7 +385,7 @@ world.ClearLevel();       // Remove all entities; keep GPU meshes
 | `InteractableComponent` | Prompt text, reach range, `onInteract` callback        |
 | `LightComponent`        | Point light: colour, radius, intensity, candle flicker |
 | `TriggerComponent`      | AABB trigger with `onEnter` / `onExit` callbacks       |
-| `CollisionComponent`    | Solid AABB for player push-out                         |
+| `CollisionComponent`    | Solid AABB for player push-out. `slippery = false` (default) zeroes horizontal velocity on landing so boxes behave like the floor. Set `slippery = true` for surfaces the player should slide off. |
 | `ContainerComponent`    | Item list + `isOpen` flag for the loot popup           |
 
 **Component storage:** each component type lives in a pre-reserved `std::vector` (capacity 1024). `EntityRecord` holds raw pointers into these vectors. Reservation prevents reallocation-induced pointer invalidation.
@@ -571,14 +571,14 @@ Key uniforms: `u_Scene` (sampler2D), `u_Palette` (sampler1D), `u_PaletteSize`, `
 | Z / Q / S / D | Move forward / left / back / right (AZERTY)             |
 | Mouse X / Y   | Camera yaw / pitch                                      |
 | Left Shift    | Sprint                                                  |
-| Left Ctrl     | Crouch; if already sprinting → slide                    |
+| Left Ctrl     | Crouch; if already sprinting, slide                     |
 | Space         | Jump (ground only, not while crouching)                 |
-| A             | Lean left (not while sprinting)                         |
-| E             | Lean right (not while sprinting and not moving)         |
+| A             | Lean left (not while sprinting or sliding)              |
+| E             | Lean right (not while sprinting or sliding)             |
 | F             | Interact (open doors, search containers, pick up items) |
 | I             | Toggle inventory overlay                                |
 | F1            | Toggle editor panel                                     |
-| Escape        | Close open container popup, or toggle pause             |
+| Escape        | Close open container or inventory, or toggle pause      |
 
 ---
 

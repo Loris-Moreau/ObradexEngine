@@ -49,29 +49,33 @@ cmake --build . -j$(nproc)
 
 ## Controls
 
-| Input             | Action                |
-|-------------------|-----------------------|
-| ZQSD/WASD         | Move                  |
-| Mouse             | Look                  |
-| Shift             | Sprint                |
-| Ctrl              | Crouch / Slide        |
-| Space             | Jump                  |
-| A / E             | Lean left / right     |
-| F *(near object)* | Interact              |
-| F1                | Toggle editor overlay |
-| Escape            | Pause                 |
+| Input     | Action                     |
+|-----------|----------------------------|
+| ZQSD/WASD | Move                       |
+| Mouse     | Look                       |
+| Shift     | Sprint                     |
+| Ctrl      | Crouch / Slide             |
+| Space     | Jump                       |
+| A / E     | Lean left / right          |
+| F         | Interact                   |
+| I         | Toggle inventory           |
+| F1        | Toggle editor overlay      |
+| Escape    | Close Inventory UI / Pause |
 
 ## Project Structure
 
 ```
-src/
-  engine/       - Engine singleton, Window, Input, Timer
-  renderer/     - Renderer, Shader, Mesh, Camera, PostProcess
-  world/        - Entity/component scene container
-  gameplay/     - Player controller, Interaction factories
-  ui/           - Dear ImGui editor + HUD
-assets/shaders/ - world.vert / world.frag (GLSL 4.10)
-third_party/    - GLAD, ImGui, stb, GLM (populated by setup.sh)
+ObradexEngine/
+  bitEngine/     - All source files (flat layout)
+    *.h / *.cpp  - Engine, Window, Input, Timer, Renderer, Shader,
+                   Mesh, Camera, PostProcess, World, Player,
+                   Interaction, InventorySystem, EditorUI, LevelEditor
+    Shaders/     - world.vert / world.frag (GLSL 4.10)
+    Levels/      - Saved .lvl scene files
+  docs/          - DOCUMENTATION.md, RoadmapAndIssues.md, References.md
+  glad/          - Pre-generated OpenGL 4.1 Core loader
+  third_party/   - GLAD, ImGui, stb, GLM (populated by setup scripts)
+  build/         - CMake / MSVC output
 ```
 
 ## Dependencies

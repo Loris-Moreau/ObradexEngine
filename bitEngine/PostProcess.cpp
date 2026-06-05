@@ -4,6 +4,7 @@
 #include "Shader.h"
 #include <glad/glad.h>
 #include <glm/glm.hpp>
+#include <algorithm>
 #include <iostream>
 
 // The vertex and fragment shaders are embedded here so the post-process pass

@@ -3,10 +3,7 @@
 #include "World.h"
 #include "Shader.h"
 #include "Mesh.h"
-#include "Input.h"
 #include "Interaction.h"
-#include "Engine.h"
-#include "InventorySystem.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <cmath>

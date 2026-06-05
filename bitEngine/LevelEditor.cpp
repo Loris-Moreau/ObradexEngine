@@ -422,8 +422,13 @@ void LevelEditor::RenderPanel(Engine& engine)
         if (GetOpenFileNameA(&ofn))
         {
             std::string name = fs::path(path).filename().string();
+#ifdef _WIN32
             strncpy_s(m_filenameBuffer, sizeof(m_filenameBuffer),
                       name.c_str(), sizeof(m_filenameBuffer) - 1);
+#else
+            std::strncpy(m_filenameBuffer, name.c_str(), sizeof(m_filenameBuffer) - 1);
+            m_filenameBuffer[sizeof(m_filenameBuffer) - 1] = '\0';
+#endif
         }
 #else
         FILE* f = popen("zenity --file-selection --file-filter='Level files | *.lvl' "
@@ -436,8 +441,8 @@ void LevelEditor::RenderPanel(Engine& engine)
                 size_t len = strlen(buf);
                 if (len && buf[len-1] == '\n') buf[len-1] = '\0';
                 std::string name = fs::path(buf).filename().string();
-                strncpy_s(m_filenameBuffer, sizeof(m_filenameBuffer),
-                          name.c_str(), sizeof(m_filenameBuffer) - 1);
+                std::strncpy(m_filenameBuffer, name.c_str(), sizeof(m_filenameBuffer) - 1);
+                m_filenameBuffer[sizeof(m_filenameBuffer) - 1] = '\0';
             }
             pclose(f);
         }

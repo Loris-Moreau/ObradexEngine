@@ -271,26 +271,14 @@ void Player::ResolveCollision(World& world)
 
         if (ox <= oy && ox <= oz)
         {
-            if (pMax.x - bMin.x < bMax.x - pMin.x) 
-            {
-                m_position.x -= ox;
-            }
-            else                                     
-            {
-                m_position.x += ox;
-            }
+            if (pMax.x - bMin.x < bMax.x - pMin.x) m_position.x -= ox;
+            else                                     m_position.x += ox;
             m_velocity.x = 0.f;
         }
         else if (oz <= ox && oz <= oy)
         {
-            if (pMax.z - bMin.z < bMax.z - pMin.z)
-            {
-                m_position.z -= oz;
-            }
-            else
-            {
-                m_position.z += oz;
-            }
+            if (pMax.z - bMin.z < bMax.z - pMin.z) m_position.z -= oz;
+            else                                     m_position.z += oz;
             m_velocity.z = 0.f;
         }
         else
@@ -351,7 +339,10 @@ void Player::HandleInteraction(const Input& input, World& world)
 
     if (near != kNullEntity)
     {
-        auto* ia = world.GetRecord(near)->interactable;
+        auto* rec = world.GetRecord(near);
+        if (!rec) { m_interactPrompt.clear(); return; }
+
+        auto* ia = rec->interactable;
         m_interactPrompt = ia ? ia->promptText : "";
 
         if (input.IsKeyJustPressed(INTERACT_KEY) && ia && ia->onInteract)

@@ -558,8 +558,7 @@ void EditorUI::DrawContainerPopup(Engine& engine)
 
     // Escape closes the container (Engine::ProcessInput also handles this,
     // but checking here too prevents a one-frame delay on the popup close).
-    ImGuiIO& escIO = ImGui::GetIO();
-    if (escIO.KeysDown[256] && !escIO.WantCaptureKeyboard)
+    if (ImGui::IsKeyDown(ImGuiKey_Escape))
         windowOpen = false;
 
     ImGui::PopStyleColor(3);

@@ -211,9 +211,9 @@ EntityID SpawnPickup(World&           world,
     return e;
 }
 
-EntityID SpawnAlarm(World&            world,
-                    const glm::vec3&  position,
-                    std::function<void()> onTrigger,
+EntityID SpawnAlarm(World&                world,
+                    const glm::vec3&      position,
+                    std::function<void()> onTrigger,  // Reserved: not yet called (no trigger event system)
                     std::function<void()> onDefuse)
 {
     EntityID e = world.CreateEntity("AlarmBox");

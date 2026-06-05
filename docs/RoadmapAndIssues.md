@@ -39,10 +39,7 @@
 | Bug                                                             | Status | Notes                                                                                                                                                                                                                                                                                |
 |-----------------------------------------------------------------|--------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | Crouch does not properly disable stand-up when ceiling is above | Open   | The AABB correctly shrinks to `crouchHeight = 0.85 m` when crouching. However there is no headroom check when releasing Ctrl - the player can clip through a low ceiling by standing up inside it. A sweep test upward before allowing the state transition to `Standing` is needed. |
-| Inventory UI needs some polish *(text isn't align with titles)* | Open   | Just need to move them a bit                                                                                                                                                                                                                                                         |
-| Missing collision when the door is open                         | Should be fixed   | Need to check that the collision properly rotates with the door                                                                                                                                                                                                                      |
-| Sliding off boxes                                               | Fixed   | ground check                                                                                                                                                                                                                                                                         |
-| empty crate doesn't exit when click grab all                    | open   |                                                                                                                                                                                                                                                                                      |
+| Inventory UI needs some polish *(text not aligned with titles)* | Open   | Column alignment pass needed.                                                                                                                                                                                                                                                        |
 
 ---
 
@@ -380,3 +377,28 @@ Root cause: `Player::Update` runs inside a fixed-timestep accumulator and can ex
 **[FEATURE] Air control and jump velocity retention exposed in editor**
 
 Added `airControl` (m/s² horizontal nudge in air) and `jumpVelocityRetain` (0–1 fraction) to `PlayerStats`. Both appear as sliders in the **Player → Air Movement** section of the F1 editor with tooltips. Presets (Base, SpeedRun) updated to include the new fields.
+
+---
+
+### 3.14 Pre-alpha code review fixes
+
+**[FIX] `strncpy_s` on Linux/macOS**
+`LevelEditor.cpp` used `strncpy_s` (MSVC extension) on both branches of the `#ifdef _WIN32` Browse dialog. The non-Windows branch would fail to compile under GCC or Clang. Fixed by using `std::strncpy` with an explicit null-terminator on the non-Windows branch.
+
+**[FIX] Null dereference in `HandleInteraction`**
+`Player::HandleInteraction` called `world.GetRecord(near)->interactable` without checking whether `GetRecord` returned `nullptr`. Although `FindNearestInteractable` only returns IDs that exist at the time of the call, entity destruction could theoretically invalidate the ID before `GetRecord` runs. Added an explicit null check before dereferencing.
+
+**[FIX] Circular/unused includes in `World.cpp`**
+`World.cpp` included `Engine.h` and `InventorySystem.h`. Neither is used in the file. `Engine.h` includes `World.h`, creating a circular include chain. Both removed.
+
+**[FIX] Deprecated ImGui `KeysDown` API in `EditorUI.cpp`**
+`escIO.KeysDown[256]` used the `KeysDown[]` array removed in ImGui 1.87. Replaced with `ImGui::IsKeyDown(ImGuiKey_Escape)`.
+
+**[FIX] Missing `<algorithm>` include in `PostProcess.cpp`**
+`std::min` was used in `Apply` without an explicit `<algorithm>` include. The call compiled only because a transitive include pulled it in. Added the explicit include.
+
+**[NOTE] `SpawnAlarm` `onTrigger` parameter is reserved but never called**
+The alarm has no event system to call `onTrigger`. The parameter is kept for API forward-compatibility but is annotated as reserved in the source.
+
+**[FIX] Section 3.7 door fix log contradicts actual implementation**
+Section 3.7 described the door fix as setting `collision->solid = false` on open. The actual shipped fix relies on OBB-to-AABB expansion in `ResolveCollision` and does *not* toggle `solid`. The section 3.7 entry described an earlier iteration that was subsequently replaced. This log entry is retained for historical context; the definitive implementation is the OBB expansion described in section 3.10.
