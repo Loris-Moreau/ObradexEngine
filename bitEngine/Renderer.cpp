@@ -61,6 +61,10 @@ void Renderer::RenderWorld(const World& world, const Camera& camera)
     m_worldShader->SetVec3("u_SunDir",    m_sunDir);
     m_worldShader->SetVec3("u_SunColour", m_sunColour);
     m_worldShader->SetVec3("u_Ambient",   m_ambient);
+    m_worldShader->SetFloat("u_FogDensity", m_fogDensity);
+    m_worldShader->SetVec3 ("u_FogColour",  m_fogColour);
+    m_worldShader->SetFloat("u_FogDensity", m_fogDensity);
+    m_worldShader->SetVec3 ("u_FogColour",  m_fogColour);
     UploadLights(*m_worldShader);
 
     world.Render(*m_worldShader);
@@ -82,6 +86,8 @@ void Renderer::ClearLights()                             { m_pointLightCount = 0
 void Renderer::SetSunDirection(const glm::vec3& d)       { m_sunDir    = glm::normalize(d); }
 void Renderer::SetSunColour   (const glm::vec3& c)       { m_sunColour = c; }
 void Renderer::SetAmbient     (const glm::vec3& c)       { m_ambient   = c; }
+void Renderer::SetFogDensity(float d)                    { m_fogDensity = d; }
+void Renderer::SetFogColour (const glm::vec3& c)         { m_fogColour  = c; }
 
 void Renderer::AddPointLight(const PointLight& l)
 {

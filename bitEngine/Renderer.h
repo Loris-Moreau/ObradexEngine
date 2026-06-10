@@ -41,10 +41,14 @@ public:
     void Present(int windowW, int windowH);
 
     void ClearLights();
+    void SetFogDensity(float density);
+    void SetFogColour (const glm::vec3& col);
     void AddPointLight(const PointLight& light);
     void SetSunDirection(const glm::vec3& dir);
     void SetSunColour   (const glm::vec3& col);
     void SetAmbient     (const glm::vec3& col);
+    void SetFogDensity  (float density);
+    void SetFogColour   (const glm::vec3& col);
 
     PostProcess& GetPostProcess() { return *m_postProcess; }
     int RenderWidth()  const { return m_renderW; }
@@ -66,5 +70,11 @@ private:
 
     glm::vec3 m_sunDir    = glm::normalize(glm::vec3(-0.4f, -0.8f, -0.3f));
     glm::vec3 m_sunColour = {0.7f, 0.75f, 0.85f};   // Cool moonlight
-    glm::vec3 m_ambient   = {0.05f, 0.05f, 0.08f};  // Near-black fill
+    glm::vec3 m_ambient   = {0.05f, 0.05f, 0.08f};
+    float     m_fogDensity = 0.f;
+    glm::vec3 m_fogColour  = {0.04f, 0.04f, 0.06f};
+    float     m_fogDensity = 0.0f;
+    glm::vec3 m_fogColour  = {0.04f, 0.04f, 0.06f};
+    float     m_fogDensity = 0.0f;
+    glm::vec3 m_fogColour  = {0.04f, 0.04f, 0.06f};  // Near-black fill
 };
