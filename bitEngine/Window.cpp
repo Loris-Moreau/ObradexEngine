@@ -5,6 +5,7 @@
 // GLAD must be included before GLFW.
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+#include <cmath>
 
 #include <iostream>
 #include <stdexcept>
@@ -53,6 +54,27 @@ bool Window::Init(const std::string& title,
     }
 
     glfwSwapInterval(vsync ? 1 : 0);
+
+
+    // Programmatic 16x16 window icon: amber ring on dark background.
+    {
+        constexpr int kSz = 16;
+        unsigned char px[kSz * kSz * 4];
+        for (int y = 0; y < kSz; ++y)
+        for (int x = 0; x < kSz; ++x)
+        {
+            int   idx  = (y * kSz + x) * 4;
+            float dx   = x - 7.5f, dy = y - 7.5f;
+            float r    = sqrtf(dx*dx + dy*dy);
+            bool  ring = (r >= 4.5f && r <= 7.2f);
+            px[idx+0] = ring ? 220 : 15;
+            px[idx+1] = ring ? 160 : 12;
+            px[idx+2] = ring ?  40 : 10;
+            px[idx+3] = 255;
+        }
+        GLFWimage img{ kSz, kSz, px };
+        glfwSetWindowIcon(m_window, 1, &img);
+    }
 
     glfwSetWindowUserPointer(m_window, this);
     glfwSetFramebufferSizeCallback(m_window, FramebufferSizeCallback);
