@@ -80,7 +80,13 @@ public:
     // Prompt text of the nearest interactable in range. Empty if none.
     const std::string& GetInteractPrompt() const { return m_interactPrompt; }
 
-    bool IsHidden() const { return m_isHidden; }
+    void TakeDamage  (int amount);
+    void RespawnAtSpawn();
+    void SetSpawnPos(const glm::vec3& p) { m_spawnPos = p; }
+    int  GetHealth()    const { return m_health;    }
+    int  GetMaxHealth() const { return m_maxHealth; }
+    bool IsDead()       const { return m_dead;      }
+    bool IsHidden()     const { return m_isHidden;  }
 
 private:
     void HandleMouseLook  (const Input& input, float dt);
@@ -102,6 +108,7 @@ private:
     float m_speed       = 0.f;
     float m_currentEyeH = 1.7f;
     float m_slideTimer  = 0.f;
+    glm::vec3 m_slideDir    = {0.f, 0.f, 0.f};
     float m_vaultTimer  = 0.f;
     float m_airSpeedCap = 0.f;    // Horizontal speed at jump time; used as in-air cap
 

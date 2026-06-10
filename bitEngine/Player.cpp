@@ -14,16 +14,40 @@ static constexpr float kPlayerHeight = 1.80f;
 
 void Player::Init()
 {
-    m_position    = {0.f, 0.f, 0.f};
-    m_velocity    = {0.f, 0.f, 0.f};
-    m_state       = MoveState::Standing;
-    m_currentEyeH = m_stats.eyeHeight;
-    m_onGround    = true;
+    m_position     = {0.f, 0.f, 0.f};
+    m_velocity     = {0.f, 0.f, 0.f};
+    m_slideDir     = {0.f, 0.f, 0.f};
+    m_state        = MoveState::Standing;
+    m_currentEyeH  = m_stats.eyeHeight;
+    m_onGround     = true;
+    m_jumpConsumed = false;
+    m_dead         = false;
+    m_health       = m_maxHealth;
+    m_camera.SetLean(0.f);
+}
+
+void Player::TakeDamage(int amount)
+{
+    if(m_dead) return;
+    m_health -= amount;
+    if(m_health <= 0){ m_health = 0; m_dead = true; }
+}
+
+void Player::RespawnAtSpawn()
+{
+    m_position     = m_spawnPos;
+    m_velocity     = {0.f, 0.f, 0.f};
+    m_state        = MoveState::Standing;
+    m_onGround     = false;
+    m_jumpConsumed = false;
+    m_dead         = false;
+    m_health       = m_maxHealth;
     m_camera.SetLean(0.f);
 }
 
 void Player::Update(float dt, const Input& input, World& world)
 {
+    if(m_dead) return;
     // HandleActions (interactions) is deliberately NOT called here.
     // Update() runs N times per real frame inside the fixed-step accumulator.
     // With the same input snapshot each sub-step, IsKeyJustPressed would be
@@ -47,6 +71,9 @@ void Player::Update(float dt, const Input& input, World& world)
     }
 
     ApplyGravity(dt);
+
+    // Kill-plane: falling below -20 m triggers death and respawn.
+    if(m_position.y < -20.f) TakeDamage(m_maxHealth);
     ResolveCollision(world);
     UpdateCameraHeight(dt, containerOpen);
     CheckTriggers(world);
@@ -73,6 +100,9 @@ void Player::UpdateMoveState(const Input& input, float dt)
     {
         m_state      = MoveState::Sliding;
         m_slideTimer = 0.6f;
+        // Lock the slide direction so releasing movement keys doesn't stop the slide.
+        glm::vec3 fwd = m_camera.GetForward(); fwd.y = 0.f;
+        if(glm::length(fwd) > 0.001f) m_slideDir = glm::normalize(fwd);
     }
 
     // End the slide when the timer expires.
@@ -161,6 +191,12 @@ void Player::HandleMovement(const Input& input, float dt)
                 m_velocity.z *= scale;
             }
         }
+    }
+    else
+    {
+        // Slide: drive along the locked direction for the full slide duration.
+        m_velocity.x = m_slideDir.x * targetSpeed;
+        m_velocity.z = m_slideDir.z * targetSpeed;
     }
     m_speed = glm::length(glm::vec3(m_velocity.x, 0.f, m_velocity.z));
 
