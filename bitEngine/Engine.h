@@ -11,6 +11,7 @@
 // (forward declarations are enough in most callers).
 
 #include <memory>
+#include <fstream>
 #include <string>
 
 class Window;
@@ -21,13 +22,18 @@ class World;
 class Player;
 class EditorUI;
 class InventorySystem;
+class AudioSystem;
+class ConfigLoader;
 
 enum class EngineState
 {
-    Uninitialized,  // Before Init() is called
-    Running,        // Normal game-loop execution
-    Paused,         // Game logic frozen; editor still ticks
-    Shutdown        // Cleanup in progress
+    Uninitialized,
+    MainMenu,       // Title screen before gameplay begins
+    Running,        // Normal gameplay
+    Paused,         // Physics frozen; editor still ticks
+    GameOver,       // Player health reached zero
+    LevelComplete,  // Player reached the exit trigger
+    Shutdown
 };
 
 // Passed to Engine::Init() to configure startup behaviour.
@@ -65,7 +71,13 @@ public:
     void Run();
 
     // Signal the game loop to exit cleanly on the next frame.
-    void RequestShutdown();
+    void RequestShutdown()    { m_state = EngineState::Shutdown; }
+    void SetState(EngineState s){ m_state = s; }  // Used by EditorUI overlays
+    void NotifyPlayerDied();   // Called when health reaches zero
+    void NotifyLevelComplete();// Called by the exit trigger
+    void StartGame();          // Load level and enter Running state
+    void ReturnToMainMenu();   // Clear level and return to menu
+    void RespawnPlayer();      // Reset player at spawn, resume Running
 
     Window&          GetWindow()    const;
     Renderer&        GetRenderer()  const;
@@ -75,6 +87,9 @@ public:
     Player&          GetPlayer()    const;
     EditorUI&        GetEditorUI()  const;
     InventorySystem& GetInventory() const;
+    AudioSystem&     GetAudio()     const;
+    ConfigLoader&    GetConfig()    const;
+    InventorySystem& GetInventory() const;
 
     EngineState         GetState()  const { return m_state;  }
     const EngineConfig& GetConfig() const { return m_config; }
@@ -83,13 +98,19 @@ private:
     Engine()  = default;
     ~Engine() = default;
 
-    void ProcessInput();    // Poll events and feed the input system
+    void ProcessInput();
+    void InitLogFile();
+    void LoadConfig();
+
+    std::ofstream m_logFile;    // Poll events and feed the input system
     void Update(float dt);  // Advance game logic by one fixed step
     void Render();          // Draw world + UI
     void Shutdown();        // Destroy subsystems in reverse order
 
     EngineConfig m_config;
     EngineState  m_state = EngineState::Uninitialized;
+
+    // Subsystem order matters: destruction is reverse of declaration.
 
     // Subsystem order matters: destruction is reverse of declaration.
     std::unique_ptr<Timer>           m_timer;
@@ -100,4 +121,6 @@ private:
     std::unique_ptr<Player>          m_player;
     std::unique_ptr<InventorySystem> m_inventory;
     std::unique_ptr<EditorUI>        m_editorUI;
+    std::unique_ptr<AudioSystem>     m_audio;
+    std::unique_ptr<ConfigLoader>    m_configLoader;
 };

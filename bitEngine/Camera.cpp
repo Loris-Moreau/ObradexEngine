@@ -68,7 +68,7 @@ glm::mat4 Camera::GetView() const
     // corners, not just tilt the view in place.
     // leanFraction is in [-1, 1], mapping m_lean to the configured distance.
     // A small upward offset (5% of the lateral shift) counters the slight
-    // downward drift that a real sideways lean produces — without it the
+    // downward drift that a real sideways lean produces - without it the
     // horizon appears to drop noticeably at full lean.
     float leanFraction  = m_lean / 15.f;
     float lateralOffset = leanFraction * m_leanDistance;

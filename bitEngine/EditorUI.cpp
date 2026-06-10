@@ -9,6 +9,8 @@
 #include "World.h"
 #include "Player.h"
 #include "InventorySystem.h"
+#include "AudioSystem.h"
+#include "ConfigLoader.h"
 
 #include <imgui.h>
 #include <backends/imgui_impl_glfw.h>
@@ -111,6 +113,15 @@ void EditorUI::Render(Engine& engine)
                     DrawWorldPanel(engine);
                     ImGui::EndTabItem();
                 }
+                if (ImGui::BeginTabItem("Audio"))
+                {
+                    AudioSystem& audio = engine.GetAudio();
+                    float vol = audio.GetMasterVolume();
+                    if (ImGui::SliderFloat("Master volume", &vol, 0.f, 1.f))
+                        audio.SetMasterVolume(vol);
+                    ImGui::TextDisabled("Audio is a stub. See AudioSystem.h to integrate miniaudio.");
+                    ImGui::EndTabItem();
+                }
                 if (ImGui::BeginTabItem("Level Editor"))
                 {
                     DrawLevelEditorPanel(engine);
@@ -121,6 +132,10 @@ void EditorUI::Render(Engine& engine)
         }
         ImGui::End();
     }
+
+
+    // Full-screen state overlays (main menu, pause, game over, level complete)
+    DrawStateOverlay(*this);
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -165,7 +180,7 @@ void EditorUI::DrawHUD(Engine& engine)
             case MoveState::Sprinting: stateStr = "SPRINTING"; break;
             case MoveState::Sliding:   stateStr = "SLIDING";   break;
             case MoveState::InAir:     stateStr = "IN AIR";    break;
-            case MoveState::Vaulting:  stateStr = "VAULTING";  break;
+            // Vaulting is a reserved state that cannot be entered; no badge needed
             default: break;
         }
         draw->AddText(ImVec2(12, 12), IM_COL32(160, 140, 80, 160), stateStr);
@@ -262,6 +277,16 @@ void EditorUI::DrawRendererPanel(Engine& engine)
     }
     if (ImGui::Button("Reset"))
         pp = PostProcessSettings{};
+
+    ImGui::SeparatorText("Fog");
+    Renderer& rend = engine.GetRenderer();
+    static float fogDensity = 0.f;
+    static float fogCol[3]  = {0.04f, 0.04f, 0.06f};
+    if (ImGui::SliderFloat("Density", &fogDensity, 0.f, 0.15f))
+        rend.SetFogDensity(fogDensity);
+    if (ImGui::ColorEdit3("Fog colour", fogCol))
+        rend.SetFogColour({fogCol[0], fogCol[1], fogCol[2]});
+
 }
 
 void EditorUI::DrawPlayerPanel(Engine& engine)
@@ -569,4 +594,162 @@ void EditorUI::DrawContainerPopup(Engine& engine)
 
     if (!windowOpen)
         container->isOpen = false;
+}
+
+// DrawStateOverlay - renders main menu, pause, game-over, and level-complete
+// screens as full-window ImGui windows. Called every frame from Render().
+static void CentreNextWindow(float w, float h)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui::SetNextWindowPos(ImVec2((io.DisplaySize.x-w)*0.5f,
+                                   (io.DisplaySize.y-h)*0.5f), ImGuiCond_Always);
+    ImGui::SetNextWindowSize(ImVec2(w, h), ImGuiCond_Always);
+}
+
+static void DrawOverlayBg(float alpha = 180.f)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui::GetBackgroundDrawList()->AddRectFilled(
+        {0,0}, {io.DisplaySize.x, io.DisplaySize.y},
+        IM_COL32(0,0,0,(int)alpha));
+}
+
+void EditorUI::DrawStateOverlay(Engine& engine)
+{
+    EngineState state = engine.GetState();
+    if (state == EngineState::Running) return;
+
+    // Push menu style
+    ImGui::PushStyleColor(ImGuiCol_WindowBg,      ImVec4(0.06f,0.05f,0.04f,0.97f));
+    ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.20f,0.14f,0.04f,1.f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.40f,0.28f,0.07f,1.f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive,  ImVec4(0.60f,0.42f,0.10f,1.f));
+    ImGui::PushStyleColor(ImGuiCol_Border,        ImVec4(0.55f,0.40f,0.10f,0.85f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 6.f);
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,    ImVec2(8.f, 10.f));
+
+    const float BW = 220.f, BH = 36.f;  // Button dimensions
+
+    if (state == EngineState::MainMenu)
+    {
+        DrawOverlayBg(220.f);
+        CentreNextWindow(320.f, 260.f);
+        ImGui::Begin("##mainmenu", nullptr,
+            ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|
+            ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollbar);
+
+        ImGui::SetCursorPosX((320.f - ImGui::CalcTextSize("OBRADEX").x * 2.5f) * 0.5f);
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.85f,0.62f,0.18f,1.f));
+        ImGui::SetWindowFontScale(2.5f);
+        ImGui::Text("OBRADEX");
+        ImGui::SetWindowFontScale(1.f);
+        ImGui::PopStyleColor();
+        ImGui::Spacing(); ImGui::Spacing();
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f,0.6f,0.6f,1.f));
+        ImGui::SetCursorPosX((320.f - ImGui::CalcTextSize("Pre-Alpha 0.1.0").x) * 0.5f);
+        ImGui::Text("Pre-Alpha 0.1.0");
+        ImGui::PopStyleColor();
+        ImGui::Spacing(); ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
+
+        ImGui::SetCursorPosX((320.f - BW) * 0.5f);
+        if (ImGui::Button("Start Game", ImVec2(BW, BH)))
+            engine.StartGame();
+
+        ImGui::Spacing();
+        ImGui::SetCursorPosX((320.f - BW) * 0.5f);
+        if (ImGui::Button("Quit", ImVec2(BW, BH)))
+            engine.RequestShutdown();
+
+        ImGui::End();
+    }
+    else if (state == EngineState::Paused)
+    {
+        DrawOverlayBg(140.f);
+        CentreNextWindow(280.f, 230.f);
+        ImGui::Begin("##pause", nullptr,
+            ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|
+            ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollbar);
+
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.85f,0.62f,0.18f,1.f));
+        ImGui::SetWindowFontScale(1.8f);
+        ImGui::SetCursorPosX((280.f - ImGui::CalcTextSize("PAUSED").x*1.8f)*0.5f);
+        ImGui::Text("PAUSED");
+        ImGui::SetWindowFontScale(1.f);
+        ImGui::PopStyleColor();
+        ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
+
+        ImGui::SetCursorPosX((280.f - BW) * 0.5f);
+        if (ImGui::Button("Continue", ImVec2(BW, BH)))
+        {
+            engine.SetState(EngineState::Running);
+            engine.GetWindow().SetCursorLocked(true);
+        }
+        ImGui::Spacing();
+        ImGui::SetCursorPosX((280.f - BW) * 0.5f);
+        if (ImGui::Button("Main Menu", ImVec2(BW, BH)))
+            engine.ReturnToMainMenu();
+        ImGui::Spacing();
+        ImGui::SetCursorPosX((280.f - BW) * 0.5f);
+        if (ImGui::Button("Quit", ImVec2(BW, BH)))
+            engine.RequestShutdown();
+
+        ImGui::End();
+    }
+    else if (state == EngineState::GameOver)
+    {
+        DrawOverlayBg(190.f);
+        CentreNextWindow(300.f, 230.f);
+        ImGui::Begin("##gameover", nullptr,
+            ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|
+            ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollbar);
+
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.85f,0.18f,0.18f,1.f));
+        ImGui::SetWindowFontScale(1.8f);
+        ImGui::SetCursorPosX((300.f - ImGui::CalcTextSize("GAME OVER").x*1.8f)*0.5f);
+        ImGui::Text("GAME OVER");
+        ImGui::SetWindowFontScale(1.f);
+        ImGui::PopStyleColor();
+        ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
+
+        ImGui::SetCursorPosX((300.f - BW) * 0.5f);
+        if (ImGui::Button("Retry", ImVec2(BW, BH)))
+            engine.RespawnPlayer();
+        ImGui::Spacing();
+        ImGui::SetCursorPosX((300.f - BW) * 0.5f);
+        if (ImGui::Button("Main Menu", ImVec2(BW, BH)))
+            engine.ReturnToMainMenu();
+
+        ImGui::End();
+    }
+    else if (state == EngineState::LevelComplete)
+    {
+        DrawOverlayBg(160.f);
+        CentreNextWindow(340.f, 220.f);
+        ImGui::Begin("##complete", nullptr,
+            ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|
+            ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollbar);
+
+        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.18f,0.85f,0.38f,1.f));
+        ImGui::SetWindowFontScale(1.6f);
+        ImGui::SetCursorPosX((340.f - ImGui::CalcTextSize("LEVEL COMPLETE").x*1.6f)*0.5f);
+        ImGui::Text("LEVEL COMPLETE");
+        ImGui::SetWindowFontScale(1.f);
+        ImGui::PopStyleColor();
+        ImGui::Spacing();
+        char timeStr[48];
+        std::snprintf(timeStr, sizeof(timeStr), "Time: %.1f s",
+                      engine.GetTimer().GetTotalTime());
+        ImGui::SetCursorPosX((340.f - ImGui::CalcTextSize(timeStr).x)*0.5f);
+        ImGui::TextDisabled("%s", timeStr);
+        ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
+
+        ImGui::SetCursorPosX((340.f - BW) * 0.5f);
+        if (ImGui::Button("Main Menu", ImVec2(BW, BH)))
+            engine.ReturnToMainMenu();
+
+        ImGui::End();
+    }
+
+    ImGui::PopStyleVar(2);
+    ImGui::PopStyleColor(5);
 }

@@ -13,6 +13,7 @@ class  Engine;
 class  LevelEditor;
 
 class EditorUI
+    // Allow DrawStateOverlay to set engine state directly
 {
 public:
     // Constructor and destructor are defined in EditorUI.cpp so the compiler
@@ -35,7 +36,8 @@ private:
     void DrawPlayerPanel     (Engine& engine);
     void DrawLevelEditorPanel(Engine& engine);
     void DrawContainerPopup  (Engine& engine);  // 3x3 item grid when a container is open
-    void DrawHUD             (Engine& engine);  // Always-on crosshair and interact prompt
+    void DrawHUD             (Engine& engine);
+    void DrawStateOverlay    (Engine& engine);  // Always-on crosshair and interact prompt
 
     bool m_showEditor       = false;
     int  m_selectedEntity   = -1;
