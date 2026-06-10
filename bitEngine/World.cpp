@@ -4,6 +4,8 @@
 #include "Shader.h"
 #include "Mesh.h"
 #include "Interaction.h"
+#include "Engine.h"
+#include "Player.h"
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <cmath>
@@ -60,8 +62,13 @@ void World::ClearLevel()
     // Primitive meshes are GPU resources kept alive across level loads.
     ReserveComponentStorage();
 
-    std::cout << "[World] Level cleared.\n";
+    // Set default spawn position (can be overridden by a TYPE spawn entity in a loaded level)
+    m_spawnPos = {0.f, 0.f, 0.f};
+
+        std::cout << "[World] Level cleared.\n";
 }
+
+void World::LoadDefaultLevel() { LoadTestLevel(); }
 
 void World::LoadTestLevel()
 {
@@ -131,6 +138,7 @@ void World::LoadTestLevel()
         tri->halfExtents = {3.f, 2.f, 1.f};
         tri->onEnter     = []() {
             std::cout << "[World] Player reached the exit zone!\n";
+            Engine::Get().NotifyLevelComplete();
         };
     }
 

@@ -144,6 +144,10 @@ public:
     // Set isOpen = false on the first open container found.
     void CloseOpenContainer();
 
+    glm::vec3 GetSpawnPos()  const             { return m_spawnPos; }
+    void      SetSpawnPos(const glm::vec3& p) { m_spawnPos = p;    }
+    void LoadDefaultLevel(); // Public alias to LoadTestLevel
+
     Mesh* GetCubeMesh()   { return m_cubeMesh.get();   }
     Mesh* GetPlaneMesh()  { return m_planeMesh.get();  }
     Mesh* GetSphereMesh() { return m_sphereMesh.get(); }
@@ -152,6 +156,8 @@ private:
     void LoadTestLevel();
     void UpdateLights(float dt);
     void ReserveComponentStorage();
+
+    glm::vec3 m_spawnPos = {0.f, 0.f, 0.f};
 
     std::vector<EntityRecord>          m_records;
     std::vector<TransformComponent>    m_transforms;
