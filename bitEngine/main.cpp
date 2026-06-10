@@ -36,7 +36,7 @@ int main()
         return 1;
     }
 
-    engine.GetWindow().SetCursorLocked(true);
+    // Cursor unlocked at startup; locked when StartGame() is called.
     engine.Run();
 
     return 0;
