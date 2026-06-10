@@ -2,6 +2,7 @@
 
 #include "Input.h"
 #include <GLFW/glfw3.h>
+#include <cctype>
 #include <iostream>
 
 void Input::Init(GLFWwindow* window)
@@ -92,23 +93,26 @@ bool Input::IsButtonJustPressed(MouseButton b) const
 
 const char* Input::GetKeyName(Key k)
 {
+    // Use GLFW's OS-level key label so the prompt reads correctly on any
+    // keyboard layout: physical W shows "W" on QWERTY and "Z" on AZERTY.
+    const char* g = glfwGetKeyName(static_cast<int>(k), 0);
+    if (g && g[0] != '\0')
+    {
+        thread_local char buf[8];
+        int i = 0;
+        while (g[i] && i < 7)
+        { buf[i] = static_cast<char>(std::toupper(static_cast<unsigned char>(g[i]))); ++i; }
+        buf[i] = '\0';
+        return buf;
+    }
+    // Non-printable fallbacks
     switch (k)
     {
-        case Key::Z:      return "Z";
-        case Key::Q:      return "Q";
-        case Key::S:      return "S";
-        case Key::D:      return "D";
-        case Key::A:      return "A";
-        case Key::E:      return "E";
         case Key::Space:  return "Space";
         case Key::LShift: return "Shift";
         case Key::LCtrl:  return "Ctrl";
         case Key::F1:     return "F1";
         case Key::Escape: return "Esc";
-        case Key::R:      return "R";
-        case Key::F:      return "F";
-        case Key::G:      return "G";
-        case Key::I:      return "I";
         case Key::Tab:    return "Tab";
         default:          return "?";
     }
