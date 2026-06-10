@@ -13,6 +13,9 @@
     <Filter Include="Gameplay">
       <UniqueIdentifier>{10000004-0000-0000-0000-000000000001}</UniqueIdentifier>
     </Filter>
+    <Filter Include="System">
+      <UniqueIdentifier>{a1b2c3d4-e5f6-7890-abcd-ef1234567890}</UniqueIdentifier>
+    </Filter>
     <Filter Include="UI">
       <UniqueIdentifier>{10000005-0000-0000-0000-000000000001}</UniqueIdentifier>
     </Filter>
@@ -41,6 +44,8 @@
     <ClCompile Include="LevelEditor.cpp"><Filter>UI</Filter></ClCompile>
     <ClCompile Include="EditorUI.cpp"><Filter>UI</Filter></ClCompile>
     <ClCompile Include="InventorySystem.cpp"><Filter>UI</Filter></ClCompile>
+    <ClCompile Include="AudioSystem.cpp"><Filter>System</Filter></ClCompile>
+    <ClCompile Include="ConfigLoader.cpp"><Filter>System</Filter></ClCompile>
     <ClCompile Include="..\third_party\glad\src\glad.c"><Filter>Third Party</Filter></ClCompile>
     <ClCompile Include="..\third_party\imgui\imgui.cpp"><Filter>Third Party</Filter></ClCompile>
     <ClCompile Include="..\third_party\imgui\imgui_draw.cpp"><Filter>Third Party</Filter></ClCompile>
@@ -67,6 +72,8 @@
     <ClInclude Include="LevelEditor.h"><Filter>UI</Filter></ClInclude>
     <ClInclude Include="EditorUI.h"><Filter>UI</Filter></ClInclude>
     <ClInclude Include="InventorySystem.h"><Filter>UI</Filter></ClInclude>
+    <ClInclude Include="AudioSystem.h"><Filter>System</Filter></ClInclude>
+    <ClInclude Include="ConfigLoader.h"><Filter>System</Filter></ClInclude>
   </ItemGroup>
 
   <ItemGroup>

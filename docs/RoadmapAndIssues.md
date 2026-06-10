@@ -402,3 +402,46 @@ The alarm has no event system to call `onTrigger`. The parameter is kept for API
 
 **[FIX] Section 3.7 door fix log contradicts actual implementation**
 Section 3.7 described the door fix as setting `collision->solid = false` on open. The actual shipped fix relies on OBB-to-AABB expansion in `ResolveCollision` and does *not* toggle `solid`. The section 3.7 entry described an earlier iteration that was subsequently replaced. This log entry is retained for historical context; the definitive implementation is the OBB expansion described in section 3.10.
+
+---
+
+### 3.15 Alpha 0.1.0 feature additions
+
+**[FEATURE] Main menu, pause, game over, level complete screens**
+Added `EngineState::MainMenu`, `GameOver`, and `LevelComplete`. Engine starts at `MainMenu`. `EditorUI::DrawStateOverlay` renders the appropriate full-screen ImGui overlay for each state. Pause menu added for `Paused` state. All screens provide navigation back to the main menu or retry.
+
+**[FEATURE] Health system**
+Player has 100 HP. `TakeDamage(int)` reduces it; reaching zero sets `m_dead = true` and `Engine::NotifyPlayerDied()` transitions to `GameOver`. Alarm boxes deal 25 damage via a proximity trigger while armed. A health bar HUD element is drawn bottom-left at all times during gameplay.
+
+**[FEATURE] Kill-plane**
+`Player::Update` checks `m_position.y < -20.f` each tick and calls `TakeDamage(maxHealth)`, triggering death and respawn. Prevents the infinite-fall softlock when walking off the level edge.
+
+**[FEATURE] Spawn point entity**
+`TYPE spawn` in the .lvl format sets `World::m_spawnPos`. `Engine::StartGame` passes this to `Player::SetSpawnPos`. `Player::RespawnAtSpawn` resets position, velocity, and health. `Engine::RespawnPlayer` transitions back to `Running` state.
+
+**[FEATURE] Fog**
+Exponential distance fog implemented in `world.frag` via `u_FogDensity` and `u_FogColour` uniforms. `Renderer::SetFogDensity / SetFogColour` provide the API. Sliders added to the Renderer editor tab. Default density is 0 (off).
+
+**[FEATURE] Point lights collected from World each frame**
+`Engine::Render` now iterates all active `LightComponent` entities and calls `Renderer::AddPointLight` before the draw call. Previously the point light array was never populated so placed lamps had no visual effect.
+
+**[FEATURE] AudioSystem stub**
+`AudioSystem.h / .cpp` provides `Init, Shutdown, LoadSound, Play, PlayLoop, Stop, SetMasterVolume`. All calls are no-ops. Volume slider added to a new Audio editor tab. Comments document the miniaudio integration path.
+
+**[FEATURE] ConfigLoader + config.ini**
+`ConfigLoader.h / .cpp` parses `[section] / key = value` INI files. `Engine::Init` loads `config.ini` before creating subsystems, overriding `EngineConfig` defaults for window size, render resolution, FPS cap, mouse sensitivity, and master volume. Missing file is silently ignored; defaults apply.
+
+**[FEATURE] Log file**
+`Engine::InitLogFile` opens `log.txt` and installs a `TeeBuf` on both `std::cout` and `std::cerr`. All engine output is mirrored to the file for post-session debugging, especially on Windows Release builds with no console window.
+
+**[FEATURE] Window icon**
+`Window::Init` generates a 16x16 amber ring on a dark background and passes it to `glfwSetWindowIcon`. No external asset required.
+
+**[FEATURE] Slide direction lock**
+`HandleMovement` captures `m_slideDir = normalize(camera.GetForward())` at slide start. During a slide, `m_velocity.x/z` is driven along `m_slideDir * slideSpeed` instead of live WASD input. Releasing movement keys no longer kills the slide early.
+
+**[FEATURE] Physical key labels via glfwGetKeyName**
+`Input::GetKeyName` now calls `glfwGetKeyName(key, 0)` for printable keys. The OS returns the correct label for the physical key position on the active layout ("W" on QWERTY, "Z" on AZERTY for the same key). HUD prompts are correct on all layouts without manual mapping.
+
+**[FEATURE] Designed demo level: Levels/alpha_demo.lvl**
+A warehouse-style enclosed room with walls, ceiling, platforms for vertical traversal, stacked crates, two loot containers, two pickups, two lampposts, a door, an armed alarm box, and a goal marker connected to the level-complete trigger.

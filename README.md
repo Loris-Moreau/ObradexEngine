@@ -49,6 +49,9 @@ cmake --build . -j$(nproc)
 
 ## Controls
 
+> HUD prompts display keys by their physical position label on the active OS keyboard layout. QWERTY players see W/A/S/D; AZERTY players see Z/Q/S/D. No manual remapping required.
+
+
 | Input     | Action                     |
 |-----------|----------------------------|
 | ZQSD/WASD | Move                       |

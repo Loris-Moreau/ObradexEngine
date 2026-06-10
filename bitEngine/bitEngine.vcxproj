@@ -187,6 +187,8 @@ if not exist "$(OutDir)Levels" mkdir "$(OutDir)Levels"
     <ClCompile Include="EditorUI.cpp" />
     <ClCompile Include="LevelEditor.cpp" />
     <ClCompile Include="InventorySystem.cpp" />
+    <ClCompile Include="AudioSystem.cpp" />
+    <ClCompile Include="ConfigLoader.cpp" />
 
     <!-- GLAD - C file, needs C compiler not C++ -->
     <ClCompile Include="..\glad\src\glad.c" />
@@ -220,6 +222,8 @@ if not exist "$(OutDir)Levels" mkdir "$(OutDir)Levels"
     <ClInclude Include="EditorUI.h" />
     <ClInclude Include="LevelEditor.h" />
     <ClInclude Include="InventorySystem.h" />
+    <ClInclude Include="AudioSystem.h" />
+    <ClInclude Include="ConfigLoader.h" />
   </ItemGroup>
 
   <!-- ── SHADERS (visible in Solution Explorer) ────────────── -->
