@@ -82,6 +82,7 @@ bool LevelEditor::SaveLevel(const World& world, const std::string& path)
         else if (rec.name.find("Container") != std::string::npos) type = "container";
         else if (rec.name.find("Pickup")    != std::string::npos) type = "pickup";
         else if (rec.name.find("Alarm")     != std::string::npos) type = "alarm";
+        else if (rec.name.find("SpawnPoint") != std::string::npos) type = "spawn";
 
         file << "ENTITY\n";
         Ws(file, "TYPE", type);
@@ -210,6 +211,10 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
         else if (cur.type == "alarm")
         {
             Interaction::SpawnAlarm(world, cur.pos);
+        }
+        else if (cur.type == "spawn")
+        {
+            Interaction::SpawnPoint(world, cur.pos);
         }
         else
         {
@@ -383,6 +388,9 @@ void LevelEditor::SpawnCurrent(Engine& engine)
             lc->intensity=m_lightIntensity; lc->flicker=m_lightFlicker;
             break;
         }
+        case 9: // Spawn Point
+            Interaction::SpawnPoint(world, pos);
+            break;
     }
 }
 
