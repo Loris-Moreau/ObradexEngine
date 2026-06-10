@@ -51,4 +51,8 @@ namespace Interaction
                         std::function<void()> onTrigger = nullptr,
                         std::function<void()> onDefuse  = nullptr);
 
+    // Place a spawn point entity. Sets World::m_spawnPos.
+    // Does not produce a visible mesh; visible only in the level editor.
+    EntityID SpawnPoint(World& world, const glm::vec3& position);
+
 } // namespace Interaction

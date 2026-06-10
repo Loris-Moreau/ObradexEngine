@@ -36,6 +36,7 @@ public:
     const std::vector<InventoryEntry>& GetEntries() const { return m_entries; }
 
     void Toggle()         { m_open = !m_open; }
+    void Clear()          { m_entries.clear(); }
     bool IsOpen()   const { return m_open;     }
 
     // Draw the full-screen inventory overlay. Call from EditorUI::Render each frame.

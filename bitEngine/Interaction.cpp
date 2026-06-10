@@ -4,6 +4,9 @@
 #include "World.h"
 #include <iostream>
 
+#include "Engine.h"
+#include "Player.h"
+
 namespace Interaction
 {
 
@@ -253,6 +256,28 @@ EntityID SpawnAlarm(World&                world,
         if (onDefuse) onDefuse();
     };
 
+    // Proximity trigger: while armed, deal 25 damage to the player on enter.
+    auto* tri        = world.AddTrigger(e);
+    tri->halfExtents = {1.5f, 1.5f, 1.5f};
+    tri->onEnter     = [armed]()
+    {
+        if (!*armed) return;
+        std::cout << "[Alarm] Player caught in alarm zone, taking damage!\n";
+        Engine::Get().GetPlayer().TakeDamage(25);
+    };
+
+    return e;
+}
+
+EntityID SpawnPoint(World& world, const glm::vec3& position)
+{
+    world.SetSpawnPos(position);
+    EntityID e = world.CreateEntity("SpawnPoint");
+    auto* t = world.AddTransform(e);
+    t->position = position;
+    t->scale    = {0.3f, 0.3f, 0.3f};
+    // Spawn points have no visible mesh in-game; shown as a marker
+    // in the level editor only.
     return e;
 }
 
