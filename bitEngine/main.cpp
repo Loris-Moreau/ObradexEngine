@@ -16,7 +16,7 @@
 int main()
 {
     EngineConfig config;
-    config.windowTitle  = "Obradex - Pre-Alpha";
+    config.windowTitle  = "Obradex - Alpha";
     config.windowWidth  = 1280;
     config.windowHeight = 720;
     config.fullscreen   = false;

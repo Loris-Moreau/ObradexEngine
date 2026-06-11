@@ -646,8 +646,8 @@ void EditorUI::DrawStateOverlay(Engine& engine)
         ImGui::PopStyleColor();
         ImGui::Spacing(); ImGui::Spacing();
         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.6f,0.6f,0.6f,1.f));
-        ImGui::SetCursorPosX((320.f - ImGui::CalcTextSize("Pre-Alpha 0.1.0").x) * 0.5f);
-        ImGui::Text("Pre-Alpha 0.1.0");
+        //ImGui::SetCursorPosX((320.f - ImGui::CalcTextSize("Pre-Alpha 0.1.0").x) * 0.5f);
+        //ImGui::Text("Pre-Alpha 0.1.0");
         ImGui::PopStyleColor();
         ImGui::Spacing(); ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 

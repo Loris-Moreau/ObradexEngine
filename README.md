@@ -1,6 +1,6 @@
 # ObradexEngine
 
-> **Pre-Alpha** 
+> **Alpha** 
 >
 > Visual style inspired by *Return of the Obra Dinn*
 > 

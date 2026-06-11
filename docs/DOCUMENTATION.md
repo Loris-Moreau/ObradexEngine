@@ -185,14 +185,14 @@ engine.RequestShutdown();    // Signal clean exit from game code
 
 **EngineConfig fields:**
 
-| Field                | Default                 | Description                              |
-|----------------------|-------------------------|------------------------------------------|
-| `windowTitle`        | `"Obradex - Pre-Alpha"` | Window title bar                         |
-| `windowWidth/Height` | 1280 × 720              | OS window size in pixels                 |
-| `fullscreen`         | false                   | Borderless fullscreen on primary monitor |
-| `vsync`              | true                    | Vertical sync                            |
-| `targetFPS`          | 60                      | Fixed-step physics tick rate             |
-| `renderWidth/Height` | 320 × 180               | Internal low-res buffer size             |
+| Field                | Default               | Description                              |
+|----------------------|-----------------------|------------------------------------------|
+| `windowTitle`        | `"Obradex - Version"` | Window title bar                         |
+| `windowWidth/Height` | 1280 × 720            | OS window size in pixels                 |
+| `fullscreen`         | false                 | Borderless fullscreen on primary monitor |
+| `vsync`              | true                  | Vertical sync                            |
+| `targetFPS`          | 60                    | Fixed-step physics tick rate             |
+| `renderWidth/Height` | 320 × 180             | Internal low-res buffer size             |
 
 **EngineState transitions:**
 ```
