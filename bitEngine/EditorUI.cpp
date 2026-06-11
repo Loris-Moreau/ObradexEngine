@@ -135,7 +135,7 @@ void EditorUI::Render(Engine& engine)
 
 
     // Full-screen state overlays (main menu, pause, game over, level complete)
-    DrawStateOverlay(*this);
+    DrawStateOverlay(engine);
 
     ImGui::Render();
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
