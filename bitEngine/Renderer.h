@@ -2,13 +2,14 @@
 
 // Renderer.h - Main OpenGL renderer.
 //
-// Drives the per-frame pipeline:
+// Pipeline per frame:
 //   BeginFrame()       - bind low-res FBO
-//   RenderWorld()      - draw all scene entities
+//   RenderWorld()      - draw all scene entities with Blinn-Phong lighting
 //   ApplyPostProcess() - stop FBO capture
 //   Present()          - dither/palette blit to window with letterboxing
 //
-// Lighting model: one directional light + up to 8 point lights per frame.
+// Point lights are fed from World LightComponent entities by Engine::Render
+// each frame via ClearLights() + AddPointLight(). Up to 8 per frame.
 
 #include <memory>
 #include <glm/glm.hpp>
@@ -32,7 +33,6 @@ public:
     Renderer()  = default;
     ~Renderer() = default;
 
-    // Initialise OpenGL state, compile world shader, create post-process FBO.
     bool Init(int renderW, int renderH);
 
     void BeginFrame();
@@ -41,8 +41,6 @@ public:
     void Present(int windowW, int windowH);
 
     void ClearLights();
-    void SetFogDensity(float density);
-    void SetFogColour (const glm::vec3& col);
     void AddPointLight(const PointLight& light);
     void SetSunDirection(const glm::vec3& dir);
     void SetSunColour   (const glm::vec3& col);
@@ -55,7 +53,6 @@ public:
     int RenderHeight() const { return m_renderH; }
 
 private:
-    // Upload all point light data to the bound world shader.
     void UploadLights(Shader& shader) const;
 
     int m_renderW = 320;
@@ -65,16 +62,12 @@ private:
     std::unique_ptr<PostProcess> m_postProcess;
 
     static constexpr int kMaxPointLights = 8;
-    PointLight  m_pointLights[kMaxPointLights];
-    int         m_pointLightCount = 0;
+    PointLight m_pointLights[kMaxPointLights];
+    int        m_pointLightCount = 0;
 
-    glm::vec3 m_sunDir    = glm::normalize(glm::vec3(-0.4f, -0.8f, -0.3f));
-    glm::vec3 m_sunColour = {0.7f, 0.75f, 0.85f};   // Cool moonlight
-    glm::vec3 m_ambient   = {0.05f, 0.05f, 0.08f};
+    glm::vec3 m_sunDir     = glm::normalize(glm::vec3(-0.4f, -0.8f, -0.3f));
+    glm::vec3 m_sunColour  = {0.7f, 0.75f, 0.85f};
+    glm::vec3 m_ambient    = {0.05f, 0.05f, 0.08f};
     float     m_fogDensity = 0.f;
     glm::vec3 m_fogColour  = {0.04f, 0.04f, 0.06f};
-    float     m_fogDensity = 0.0f;
-    glm::vec3 m_fogColour  = {0.04f, 0.04f, 0.06f};
-    float     m_fogDensity = 0.0f;
-    glm::vec3 m_fogColour  = {0.04f, 0.04f, 0.06f};  // Near-black fill
 };

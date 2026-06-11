@@ -112,7 +112,11 @@ private:
     float m_vaultTimer  = 0.f;
     float m_airSpeedCap = 0.f;    // Horizontal speed at jump time; used as in-air cap
 
-    bool m_onGround     = true;
+    int   m_health      = 100;
+    int   m_maxHealth   = 100;
+    bool  m_dead        = false;
+    glm::vec3 m_spawnPos= {0.f, 0.f, 0.f};
+    bool  m_onGround    = true;
     bool m_jumpConsumed = false;  // Prevents re-firing the jump within the same key press
     bool m_isHidden     = false;
 

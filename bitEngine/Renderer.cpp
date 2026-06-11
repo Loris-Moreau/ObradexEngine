@@ -63,8 +63,6 @@ void Renderer::RenderWorld(const World& world, const Camera& camera)
     m_worldShader->SetVec3("u_Ambient",   m_ambient);
     m_worldShader->SetFloat("u_FogDensity", m_fogDensity);
     m_worldShader->SetVec3 ("u_FogColour",  m_fogColour);
-    m_worldShader->SetFloat("u_FogDensity", m_fogDensity);
-    m_worldShader->SetVec3 ("u_FogColour",  m_fogColour);
     UploadLights(*m_worldShader);
 
     world.Render(*m_worldShader);

@@ -1,14 +1,11 @@
 #pragma once
 
-// Engine.h - Root singleton that owns every subsystem and drives the game loop.
+// Engine.h - Root singleton. Owns all subsystems and drives the game loop.
 //
-// Lifecycle:
-//   Engine::Get().Init(config)  - allocate and initialise all systems in order
-//   Engine::Get().Run()         - enter the blocking game loop
-//   Engine::Get().Shutdown()    - release resources (called automatically by Run)
-//
-// Systems are stored as unique_ptr for RAII cleanup and to keep headers lean
-// (forward declarations are enough in most callers).
+// State machine:
+//   Uninitialized -> MainMenu -> Running <-> Paused
+//                                  |
+//                             GameOver / LevelComplete -> MainMenu
 
 #include <memory>
 #include <fstream>
@@ -36,48 +33,41 @@ enum class EngineState
     Shutdown
 };
 
-// Passed to Engine::Init() to configure startup behaviour.
 struct EngineConfig
 {
-    std::string windowTitle   = "Obradex";
-    int         windowWidth   = 1280;
-    int         windowHeight  = 720;
-    bool        fullscreen    = false;
-    bool        vsync         = true;
-    int         targetFPS     = 60;
-
-    // Resolution of the internal low-res render buffer. The image is
-    // upscaled to the window size for the pixel-art / dithered look.
-    int         renderWidth   = 320;
-    int         renderHeight  = 180;
+    std::string windowTitle  = "Obradex";
+    int  windowWidth         = 1280;
+    int  windowHeight        = 720;
+    bool fullscreen          = false;
+    bool vsync               = true;
+    int  targetFPS           = 60;
+    int  renderWidth         = 320;
+    int  renderHeight        = 180;
+    float sensitivity        = 0.12f;
+    float masterVolume       = 1.0f;
 };
 
 class Engine
 {
 public:
-    static Engine& Get();  // Meyers singleton, thread-safe in C++11+
+    static Engine& Get();
 
     Engine(const Engine&)            = delete;
     Engine& operator=(const Engine&) = delete;
     Engine(Engine&&)                 = delete;
     Engine& operator=(Engine&&)      = delete;
 
-    // Initialise all subsystems in dependency order.
-    // Returns true on success, false if a fatal error occurred.
     bool Init(const EngineConfig& config = {});
-
-    // Enter the main game loop. Blocks until the window is closed
-    // or RequestShutdown() is called.
     void Run();
 
-    // Signal the game loop to exit cleanly on the next frame.
-    void RequestShutdown()    { m_state = EngineState::Shutdown; }
-    void SetState(EngineState s){ m_state = s; }  // Used by EditorUI overlays
-    void NotifyPlayerDied();   // Called when health reaches zero
-    void NotifyLevelComplete();// Called by the exit trigger
-    void StartGame();          // Load level and enter Running state
-    void ReturnToMainMenu();   // Clear level and return to menu
-    void RespawnPlayer();      // Reset player at spawn, resume Running
+    void RequestShutdown()     { m_state = EngineState::Shutdown; }
+    void SetState(EngineState s){ m_state = s; }
+
+    void NotifyPlayerDied();
+    void NotifyLevelComplete();
+    void StartGame();
+    void ReturnToMainMenu();
+    void RespawnPlayer();
 
     Window&          GetWindow()    const;
     Renderer&        GetRenderer()  const;
@@ -89,30 +79,25 @@ public:
     InventorySystem& GetInventory() const;
     AudioSystem&     GetAudio()     const;
     ConfigLoader&    GetConfig()    const;
-    InventorySystem& GetInventory() const;
 
     EngineState         GetState()  const { return m_state;  }
-    const EngineConfig& GetConfig() const { return m_config; }
+    const EngineConfig& GetConfig2()const { return m_config; }
 
 private:
     Engine()  = default;
     ~Engine() = default;
 
     void ProcessInput();
+    void Update(float dt);
+    void Render();
+    void Shutdown();
     void InitLogFile();
     void LoadConfig();
 
-    std::ofstream m_logFile;    // Poll events and feed the input system
-    void Update(float dt);  // Advance game logic by one fixed step
-    void Render();          // Draw world + UI
-    void Shutdown();        // Destroy subsystems in reverse order
+    EngineConfig  m_config;
+    EngineState   m_state = EngineState::Uninitialized;
+    std::ofstream m_logFile;
 
-    EngineConfig m_config;
-    EngineState  m_state = EngineState::Uninitialized;
-
-    // Subsystem order matters: destruction is reverse of declaration.
-
-    // Subsystem order matters: destruction is reverse of declaration.
     std::unique_ptr<Timer>           m_timer;
     std::unique_ptr<Input>           m_input;
     std::unique_ptr<Window>          m_window;

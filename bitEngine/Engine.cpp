@@ -135,6 +135,7 @@ void Engine::StartGame(){
     m_player->SetSpawnPos(m_world->GetSpawnPos());
     m_player->RespawnAtSpawn();
     m_inventory->Clear();
+    m_world->ResetLevelComplete();
     m_state = EngineState::Running;
     m_window->SetCursorLocked(true);
 }
@@ -234,7 +235,8 @@ void Engine::ProcessInput(){
 void Engine::Update(float dt){
     m_world->Update(dt);
     m_player->Update(dt, *m_input, *m_world);
-    if(m_player->IsDead()) NotifyPlayerDied();
+    if(m_player->IsDead())           NotifyPlayerDied();
+    if(m_world->IsLevelComplete())   NotifyLevelComplete();
 }
 
 void Engine::Render(){

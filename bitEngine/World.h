@@ -145,6 +145,8 @@ public:
     void CloseOpenContainer();
 
     glm::vec3 GetSpawnPos()  const             { return m_spawnPos; }
+    bool      IsLevelComplete() const { return m_levelComplete; }
+    void      ResetLevelComplete()    { m_levelComplete = false; }
     void      SetSpawnPos(const glm::vec3& p) { m_spawnPos = p;    }
     void LoadDefaultLevel(); // Public alias to LoadTestLevel
 
@@ -157,7 +159,8 @@ private:
     void UpdateLights(float dt);
     void ReserveComponentStorage();
 
-    glm::vec3 m_spawnPos = {0.f, 0.f, 0.f};
+    glm::vec3 m_spawnPos      = {0.f, 0.f, 0.f};
+    bool      m_levelComplete = false;
 
     std::vector<EntityRecord>          m_records;
     std::vector<TransformComponent>    m_transforms;
