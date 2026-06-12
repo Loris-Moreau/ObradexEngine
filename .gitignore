@@ -344,3 +344,4 @@ healthchecksdb
 /third_party
 /build
 bitEngine/log.txt
+CHANGELOG.md
