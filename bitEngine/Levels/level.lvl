@@ -186,3 +186,10 @@ ENTITY
   ITEM Watch 1
 END
 
+ENTITY
+  TYPE spawn
+  NAME SpawnPoint
+  POS 5.17973 0.5 -6.29521
+  SCALE 0.3 0.3 0.3
+END
+

@@ -36,7 +36,7 @@ static TeeBuf *s_coutTee=nullptr, *s_cerrTee=nullptr;
 Engine& Engine::Get(){ static Engine e; return e; }
 
 void Engine::InitLogFile(){
-    m_logFile.open("log.txt", std::ios::out|std::ios::trunc);
+    m_logFile.open("../log.txt", std::ios::out|std::ios::trunc);
     if(m_logFile.is_open()){
         s_coutTee = new TeeBuf(std::cout.rdbuf(), m_logFile.rdbuf());
         s_cerrTee = new TeeBuf(std::cerr.rdbuf(), m_logFile.rdbuf());
@@ -49,15 +49,15 @@ void Engine::InitLogFile(){
 void Engine::LoadConfig(){
     m_configLoader = std::make_unique<ConfigLoader>();
     m_configLoader->Load("config.ini");
-    m_config.windowWidth  = m_configLoader->GetInt  ("window","width",      m_config.windowWidth);
-    m_config.windowHeight = m_configLoader->GetInt  ("window","height",     m_config.windowHeight);
-    m_config.fullscreen   = m_configLoader->GetBool ("window","fullscreen", m_config.fullscreen);
-    m_config.vsync        = m_configLoader->GetBool ("window","vsync",      m_config.vsync);
-    m_config.renderWidth  = m_configLoader->GetInt  ("render","width",      m_config.renderWidth);
-    m_config.renderHeight = m_configLoader->GetInt  ("render","height",     m_config.renderHeight);
-    m_config.targetFPS    = m_configLoader->GetInt  ("render","fps",        m_config.targetFPS);
-    m_config.sensitivity  = m_configLoader->GetFloat("player","sensitivity",m_config.sensitivity);
-    m_config.masterVolume = m_configLoader->GetFloat("audio", "master_volume",m_config.masterVolume);
+    m_config.windowWidth  = m_configLoader->GetInt  ("window","width",         m_config.windowWidth);
+    m_config.windowHeight = m_configLoader->GetInt  ("window","height",        m_config.windowHeight);
+    m_config.fullscreen   = m_configLoader->GetBool ("window","fullscreen",    m_config.fullscreen);
+    m_config.vsync        = m_configLoader->GetBool ("window","vsync",         m_config.vsync);
+    m_config.renderWidth  = m_configLoader->GetInt  ("render","width",         m_config.renderWidth);
+    m_config.renderHeight = m_configLoader->GetInt  ("render","height",        m_config.renderHeight);
+    m_config.targetFPS    = m_configLoader->GetInt  ("render","fps",           m_config.targetFPS);
+    m_config.sensitivity  = m_configLoader->GetFloat("player","sensitivity",   m_config.sensitivity);
+    m_config.masterVolume = m_configLoader->GetFloat("audio", "master_volume", m_config.masterVolume);
 }
 
 bool Engine::Init(const EngineConfig& config){
@@ -67,7 +67,7 @@ bool Engine::Init(const EngineConfig& config){
     m_config = config;
     InitLogFile();
     LoadConfig();
-    std::cout<<"[Engine] Initialising ObradexEngine v0.1.0-alpha\n";
+    std::cout<<"[Engine] Initialising ObradexEngine\n";
     try{
         m_timer = std::make_unique<Timer>();
         std::cout<<"[Engine]  Timer        OK\n";

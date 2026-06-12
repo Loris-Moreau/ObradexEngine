@@ -15,7 +15,7 @@ static std::string Lo(std::string s){
 }
 bool ConfigLoader::Load(const std::string& path){
     std::ifstream f(path);
-    if(!f.is_open()){std::cout<<"[Config] "<<path<<" not found, using defaults.\n";return false;}
+    if(!f.is_open()){std::cout<<"[Config] "<< path <<" not found, using defaults.\n";return false;}
     std::string sec,line;
     while(std::getline(f,line)){
         line=Trim(line);
@@ -24,6 +24,7 @@ bool ConfigLoader::Load(const std::string& path){
         auto eq=line.find('=');if(eq==std::string::npos)continue;
         m_data[sec][Lo(Trim(line.substr(0,eq)))]=Trim(line.substr(eq+1));
     }
+    
     std::cout<<"[Config] Loaded "<<path<<"\n";return true;
 }
 bool ConfigLoader::Save(const std::string& path) const{

@@ -405,7 +405,7 @@ Section 3.7 described the door fix as setting `collision->solid = false` on open
 
 ---
 
-### 3.15 Alpha 0.1.0 feature additions
+### 3.15 Alpha 1.0.0 feature additions
 
 **[FEATURE] Main menu, pause, game over, level complete screens**
 Added `EngineState::MainMenu`, `GameOver`, and `LevelComplete`. Engine starts at `MainMenu`. `EditorUI::DrawStateOverlay` renders the appropriate full-screen ImGui overlay for each state. Pause menu added for `Paused` state. All screens provide navigation back to the main menu or retry.
