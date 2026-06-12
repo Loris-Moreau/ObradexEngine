@@ -112,12 +112,8 @@
     </Link>
     <!-- Copy Shaders/ folder next to the .exe so they're found at runtime -->
     <PostBuildEvent>
-      <Command>
-if not exist "$(OutDir)Shaders" mkdir "$(OutDir)Shaders"
-xcopy /E /Y /I "$(ProjectDir)Shaders" "$(OutDir)Shaders"
-if not exist "$(OutDir)Levels" mkdir "$(OutDir)Levels"
-      </Command>
-      <Message>Copying shaders to output directory...</Message>
+      <Command>xcopy /D /E /Y /I "$(ProjectDir)Shaders" "$(OutDir)Shaders" &amp; xcopy /D /E /Y /I "$(ProjectDir)Levels" "$(OutDir)Levels" &amp; xcopy /D /Y "$(ProjectDir)config.ini" "$(OutDir)" &amp; xcopy /D /Y "$(SolutionDir)CHANGELOG.md" "$(OutDir)"</Command>
+      <Message>Copying necessary files to output directory...</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
 
