@@ -81,7 +81,7 @@ public:
     ConfigLoader&    GetConfig()    const;
 
     EngineState         GetState()  const { return m_state;  }
-    const EngineConfig& GetConfig2()const { return m_config; }
+    const EngineConfig& GetEngineConfig()const { return m_config; }
 
 private:
     Engine()  = default;

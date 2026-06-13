@@ -181,6 +181,11 @@ Engine& engine = Engine::Get();
 engine.Init(config);         // Allocate all subsystems
 engine.Run();                // Blocking game loop
 engine.RequestShutdown();    // Signal clean exit from game code
+engine.StartGame();           // Load alpha_demo.lvl and enter Running state
+engine.ReturnToMainMenu();    // Clear level and return to MainMenu
+engine.RespawnPlayer();       // Reset player at spawn, resume Running
+engine.NotifyPlayerDied();    // Called by Player when health reaches zero
+engine.NotifyLevelComplete(); // Called by the exit trigger
 ```
 
 **EngineConfig fields:**
@@ -196,11 +201,11 @@ engine.RequestShutdown();    // Signal clean exit from game code
 
 **EngineState transitions:**
 ```
-Uninitialized → Running ⇄ Paused → Shutdown
-                  ↑
-               Escape toggles (unless a container is open -
-               Escape then closes the container instead)
+Uninitialized -> MainMenu -> Running <-> Paused
+                                 |
+                            GameOver / LevelComplete -> MainMenu
 ```
+Escape priority while Running: open container > open inventory > pause.
 
 ---
 
@@ -557,6 +562,8 @@ The nearest-neighbour upscale from 320 × 180 → 1280 × 720 is handled by Open
 | `u_PointLights[i].intensity` | float | Brightness scalar                      |
 | `u_PointLightCount`          | int   | Active lights (0–8)                    |
 | `u_CamPos`                   | vec3  | Camera world position (specular)       |
+| `u_FogDensity`               | float | Exponential fog density (0 = off)      |
+| `u_FogColour`                | vec3  | Fog blend target colour                |
 
 ### Post-process shader (embedded in PostProcess.cpp)
 
@@ -568,7 +575,7 @@ Key uniforms: `u_Scene` (sampler2D), `u_Palette` (sampler1D), `u_PaletteSize`, `
 
 | Key / Input   | Action                                                  |
 |---------------|---------------------------------------------------------|
-| Z / Q / S / D | Move forward / left / back / right (AZERTY)             |
+| Z / Q / S / D | Move forward / left / back / right (physical key position; HUD shows OS label) |
 | Mouse X / Y   | Camera yaw / pitch                                      |
 | Left Shift    | Sprint                                                  |
 | Left Ctrl     | Crouch; if already sprinting, slide                     |
@@ -641,8 +648,9 @@ END
 | `door`      | Pivoting door panel                        |
 | `container` | Searchable loot box (max 9 items)          |
 | `pickup`    | Collectible ground item                    |
-| `alarm`     | Armed alarm box with defuse interact       |
+| `alarm`     | Armed alarm box; deals 25 damage while armed, defuse interact to disarm |
 | `light`     | Standalone point light (no mesh)           |
+| `spawn`     | Sets the player spawn point (no mesh shown in-game)                     |
 
 Item names with spaces are serialised with underscores (`First_Aid_Kit`) and restored on load.
 
@@ -680,3 +688,37 @@ Item names with spaces are serialised with underscores (`First_Aid_Kit`) and res
 3. Add a `GLuint textureID` field to `MeshComponent`.
 4. Bind to texture unit 2 before `mesh->Draw()` in `World::Render()`.
 5. Set `u_HasTexture = 1` and sample `u_DiffuseMap` in `world.frag` (uniform stub already declared).
+
+---
+
+### 6.15 AudioSystem (`AudioSystem.h`)
+
+No-op stub. All methods compile and link; no audio is produced until miniaudio is integrated.
+
+```cpp
+AudioSystem& audio = engine.GetAudio();
+audio.LoadSound("click", "sounds/click.wav");
+audio.Play("click");
+audio.SetMasterVolume(0.8f);
+```
+
+To integrate miniaudio:
+1. Download `miniaudio.h` from https://github.com/mackron/miniaudio.
+2. Place it in `third_party/miniaudio/`.
+3. Create one `.cpp` with `#define MINIAUDIO_IMPLEMENTATION` before the include.
+4. Replace the stub bodies in `AudioSystem.cpp` with `ma_engine` calls.
+
+---
+
+### 6.16 ConfigLoader (`ConfigLoader.h`)
+
+Parses INI-style `[section] / key = value` files. Keys and section names are case-insensitive. Lines starting with `#` or `;` are comments. Missing keys return the supplied default — the binary works without a config file.
+
+```cpp
+ConfigLoader& cfg = engine.GetConfig();
+int   width  = cfg.GetInt  ("window", "width",  1280);
+float sens   = cfg.GetFloat("player", "sensitivity", 0.12f);
+bool  vsync  = cfg.GetBool ("window", "vsync",  true);
+```
+
+`config.ini` is loaded by `Engine::Init` before any subsystem is created. Changes require a restart.

@@ -23,7 +23,7 @@
 //   END
 //
 // Supported TYPE values:
-//   cube, plane, sphere, lamppost, door, container, pickup, alarm, light
+//   cube, plane, sphere, lamppost, door, container, pickup, alarm, light, spawn
 
 #include "World.h"
 #include <string>

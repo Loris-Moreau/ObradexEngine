@@ -20,6 +20,14 @@
 - **Entity/component scene graph**: lightweight, no external ECS framework
 - **Point light flickering**: multi-sine candle/fire simulation
 - **Dear ImGui editor**: live post-process tuning, entity inspector, player stats, FPS sparkline
+- **Health system**: 100 HP, HUD bar, alarm proximity damage, game-over screen
+- **Full game loop**: main menu, pause, game-over, level-complete overlays
+- **Spawn points**: TYPE spawn entity in .lvl format; respawn on death
+- **Kill-plane**: falling below -20 m triggers death and respawn
+- **Fog**: exponential distance fog, tunable density and colour in the editor
+- **Config file**: config.ini for window size, render resolution, sensitivity, volume
+- **Log file**: log.txt mirrors all output for post-session debugging
+- **Physical key labels**: HUD prompts use OS-level key names via glfwGetKeyName (layout-agnostic)
 
 ---
 
@@ -54,7 +62,7 @@ cmake --build . -j$(nproc)
 
 | Input     | Action                     |
 |-----------|----------------------------|
-| ZQSD/WASD | Move                       |
+| W/A/S/D   | Move (physical key pos)    |
 | Mouse     | Look                       |
 | Shift     | Sprint                     |
 | Ctrl      | Crouch / Slide             |
@@ -72,10 +80,13 @@ ObradexEngine/
   bitEngine/     - All source files (flat layout)
     *.h / *.cpp  - Engine, Window, Input, Timer, Renderer, Shader,
                    Mesh, Camera, PostProcess, World, Player,
-                   Interaction, InventorySystem, EditorUI, LevelEditor
+                   Interaction, InventorySystem, EditorUI, LevelEditor,
+                   AudioSystem, ConfigLoader
     Shaders/     - world.vert / world.frag (GLSL 4.10)
     Levels/      - Saved .lvl scene files
   docs/          - DOCUMENTATION.md, RoadmapAndIssues.md, References.md
+  config.ini     - Runtime settings (window, render, sensitivity, volume)
+  CHANGELOG.md   - Version history
   glad/          - Pre-generated OpenGL 4.1 Core loader
   third_party/   - GLAD, ImGui, stb, GLM (populated by setup scripts)
   build/         - CMake / MSVC output

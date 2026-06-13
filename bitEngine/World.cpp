@@ -65,7 +65,7 @@ void World::ClearLevel()
     // Set default spawn position (can be overridden by a TYPE spawn entity in a loaded level)
     m_spawnPos = {0.f, 0.f, 0.f};
 
-        std::cout << "[World] Level cleared.\n";
+    std::cout << "[World] Level cleared.\n";
 }
 
 void World::LoadDefaultLevel() { LoadTestLevel(); }

@@ -445,3 +445,34 @@ Exponential distance fog implemented in `world.frag` via `u_FogDensity` and `u_F
 
 **[FEATURE] Designed demo level: Levels/alpha_demo.lvl**
 A warehouse-style enclosed room with walls, ceiling, platforms for vertical traversal, stacked crates, two loot containers, two pickups, two lampposts, a door, an armed alarm box, and a goal marker connected to the level-complete trigger.
+
+---
+
+### 3.16 Post-alpha code review fixes
+
+**[FIX] Engine::StartGame double ClearLevel**
+`StartGame` explicitly called `m_world->ClearLevel()` before `LevelEditor::LoadLevel`, which internally calls `ClearLevel` again. The level was being cleared twice. Removed the explicit call; the fallback path (built-in level) still calls `ClearLevel` explicitly before `LoadDefaultLevel`.
+
+**[FIX] Engine::ReturnToMainMenu called World::Init()**
+`Init()` creates the three primitive GPU meshes and then calls `LoadTestLevel()`, which populated the scene while returning to the main menu. Changed to `ClearLevel()` only — primitive meshes survive `ClearLevel` and do not need to be recreated.
+
+**[FIX] World::m_levelComplete was dead code**
+`m_levelComplete`, `IsLevelComplete()`, and `ResetLevelComplete()` existed in `World.h` but `m_levelComplete` was never set to `true` anywhere in `World.cpp`. Level completion is handled by `Engine::NotifyLevelComplete()` via the exit trigger lambda. The dead members and methods were removed.
+
+**[FIX] LevelEditor.cpp nested #ifdef _WIN32**
+Inside an `#ifdef _WIN32` block, the Browse dialog result used a nested `#ifdef _WIN32 / #else` to choose between `strncpy_s` and `std::strncpy`. Since the outer guard already confirms MSVC/Windows, the inner `#else` branch was unreachable. Removed the inner `#ifdef`; `strncpy_s` is used directly inside the Windows block.
+
+**[FIX] EditorUI.cpp: commented-out version string in main menu**
+Leftover `//ImGui::Text("Pre-Alpha...")` and related commented-out lines in `DrawStateOverlay` were dead code. Removed.
+
+**[FIX] World::ClearLevel cout indentation**
+The `std::cout << "[World] Level cleared."` line had 8-space indentation (two levels) instead of 4 (one level, matching the rest of the function body). Fixed.
+
+**[FIX] Engine::GetConfig2() renamed to GetEngineConfig()**
+`GetConfig2()` was a legacy remnant from before `ConfigLoader` was added. It returned `const EngineConfig&` (the startup config struct), while `GetConfig()` returns `ConfigLoader&` (the runtime config file parser). The ambiguous `GetConfig2` name is replaced with `GetEngineConfig()` to make the distinction clear.
+
+**[FIX] LevelEditor.h TYPE list comment missing spawn and Point Light**
+The block comment listing supported TYPE values did not include `spawn` (added in 3.15) or `light`. Both added.
+
+**[FIX] AudioSystem.cpp and ConfigLoader.cpp style inconsistency**
+Both files were written in a minified one-liner style inconsistent with the rest of the codebase. Rewritten to match the project formatting conventions (named functions, one statement per line, matching indentation).
