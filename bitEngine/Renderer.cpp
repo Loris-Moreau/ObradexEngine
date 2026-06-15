@@ -6,6 +6,8 @@
 #include "Camera.h"
 #include "PostProcess.h"
 #include "World.h"
+#include "TextureManager.h"
+#include "Billboard.h"
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <iostream>
@@ -68,6 +70,8 @@ void Renderer::RenderWorld(const World& world, const Camera& camera)
     world.Render(*m_worldShader);
 
     m_worldShader->Unbind();
+
+    RenderBillboards(world, camera);
 }
 
 void Renderer::ApplyPostProcess()
@@ -80,6 +84,59 @@ void Renderer::Present(int windowW, int windowH)
     m_postProcess->Apply(windowW, windowH);
 }
 
+
+void Renderer::RenderBillboards(const World& world, const Camera& camera)
+{
+    // Billboard pass: depth-test on, depth-write off, alpha blend.
+    // Quads face the camera by decomposing the view matrix rotation.
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glDepthMask(GL_FALSE);
+
+    glm::mat4 view = camera.GetView();
+    // Camera right and up extracted from the view matrix rows.
+    glm::vec3 camRight = { view[0][0], view[1][0], view[2][0] };
+    glm::vec3 camUp    = { view[0][1], view[1][1], view[2][1] };
+
+    m_worldShader->Bind();
+
+    for (const auto& rec : world.GetAllRecords())
+    {
+        if (!rec.active || !rec.billboard || !rec.transform) continue;
+        const BillboardComponent& bb = *rec.billboard;
+        const glm::vec3& pos = rec.transform->position;
+
+        // Build a billboard model matrix: scale by size, orient toward camera.
+        glm::mat4 model(1.f);
+        model[0] = glm::vec4(camRight * bb.size.x, 0.f);
+        model[1] = glm::vec4(camUp    * bb.size.y, 0.f);
+        model[2] = glm::vec4(glm::cross(camRight, camUp), 0.f);
+        model[3] = glm::vec4(pos, 1.f);
+
+        m_worldShader->SetMat4("u_Model",       model);
+        m_worldShader->SetVec3("u_AlbedoColour",{bb.tint.r, bb.tint.g, bb.tint.b});
+        m_worldShader->SetFloat("u_Specular",   0.f);
+        m_worldShader->SetFloat("u_Roughness",  1.f);
+        m_worldShader->SetInt  ("u_HasTexture", bb.textureID != 0 ? 1 : 0);
+
+        unsigned int tex = bb.textureID != 0
+            ? bb.textureID
+            : TextureManager::Get().GetWhite();
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, tex);
+        m_worldShader->SetInt("u_AlbedoTex", 0);
+
+        // Draw a single unit quad - same VAO as the fullscreen quad would be,
+        // but we use the plane mesh from the world instead.
+        // Billboard mesh must be set up as a unit quad centred at origin.
+        const_cast<World&>(world).GetPlaneMesh()->Draw();
+    }
+
+    m_worldShader->Unbind();
+
+    glDepthMask(GL_TRUE);
+    glDisable(GL_BLEND);
+}
 void Renderer::ClearLights()                             { m_pointLightCount = 0; }
 void Renderer::SetSunDirection(const glm::vec3& d)       { m_sunDir    = glm::normalize(d); }
 void Renderer::SetSunColour   (const glm::vec3& c)       { m_sunColour = c; }

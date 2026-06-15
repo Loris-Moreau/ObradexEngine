@@ -5,6 +5,7 @@
 #include <iostream>
 
 #include "Engine.h"
+#include "AudioSystem.h"
 #include "Player.h"
 
 namespace Interaction
@@ -50,6 +51,9 @@ EntityID SpawnLamppost(World&           world,
     ia->range      = 3.0f;
     ia->promptText = GetInteractionKey() + "Toggle lamp";
 
+    ia->sounds.onOpen  = "sfx_switch";
+    ia->sounds.onClose = "sfx_switch";
+
     ia->onInteract = [&world, lightE, ia]()
     {
         auto* rec = world.GetRecord(lightE);
@@ -60,11 +64,13 @@ EntityID SpawnLamppost(World&           world,
         {
             lc2.intensity  = 0.f;
             ia->promptText = GetInteractionKey() + "Turn on lamp";
+            Engine::Get().GetAudio().PlayFromSet(ia->sounds, &SoundSet::onClose);
         }
         else
         {
             lc2.intensity  = 1.5f;
             ia->promptText = GetInteractionKey() + "Turn off lamp";
+            Engine::Get().GetAudio().PlayFromSet(ia->sounds, &SoundSet::onOpen);
         }
     };
 
@@ -109,6 +115,9 @@ EntityID SpawnDoor(World&            world,
     ia->promptText = locked ? GetInteractionKey() + "Locked"
                             : GetInteractionKey() + "Open door";
 
+    ia->sounds.onOpen  = "sfx_door_open";
+    ia->sounds.onClose = "sfx_door_close";
+
     ia->onInteract = [e, &world, state, onOpen, ia]()
     {
         if (state->locked)
@@ -140,7 +149,15 @@ EntityID SpawnDoor(World&            world,
 
         std::cout << "[Interaction] Door "
                   << (state->open ? "opened" : "closed") << ".\n";
-        if (state->open && onOpen) onOpen();
+        if (state->open)
+        {
+            Engine::Get().GetAudio().PlayFromSet(ia->sounds, &SoundSet::onOpen);
+            if (onOpen) onOpen();
+        }
+        else
+        {
+            Engine::Get().GetAudio().PlayFromSet(ia->sounds, &SoundSet::onClose);
+        }
     };
 
     return e;
@@ -170,6 +187,8 @@ EntityID SpawnContainer(World&                world,
     ia->range      = 2.25f;
     ia->promptText = GetInteractionKey() + "Search";
 
+    ia->sounds.onOpen = "sfx_container_open";
+
     ia->onInteract = [e, &world, ia]()
     {
         auto* rec = world.GetRecord(e);
@@ -179,6 +198,7 @@ EntityID SpawnContainer(World&                world,
             ia->promptText = GetInteractionKey() + "Search  (empty)";
 
         rec->container->isOpen = true;
+        Engine::Get().GetAudio().PlayFromSet(ia->sounds, &SoundSet::onOpen);
     };
 
     return e;
@@ -203,12 +223,15 @@ EntityID SpawnPickup(World&           world,
     ia->range      = 2.25f;
     ia->promptText = GetInteractionKey() + "Pick up " + item.name;
 
+    ia->sounds.onOpen = "sfx_pickup";
+
     ia->onInteract = [e, &world, item, onPickup, ia]()
     {
         std::cout << "[Interaction] Picked up: " << item.name << "\n";
         ia->enabled = false;
         auto* tr = world.GetTransform(e);
         if (tr) tr->scale = {0.f, 0.f, 0.f};
+        Engine::Get().GetAudio().PlayFromSet(ia->sounds, &SoundSet::onOpen);
         if (onPickup) onPickup(item);
     };
     return e;
@@ -242,12 +265,16 @@ EntityID SpawnAlarm(World&                world,
     ia->range      = 2.0f;
     ia->promptText = GetInteractionKey() + "Defuse alarm";
 
+    ia->sounds.onAlarm  = "sfx_alarm";
+    ia->sounds.onDefuse = "sfx_defuse";
+
     ia->onInteract = [armed, &world, lightE, onDefuse, ia]()
     {
         if (!*armed) { std::cout << "[Interaction] Already disarmed.\n"; return; }
         *armed         = false;
         ia->promptText = "(Defused)";
         ia->enabled    = false;
+        Engine::Get().GetAudio().PlayFromSet(ia->sounds, &SoundSet::onDefuse);
 
         auto* rec = world.GetRecord(lightE);
         if (rec && rec->light) rec->light->intensity = 0.f;

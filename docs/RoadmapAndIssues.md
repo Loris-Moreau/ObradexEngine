@@ -476,3 +476,74 @@ The block comment listing supported TYPE values did not include `spawn` (added i
 
 **[FIX] AudioSystem.cpp and ConfigLoader.cpp style inconsistency**
 Both files were written in a minified one-liner style inconsistent with the rest of the codebase. Rewritten to match the project formatting conventions (named functions, one statement per line, matching indentation).
+
+---
+
+## 4. Alpha-v1.5.0 Feature Additions
+
+### 4.1 Audio System (miniaudio)
+
+**Design:**
+Three independent channels: SFX (one-shot), Music (looped, one track at a time), Ambience (looped, independent of Music). All backed by `ma_engine` when `AUDIO_ENABLED=1`; stub mode when 0.
+
+`SoundSet` struct lives on `InteractableComponent`. Fields: `onOpen`, `onClose`, `onBreak`, `onAlarm`, `onDefuse`. Each Interaction factory assigns default SFX IDs. `AudioSystem::PlayFromSet` takes a pointer-to-member so callers choose which field fires without a switch.
+
+**Asset layout:**
+- `assets/sounds/effects/` — one-shot SFX (WAV recommended for lowest latency)
+- `assets/sounds/music/`   — music and ambience loops
+
+**Integration steps for miniaudio:**
+1. `git clone https://github.com/mackron/miniaudio` or download `miniaudio.h`.
+2. Place in `third_party/miniaudio/`.
+3. In exactly one `.cpp` file: `#define MINIAUDIO_IMPLEMENTATION` then `#include "miniaudio.h"`.
+4. Set `#define AUDIO_ENABLED 1` in `AudioSystem.h`.
+5. Rebuild. No other files need to change.
+
+**Open issues:** music crossfade not implemented; 3D positional audio not implemented.
+
+---
+
+### 4.2 Texture System
+
+`TextureManager` is a Meyers singleton. `Load(path)` returns a cached `GLuint`; on first call it uses `stb_image` to load RGBA data and uploads to GL with nearest-mip filtering (preserves pixel-art sharpness). The 1x1 white fallback is always valid after `Init()`.
+
+`MeshComponent` gains `textureID`, `texturePath`, `useTexture`. When `useTexture` is true, `World::Render` binds the texture to unit 0 before the draw call; the fragment shader multiplies it with `albedoColour`. Disabling `useTexture` reverts to flat colour with no shader change required.
+
+`.lvl` format: `TEXTURE <path>` line written after `COLLISION` when `useTexture` is true.
+
+**Asset conventions:**
+- `assets/textures/world/` — geometry textures
+- `assets/textures/ui/`    — HUD and inventory icons
+
+**Open issues:** no normal maps; no UV scale/offset per entity; no texture atlas.
+
+---
+
+### 4.3 Billboards / Decals
+
+`BillboardComponent` on any entity makes it render as a camera-facing quad. Two modes:
+- **Spherical** (default): full facing toward the camera eye
+- **Axis-locked** (`axisLocked=true`): rotates around world-Y only (correct for signs, trees)
+
+Rendered in `Renderer::RenderBillboards` after the opaque pass with `GL_BLEND` on, `glDepthMask(false)`, so they composite over geometry without writing to the depth buffer.
+
+`.lvl` keywords: `BB_SIZE x y`, `BB_TINT r g b`, `BB_TEX <path>`.
+
+---
+
+### 4.4 Inventory (DXMD-style grid)
+
+**Grid:** 12 columns × 8 rows, 46×46 px cells.
+
+**Item footprint:** `Item::gridW` and `Item::gridH` (default 1×1). Auto-placement uses a greedy top-left shelf scan. `Organise()` rebuilds all placements from scratch.
+
+**Interaction model:**
+- Left-click: select and begin drag
+- Drag: placement preview tinted green (valid) or red (blocked)
+- Release: item snaps to new position or returns to original if blocked
+- Right-click: context menu (Use, Examine, Drop 1, Discard all)
+- `[A]` key: auto-organise while inventory is focused
+
+**Stacking:** items with the same `name` increment `quantity` rather than occupying a new cell. Grid size is determined by the first placement.
+
+**Open issues:** `Use` and `Examine` are stubs pending an item-effect system; no inventory persistence across sessions.

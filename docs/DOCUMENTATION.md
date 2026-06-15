@@ -651,6 +651,7 @@ END
 | `alarm`     | Armed alarm box; deals 25 damage while armed, defuse interact to disarm |
 | `light`     | Standalone point light (no mesh)           |
 | `spawn`     | Sets the player spawn point (no mesh shown in-game)                     |
+| `billboard` | Camera-facing quad with optional texture, size, tint, and axis-lock     |
 
 Item names with spaces are serialised with underscores (`First_Aid_Kit`) and restored on load.
 
@@ -722,3 +723,81 @@ bool  vsync  = cfg.GetBool ("window", "vsync",  true);
 ```
 
 `config.ini` is loaded by `Engine::Init` before any subsystem is created. Changes require a restart.
+
+---
+
+### 6.17 TextureManager (`TextureManager.h`)
+
+Meyers singleton. Call `Init()` once after the GL context is created (Engine does this). All subsequent `Load` calls are safe from any thread that owns the GL context.
+
+```cpp
+unsigned int id = TextureManager::Get().Load("assets/textures/world/brick.png");
+meshComp->textureID  = id;
+meshComp->useTexture = true;
+```
+
+Returns `GetWhite()` (a 1x1 opaque white texture) on load failure so rendering never crashes. All loaded textures are released on `Shutdown()`.
+
+---
+
+### 6.18 BillboardComponent (`Billboard.h`)
+
+```cpp
+EntityID e = world.CreateEntity("Sign");
+world.AddTransform(e)->position = {3.f, 1.5f, 5.f};
+auto* bb = world.AddBillboard(e);
+bb->size        = {2.f, 1.f};
+bb->textureID   = TextureManager::Get().Load("assets/textures/world/sign.png");
+bb->axisLocked  = true;  // Y-axis only (sign-pole style)
+bb->tint        = {1.f, 1.f, 1.f, 1.f};
+```
+
+Rendered after opaque geometry. Depth-test is on (billboards hide behind walls) but depth-write is off (billboards do not occlude each other or later draws).
+
+---
+
+### 6.19 InventorySystem grid API (`InventorySystem.h`)
+
+Item footprint is set on the `Item` struct before adding it:
+
+```cpp
+Item medkit;
+medkit.name        = "Medkit";
+medkit.description = "Restores 50 HP.";
+medkit.gridW       = 2;
+medkit.gridH       = 1;
+medkit.iconPath    = "assets/textures/ui/medkit.png";
+medkit.iconTexID   = TextureManager::Get().Load(medkit.iconPath);
+engine.GetInventory().AddItem(medkit);
+```
+
+`AddItem` returns `false` if no contiguous `gridW x gridH` region is available. Call `Organise()` to repack items if space is fragmented.
+
+---
+
+### 6.20 SoundSet and audio wiring (`AudioSystem.h`)
+
+```cpp
+// Play the 'onOpen' sound from an interactable's SoundSet:
+engine.GetAudio().PlayFromSet(ia->sounds, &SoundSet::onOpen);
+
+// Override a sound ID on an existing entity:
+world.GetRecord(doorID)->interactable->sounds.onOpen = "sfx_my_custom_door";
+
+// Load and play music:
+engine.GetAudio().LoadSound("bgm_cave", "assets/sounds/music/cave.wav");
+engine.GetAudio().PlayMusic("bgm_cave");
+```
+
+Default SFX IDs used by factories:
+
+| Factory       | Field     | Default ID          |
+|---------------|-----------|---------------------|
+| SpawnDoor     | onOpen    | sfx_door_open       |
+| SpawnDoor     | onClose   | sfx_door_close      |
+| SpawnContainer| onOpen    | sfx_container_open  |
+| SpawnPickup   | onOpen    | sfx_pickup          |
+| SpawnLamppost | onOpen    | sfx_switch          |
+| SpawnLamppost | onClose   | sfx_switch          |
+| SpawnAlarm    | onAlarm   | sfx_alarm           |
+| SpawnAlarm    | onDefuse  | sfx_defuse          |

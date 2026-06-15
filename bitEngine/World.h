@@ -12,6 +12,8 @@
 #include <functional>
 #include <memory>
 #include "Mesh.h"
+#include "Billboard.h"
+#include "AudioSystem.h"
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
@@ -33,11 +35,17 @@ struct TransformComponent
 
 struct MeshComponent
 {
-    Mesh*     mesh         = nullptr;
-    glm::vec3 albedoColour = {0.8f, 0.8f, 0.8f};
-    float     specular     = 0.2f;
-    float     roughness    = 0.8f;
-    bool      castsShadow  = true;
+    Mesh*        mesh         = nullptr;
+    glm::vec3    albedoColour = {0.8f, 0.8f, 0.8f};
+    float        specular     = 0.2f;
+    float        roughness    = 0.8f;
+    bool         castsShadow  = true;
+    // Texture: if texturePath is non-empty and textureID is non-zero,
+    // the texture is multiplied with albedoColour in the shader.
+    // Use TextureManager::Load() to populate textureID.
+    unsigned int textureID    = 0;
+    std::string  texturePath;   // Path stored so level save/load can reload it
+    bool         useTexture   = false;
 };
 
 struct InteractableComponent
@@ -46,6 +54,7 @@ struct InteractableComponent
     float                 range   = 2.f;
     bool                  enabled = true;
     std::function<void()> onInteract;
+    SoundSet              sounds;  // Played by the interact system on the matching event
 };
 
 struct LightComponent
@@ -77,9 +86,15 @@ struct CollisionComponent
 // can all use Item without circular includes.
 struct Item
 {
-    std::string name;
-    std::string description;
-    int         quantity = 1;
+    std::string  name;
+    std::string  description;
+    int          quantity    = 1;
+    int          gridW       = 1;  // Width in inventory grid cells (1-4)
+    int          gridH       = 1;  // Height in inventory grid cells (1-4)
+    // Icon texture for the inventory grid slot.
+    // Path relative to working dir; loaded by TextureManager on demand.
+    std::string  iconPath;
+    unsigned int iconTexID   = 0;
 };
 
 // Used by searchable entities. UI reads isOpen to render the grid popup.
@@ -102,6 +117,7 @@ struct EntityRecord
     TriggerComponent*      trigger      = nullptr;
     CollisionComponent*    collision    = nullptr;
     ContainerComponent*    container    = nullptr;
+    BillboardComponent*    billboard    = nullptr;
 };
 
 class World
@@ -128,6 +144,7 @@ public:
     TriggerComponent*      AddTrigger      (EntityID id);
     CollisionComponent*    AddCollision    (EntityID id);
     ContainerComponent*    AddContainer    (EntityID id);
+    BillboardComponent*    AddBillboard    (EntityID id);
 
     TransformComponent*    GetTransform    (EntityID id);
     MeshComponent*         GetMesh         (EntityID id);
@@ -170,6 +187,7 @@ private:
     std::vector<TriggerComponent>      m_triggers;
     std::vector<CollisionComponent>    m_collisions;
     std::vector<ContainerComponent>    m_containers;
+    std::vector<BillboardComponent>    m_billboards;
 
     std::unique_ptr<Mesh> m_cubeMesh;
     std::unique_ptr<Mesh> m_planeMesh;
