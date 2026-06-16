@@ -1,11 +1,9 @@
 // World.cpp - Scene and level container.
 
 #include "World.h"
-#include <glad/glad.h>
 #include "Shader.h"
 #include "Mesh.h"
 #include "Interaction.h"
-#include "TextureManager.h"
 #include "Engine.h"
 #include "Player.h"
 #include <glm/gtc/matrix_transform.hpp>
@@ -36,7 +34,6 @@ void World::ReserveComponentStorage()
     m_triggers.reserve(MAX);
     m_collisions.reserve(MAX);
     m_containers.reserve(MAX);
-    m_billboards.reserve(MAX);
 }
 
 void World::Init()
@@ -60,7 +57,6 @@ void World::ClearLevel()
     m_triggers.clear();
     m_collisions.clear();
     m_containers.clear();
-    m_billboards.clear();
     m_nextID = 0;
 
     // Primitive meshes are GPU resources kept alive across level loads.
@@ -184,16 +180,7 @@ void World::Render(Shader& sh) const
         sh.SetVec3("u_AlbedoColour", mc.albedoColour);
         sh.SetFloat("u_Specular",    mc.specular);
         sh.SetFloat("u_Roughness",   mc.roughness);
-
-        bool hasTex = mc.useTexture && mc.textureID != 0;
-        sh.SetInt("u_HasTexture", hasTex ? 1 : 0);
-        if (hasTex)
-        {
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, mc.textureID);
-            sh.SetInt("u_AlbedoTex", 0);
-        }
-
+        sh.SetInt  ("u_HasTexture",  0);
         mc.mesh->Draw();
     }
 }
@@ -267,14 +254,6 @@ ContainerComponent* World::AddContainer(EntityID id)
     m_containers.push_back({});
     auto* c = &m_containers.back();
     if (auto* r = GetRecord(id)) r->container = c;
-    return c;
-}
-
-BillboardComponent* World::AddBillboard(EntityID id)
-{
-    m_billboards.push_back({});
-    auto* c = &m_billboards.back();
-    if (auto* r = GetRecord(id)) r->billboard = c;
     return c;
 }
 

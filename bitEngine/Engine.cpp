@@ -12,7 +12,6 @@
 #include "ConfigLoader.h"
 #include <iostream>
 #include "LevelEditor.h"
-#include "TextureManager.h"
 #include <fstream>
 #include <stdexcept>
 
@@ -106,9 +105,6 @@ bool Engine::Init(const EngineConfig& config){
         m_audio->SetMasterVolume(m_config.masterVolume);
         std::cout<<"[Engine]  Audio        OK\n";
 
-        TextureManager::Get().Init();
-        std::cout << "[Engine]  Textures     OK\n";
-
         m_editorUI = std::make_unique<EditorUI>();
         m_editorUI->Init(m_window->GetGLFWWindow());
         std::cout<<"[Engine]  EditorUI     OK\n";
@@ -150,8 +146,6 @@ void Engine::ReturnToMainMenu()
     m_world->ClearLevel();
     m_player->Init();
     m_inventory->Clear();
-    m_audio->StopAmbience();
-    m_audio->StopMusic();
     m_state = EngineState::MainMenu;
     m_window->SetCursorLocked(false);
 }
@@ -269,7 +263,6 @@ void Engine::Render(){
 void Engine::Shutdown(){
     std::cout<<"[Engine] Shutting down...\n";
     m_state=EngineState::Shutdown;
-    TextureManager::Get().Shutdown();
     if(m_audio) m_audio->Shutdown();
     m_editorUI.reset(); m_audio.reset(); m_inventory.reset();
     m_player.reset(); m_world.reset(); m_renderer.reset();

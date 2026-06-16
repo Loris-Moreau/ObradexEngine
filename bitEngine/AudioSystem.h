@@ -2,41 +2,36 @@
 
 // AudioSystem.h - miniaudio-backed audio system.
 //
-// Handles SFX, music, and ambience via three named channel types.
-// All sounds are keyed by a string ID assigned at LoadSound time.
+// Three channel types:
+//   SFX      - one-shot sounds
+//   Music    - looped, one track at a time
+//   Ambience - looped background, independent of music
 //
-// Channel types:
-//   SFX       - one-shot sounds (footsteps, interact, pickup)
-//   Music     - looped, only one track plays at a time; crossfade on switch
-//   Ambience  - looped background layer, independent of music
+// Asset layout:
+//   assets/sounds/effects/   one-shot SFX
+//   assets/sounds/music/     music and ambience loops
 //
-// Sound asset layout:
-//   assets/sounds/effects/   SFX files
-//   assets/sounds/music/     Music and ambience files
-//
-// miniaudio integration:
-//   1. Download miniaudio.h into third_party/miniaudio/
-//   2. In one .cpp: #define MINIAUDIO_IMPLEMENTATION then #include "miniaudio.h"
-//   3. Flip AUDIO_ENABLED below to 1 and rebuild.
-//   All call sites are already wired; no other files need to change.
+// To activate: miniaudio.h is already in third_party/miniaudio/.
+// AUDIO_ENABLED is set to 1 below. miniaudio_impl.cpp carries the implementation.
 
-#define AUDIO_ENABLED 0  // Set to 1 after placing miniaudio.h
+#define AUDIO_ENABLED 1
+
+#if AUDIO_ENABLED
+  // miniaudio.h lives in third_party/miniaudio/ and is compiled via
+  // miniaudio_impl.cpp (one .cpp with MINIAUDIO_IMPLEMENTATION defined).
+  #include "../../third_party/miniaudio/miniaudio.h"
+#endif
 
 #include <string>
 #include <unordered_map>
 
-#if AUDIO_ENABLED
-  #include "miniaudio.h"
-#endif
-
-// Per-interactable sound set.  Any field may be empty (no sound plays).
 struct SoundSet
 {
-    std::string onOpen;   // Container search, door open, pickup grab
-    std::string onClose;  // Door close
-    std::string onBreak;  // Crate destroyed
-    std::string onAlarm;  // Alarm triggered
-    std::string onDefuse; // Alarm defused
+    std::string onOpen;
+    std::string onClose;
+    std::string onBreak;
+    std::string onAlarm;
+    std::string onDefuse;
 };
 
 class AudioSystem
@@ -45,24 +40,15 @@ public:
     bool Init();
     void Shutdown();
 
-    // Register a sound file under an ID.  Safe to call multiple times for the
-    // same ID (second call is ignored).  Path is relative to working directory.
     bool LoadSound(const std::string& id, const std::string& path);
 
-    // Play a one-shot SFX at the given volume (0..1).
-    void Play(const std::string& id, float volume = 1.f);
-
-    // Start looping music.  Stops the previous music track first.
-    void PlayMusic(const std::string& id, float volume = 1.f);
-
-    // Start looping ambience independently of the music channel.
+    void Play       (const std::string& id, float volume = 1.f);
+    void PlayMusic  (const std::string& id, float volume = 1.f);
     void PlayAmbience(const std::string& id, float volume = 1.f);
-
     void StopMusic();
     void StopAmbience();
     void Stop(const std::string& id);
 
-    // Convenience: play a field from a SoundSet if it is non-empty.
     void PlayFromSet(const SoundSet& set, const std::string& SoundSet::* field,
                      float volume = 1.f);
 
@@ -83,6 +69,6 @@ private:
     ma_engine m_engine;
     std::unordered_map<std::string, ma_sound*> m_sounds;
 #else
-    std::unordered_map<std::string, bool> m_sounds;  // stub placeholder
+    std::unordered_map<std::string, bool> m_sounds;
 #endif
 };

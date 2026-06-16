@@ -73,7 +73,7 @@ private:
 
     static constexpr const char* kSpawnTypeNames[] = {
         "Cube", "Plane", "Sphere", "Lamppost", "Door",
-        "Container", "Pickup", "Alarm", "Point Light", "Spawn Point", "Billboard"
+        "Container", "Pickup", "Alarm", "Point Light", "Spawn Point"
     };
-    static constexpr int kSpawnTypeCount = 11;
+    static constexpr int kSpawnTypeCount = 10;
 };

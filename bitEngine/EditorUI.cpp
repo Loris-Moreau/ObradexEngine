@@ -10,8 +10,6 @@
 #include "Player.h"
 #include "InventorySystem.h"
 #include "AudioSystem.h"
-#include "TextureManager.h"
-#include "Billboard.h"
 #include "ConfigLoader.h"
 
 #include <imgui.h>
@@ -118,30 +116,10 @@ void EditorUI::Render(Engine& engine)
                 if (ImGui::BeginTabItem("Audio"))
                 {
                     AudioSystem& audio = engine.GetAudio();
-                    float mVol = audio.GetMasterVolume();
-                    if (ImGui::SliderFloat("Master volume", &mVol, 0.f, 1.f))
-                        audio.SetMasterVolume(mVol);
-                    float muVol = audio.GetMusicVolume();
-                    if (ImGui::SliderFloat("Music volume",  &muVol, 0.f, 1.f))
-                        audio.SetMusicVolume(muVol);
-                    ImGui::Spacing();
-                    ImGui::SeparatorText("Music / Ambience");
-                    if (ImGui::Button("Play menu music"))
-                        audio.PlayMusic("music_menu");
-                    ImGui::SameLine();
-                    if (ImGui::Button("Stop music"))
-                        audio.StopMusic();
-                    if (ImGui::Button("Play ambience"))
-                        audio.PlayAmbience("music_ambient");
-                    ImGui::SameLine();
-                    if (ImGui::Button("Stop ambience"))
-                        audio.StopAmbience();
-                    ImGui::Spacing();
-                    if (AUDIO_ENABLED)
-                        ImGui::TextColored(ImVec4(0.2f,0.8f,0.2f,1.f), "miniaudio ACTIVE");
-                    else
-                        ImGui::TextColored(ImVec4(0.8f,0.5f,0.2f,1.f),
-                            "Stub mode. Set AUDIO_ENABLED=1 in AudioSystem.h");
+                    float vol = audio.GetMasterVolume();
+                    if (ImGui::SliderFloat("Master volume", &vol, 0.f, 1.f))
+                        audio.SetMasterVolume(vol);
+                    ImGui::TextDisabled("Audio is a stub. See AudioSystem.h to integrate miniaudio.");
                     ImGui::EndTabItem();
                 }
                 if (ImGui::BeginTabItem("Level Editor"))
@@ -441,49 +419,6 @@ void EditorUI::DrawWorldPanel(Engine& engine)
                 ImGui::SliderFloat("Range",      &rec->interactable->range, 0.5f, 10.f);
                 ImGui::Checkbox   ("Enabled",    &rec->interactable->enabled);
             }
-
-            if (rec->mesh && ImGui::CollapsingHeader("Texture"))
-            {
-                ImGui::Checkbox("Use texture", &rec->mesh->useTexture);
-                static char texBuf[256] = "";
-                if (rec->mesh->texturePath.size() < 255)
-                    std::strncpy(texBuf, rec->mesh->texturePath.c_str(), 255);
-                if (ImGui::InputText("Path##texinsp", texBuf, sizeof(texBuf)))
-                    rec->mesh->texturePath = texBuf;
-                if (ImGui::Button("Load##tex") && rec->mesh->texturePath.size() > 0)
-                {
-                    rec->mesh->textureID = TextureManager::Get().Load(rec->mesh->texturePath);
-                    rec->mesh->useTexture = (rec->mesh->textureID != 0);
-                }
-                ImGui::SameLine();
-                ImGui::TextDisabled("assets/textures/world/");
-            }
-            if (rec->billboard && ImGui::CollapsingHeader("Billboard"))
-            {
-                ImGui::DragFloat2("Size##bb", &rec->billboard->size.x, 0.05f, 0.01f, 20.f);
-                ImGui::ColorEdit4("Tint##bb",   &rec->billboard->tint.x);
-                ImGui::Checkbox("Axis locked (Y-only)", &rec->billboard->axisLocked);
-                static char bbTex[256] = "";
-                if (ImGui::InputText("Texture##bb", bbTex, sizeof(bbTex)))
-                    rec->billboard->texturePath = bbTex;
-                if (ImGui::Button("Load##bbtex"))
-                    rec->billboard->textureID = TextureManager::Get().Load(rec->billboard->texturePath);
-            }
-            if (rec->interactable && rec->interactable->sounds.onOpen.size()
-                && ImGui::CollapsingHeader("Sounds"))
-            {
-                auto& ss = rec->interactable->sounds;
-                static char sOpen[128]="",sClose[128]="",sBreak[128]="";
-                ImGui::InputText("On Open##ss",   sOpen,  sizeof(sOpen));
-                ImGui::InputText("On Close##ss",  sClose, sizeof(sClose));
-                ImGui::InputText("On Break##ss",  sBreak, sizeof(sBreak));
-                if (ImGui::Button("Apply##ss")) {
-                    if (sOpen[0])  ss.onOpen  = sOpen;
-                    if (sClose[0]) ss.onClose = sClose;
-                    if (sBreak[0]) ss.onBreak = sBreak;
-                }
-            }
-
             if (rec->collision && ImGui::CollapsingHeader("Collision"))
             {
                 ImGui::DragFloat3("Half extents", &rec->collision->halfExtents.x, 0.01f, 0.01f, 10.f);

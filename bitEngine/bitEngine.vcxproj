@@ -184,6 +184,8 @@ if not exist "$(OutDir)Levels" mkdir "$(OutDir)Levels"
     <ClCompile Include="LevelEditor.cpp" />
     <ClCompile Include="InventorySystem.cpp" />
     <ClCompile Include="AudioSystem.cpp" />
+    <ClCompile Include="miniaudio_impl.cpp" />
+    <ClCompile Include="TextureManager.cpp" />
     <ClCompile Include="ConfigLoader.cpp" />
 
     <!-- GLAD - C file, needs C compiler not C++ -->
@@ -219,6 +221,8 @@ if not exist "$(OutDir)Levels" mkdir "$(OutDir)Levels"
     <ClInclude Include="LevelEditor.h" />
     <ClInclude Include="InventorySystem.h" />
     <ClInclude Include="AudioSystem.h" />
+    <ClInclude Include="Billboard.h" />
+    <ClInclude Include="TextureManager.h" />
     <ClInclude Include="ConfigLoader.h" />
   </ItemGroup>
 

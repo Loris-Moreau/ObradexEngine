@@ -1,6 +1,4 @@
-// AudioSystem.cpp - Audio implementation.
-// Stub mode (AUDIO_ENABLED 0): all calls succeed silently.
-// Live mode (AUDIO_ENABLED 1): backed by miniaudio.
+// AudioSystem.cpp - miniaudio implementation.
 
 #include "AudioSystem.h"
 #include <iostream>
@@ -19,7 +17,7 @@ bool AudioSystem::Init()
     std::cout << "[Audio] miniaudio engine initialised.\n";
 #else
     m_initialised = true;
-    std::cout << "[Audio] Stub audio initialised (AUDIO_ENABLED=0).\n";
+    std::cout << "[Audio] Stub audio (AUDIO_ENABLED=0).\n";
 #endif
     return true;
 }
@@ -28,10 +26,7 @@ void AudioSystem::Shutdown()
 {
 #if AUDIO_ENABLED
     for (auto& [id, snd] : m_sounds)
-    {
-        ma_sound_uninit(snd);
-        delete snd;
-    }
+    { ma_sound_uninit(snd); delete snd; }
     m_sounds.clear();
     ma_engine_uninit(&m_engine);
 #endif
@@ -40,15 +35,15 @@ void AudioSystem::Shutdown()
 
 bool AudioSystem::LoadSound(const std::string& id, const std::string& path)
 {
-    if (m_sounds.count(id)) return true;  // already loaded
-
+    if (m_sounds.count(id)) return true;
 #if AUDIO_ENABLED
     auto* snd = new ma_sound();
     ma_result r = ma_sound_init_from_file(&m_engine, path.c_str(),
-                                          MA_SOUND_FLAG_DECODE, nullptr, nullptr, snd);
+                                          MA_SOUND_FLAG_DECODE,
+                                          nullptr, nullptr, snd);
     if (r != MA_SUCCESS)
     {
-        std::cerr << "[Audio] Failed to load " << path << "\n";
+        std::cerr << "[Audio] Failed to load: " << path << "\n";
         delete snd;
         return false;
     }

@@ -36,7 +36,6 @@ public:
     bool Init(int renderW, int renderH);
 
     void BeginFrame();
-    void RenderBillboards(const World& world, const Camera& camera);
     void RenderWorld(const World& world, const Camera& camera);
     void ApplyPostProcess();
     void Present(int windowW, int windowH);

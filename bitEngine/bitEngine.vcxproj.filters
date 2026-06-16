@@ -45,6 +45,8 @@
     <ClCompile Include="EditorUI.cpp"><Filter>UI</Filter></ClCompile>
     <ClCompile Include="InventorySystem.cpp"><Filter>UI</Filter></ClCompile>
     <ClCompile Include="AudioSystem.cpp"><Filter>System</Filter></ClCompile>
+    <ClCompile Include="miniaudio_impl.cpp"><Filter>System</Filter></ClCompile>
+    <ClCompile Include="TextureManager.cpp"><Filter>System</Filter></ClCompile>
     <ClCompile Include="ConfigLoader.cpp"><Filter>System</Filter></ClCompile>
     <ClCompile Include="..\third_party\glad\src\glad.c"><Filter>Third Party</Filter></ClCompile>
     <ClCompile Include="..\third_party\imgui\imgui.cpp"><Filter>Third Party</Filter></ClCompile>
@@ -73,6 +75,8 @@
     <ClInclude Include="EditorUI.h"><Filter>UI</Filter></ClInclude>
     <ClInclude Include="InventorySystem.h"><Filter>UI</Filter></ClInclude>
     <ClInclude Include="AudioSystem.h"><Filter>System</Filter></ClInclude>
+    <ClInclude Include="Billboard.h"><Filter>System</Filter></ClInclude>
+    <ClInclude Include="TextureManager.h"><Filter>System</Filter></ClInclude>
     <ClInclude Include="ConfigLoader.h"><Filter>System</Filter></ClInclude>
   </ItemGroup>
 

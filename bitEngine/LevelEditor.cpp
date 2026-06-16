@@ -5,8 +5,6 @@
 #include "World.h"
 #include "Player.h"
 #include "Interaction.h"
-#include "TextureManager.h"
-#include "Billboard.h"
 #include "Input.h"
 
 #include <imgui.h>
@@ -117,14 +115,6 @@ bool LevelEditor::SaveLevel(const World& world, const std::string& path)
                 rec.collision->halfExtents.z);
             if (rec.collision->slippery)
                 Wi1(file, "SLIPPERY", 1);
-        if (rec.mesh && rec.mesh->useTexture && !rec.mesh->texturePath.empty())
-            Ws(file, "TEXTURE", rec.mesh->texturePath);
-        if (rec.billboard) {
-            Wf3(file, "BB_SIZE", rec.billboard->size.x, rec.billboard->size.y, 0.f);
-            Wf3(file, "BB_TINT", rec.billboard->tint.r, rec.billboard->tint.g, rec.billboard->tint.b);
-            if (!rec.billboard->texturePath.empty())
-                Ws(file, "BB_TEX", rec.billboard->texturePath);
-        }
         }
 
         if (rec.light)
@@ -180,11 +170,6 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
         bool        hasCollision  = false;
         glm::vec3   collHalf{0.5f,0.5f,0.5f};
         bool        collSlippery  = false;
-        std::string texturePath;
-        bool        isBillboard   = false;
-        float       bbSizeX=1.f, bbSizeY=1.f;
-        float       bbTintR=1.f, bbTintG=1.f, bbTintB=1.f;
-        std::string bbTexPath;
         bool        hasLight = false;
         glm::vec3   lightColor{1.f,0.85f,0.5f};
         float       lightRadius = 10.f, lightIntensity = 1.5f;
@@ -248,20 +233,6 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
                 m->specular     = cur.specular;
                 m->roughness    = cur.roughness;
 
-                if (!cur.texturePath.empty() && rec->mesh) {
-                    rec->mesh->textureID   = TextureManager::Get().Load(cur.texturePath);
-                    rec->mesh->texturePath = cur.texturePath;
-                    rec->mesh->useTexture  = true;
-                }
-                if (cur.isBillboard) {
-                    auto* bb = world.AddBillboard(e);
-                    bb->size = {cur.bbSizeX, cur.bbSizeY};
-                    bb->tint = {cur.bbTintR, cur.bbTintG, cur.bbTintB, 1.f};
-                    if (!cur.bbTexPath.empty()) {
-                        bb->texturePath = cur.bbTexPath;
-                        bb->textureID   = TextureManager::Get().Load(cur.bbTexPath);
-                    }
-                }
                 if (cur.hasCollision)
                 {
                     auto* col = world.AddCollision(e);
@@ -316,14 +287,6 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
                 cur.hasCollision = true;
                 ss >> cur.collHalf.x >> cur.collHalf.y >> cur.collHalf.z;
             }
-            else if (token == "TEXTURE")
-            { std::string tp; ss >> tp; cur.texturePath = tp; }
-            else if (token == "BB_SIZE")
-            { float x,y,z; ss>>x>>y>>z; cur.bbSizeX=x; cur.bbSizeY=y; cur.isBillboard=true; }
-            else if (token == "BB_TINT")
-            { ss>>cur.bbTintR>>cur.bbTintG>>cur.bbTintB; }
-            else if (token == "BB_TEX")
-            { ss>>cur.bbTexPath; }
             else if (token == "SLIPPERY")
             {
                 int v = 0; ss >> v;
@@ -369,12 +332,7 @@ void LevelEditor::SpawnCurrent(Engine& engine)
             EntityID e = world.CreateEntity("Cube");
             auto* t = world.AddTransform(e); t->position=pos; t->scale=scale;
             auto* m = world.AddMesh(e);
-            m->mesh=world.GetCubeMesh();
-            if (m_useTexture && m_texturePath[0] != '\0') {
-                m->textureID   = TextureManager::Get().Load(m_texturePath);
-                m->texturePath = m_texturePath;
-                m->useTexture  = true;
-            } m->albedoColour=color;
+            m->mesh=world.GetCubeMesh(); m->albedoColour=color;
             m->specular=m_spawnSpecular; m->roughness=m_spawnRoughness;
             if (m_spawnCollision)
             {
@@ -398,12 +356,7 @@ void LevelEditor::SpawnCurrent(Engine& engine)
             EntityID e = world.CreateEntity("Sphere");
             auto* t = world.AddTransform(e); t->position=pos; t->scale=scale;
             auto* m = world.AddMesh(e);
-            m->mesh=world.GetSphereMesh();
-            if (m_useTexture && m_texturePath[0] != '\0') {
-                m->textureID   = TextureManager::Get().Load(m_texturePath);
-                m->texturePath = m_texturePath;
-                m->useTexture  = true;
-            } m->albedoColour=color;
+            m->mesh=world.GetSphereMesh(); m->albedoColour=color;
             m->specular=m_spawnSpecular; m->roughness=m_spawnRoughness;
             if (m_spawnCollision)
             {
@@ -438,20 +391,6 @@ void LevelEditor::SpawnCurrent(Engine& engine)
         case 9: // Spawn Point
             Interaction::SpawnPoint(world, pos);
             break;
-        case 10: // Billboard
-        {
-            EntityID e = world.CreateEntity("Billboard");
-            auto* t = world.AddTransform(e); t->position = pos;
-            auto* bb = world.AddBillboard(e);
-            bb->size  = {m_billboardSize[0], m_billboardSize[1]};
-            bb->tint  = {m_billboardTint[0],m_billboardTint[1],
-                         m_billboardTint[2],m_billboardTint[3]};
-            bb->axisLocked  = m_billboardAxisLocked;
-            bb->texturePath = m_texturePath;
-            if (m_texturePath[0] != '\0')
-                bb->textureID = TextureManager::Get().Load(m_texturePath);
-            break;
-        }
     }
 }
 
