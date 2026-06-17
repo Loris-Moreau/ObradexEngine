@@ -2,7 +2,7 @@
 
 #include "TextureManager.h"
 #include <glad/glad.h>
-#include <stb/stb_image.h>
+#include <stb_image.h>
 #include <iostream>
 
 TextureManager& TextureManager::Get()

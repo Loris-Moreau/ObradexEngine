@@ -138,7 +138,7 @@ void AudioSystem::Stop(const std::string& id)
 }
 
 void AudioSystem::PlayFromSet(const SoundSet& set,
-                               const std::string& SoundSet::* field,
+                               std::string SoundSet::* field,
                                float volume)
 {
     const std::string& id = set.*field;

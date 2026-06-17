@@ -49,7 +49,7 @@ public:
     void StopAmbience();
     void Stop(const std::string& id);
 
-    void PlayFromSet(const SoundSet& set, const std::string& SoundSet::* field,
+    void PlayFromSet(const SoundSet& set, std::string SoundSet::* field,
                      float volume = 1.f);
 
     void  SetMasterVolume(float v);
