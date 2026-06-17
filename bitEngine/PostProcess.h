@@ -23,14 +23,14 @@ class Shader;
 // Runtime-tunable settings; exposed in the Renderer editor tab.
 struct PostProcessSettings
 {
-    float ditherStrength  = 0.92f;  // 0 = off, 1 = full Bayer dither
+    float ditherStrength  = 0.35f;  // 0 = off, 1 = full Bayer dither
     int   paletteSize     = 24;     // Active palette entries (2 to 32)
-    float vignetteRadius  = 1.025f;
-    float vignetteFeather = 0.25f;
+    float vignetteRadius  = 1.05f;
+    float vignetteFeather = 0.2f;
     bool  scanlines       = true;
     float scanlineAlpha   = 0.12f;
-    float contrast        = 1.1f;
-    float brightness      = 0.1f;   // Additive offset, range -1 to 1
+    float contrast        = 2.0f;
+    float brightness      = 0.45f;   // Additive offset, range -1 to 1
     bool  obraDinnMode    = false;  // Forces monochrome + heavy dither
 };
 

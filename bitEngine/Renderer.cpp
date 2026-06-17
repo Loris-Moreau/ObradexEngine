@@ -84,8 +84,8 @@ void Renderer::ClearLights()                             { m_pointLightCount = 0
 void Renderer::SetSunDirection(const glm::vec3& d)       { m_sunDir    = glm::normalize(d); }
 void Renderer::SetSunColour   (const glm::vec3& c)       { m_sunColour = c; }
 void Renderer::SetAmbient     (const glm::vec3& c)       { m_ambient   = c; }
-void Renderer::SetFogDensity(float d)                    { m_fogDensity = d; }
-void Renderer::SetFogColour (const glm::vec3& c)         { m_fogColour  = c; }
+void Renderer::SetFogDensity  (float d)                  { m_fogDensity = d; }
+void Renderer::SetFogColour   (const glm::vec3& c)       { m_fogColour  = c; }
 
 void Renderer::AddPointLight(const PointLight& l)
 {

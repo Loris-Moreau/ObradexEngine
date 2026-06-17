@@ -38,6 +38,9 @@ private:
     bool m_showEditor       = false;
     int  m_selectedEntity   = -1;
     bool m_wasContainerOpen = false;
+    
+    float fogDensity = 0.005f;
+    float fogCol[3]  = {0.06f, 0.06f, 0.16f};
 
     std::unique_ptr<LevelEditor> m_levelEditor;
 };

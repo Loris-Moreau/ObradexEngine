@@ -243,45 +243,77 @@ void EditorUI::DrawRendererPanel(Engine& engine)
     ImGui::SeparatorText("Presets");
     if (ImGui::Button("Obra Dinn"))
     {
-        pp.ditherStrength  = 1.45f;  pp.paletteSize     = 6;
-        pp.vignetteRadius  = 0.885f; pp.vignetteFeather = 0.325f;
-        pp.scanlines       = false;  pp.scanlineAlpha   = 0.12f;
-        pp.contrast        = 1.75f;  pp.brightness      = 0.32f;
+        pp.ditherStrength  = 1.45f;  
+        pp.paletteSize     = 6;
+        pp.vignetteRadius  = 0.885f; 
+        pp.vignetteFeather = 0.325f;
+        pp.scanlines       = false;  
+        pp.scanlineAlpha   = 0.12f;
+        pp.contrast        = 1.75f;  
+        pp.brightness      = 0.32f;
         pp.obraDinnMode    = true;
+        
+        fogDensity = 0.0f;
     }
     ImGui::SameLine();
     if (ImGui::Button("8-bit"))
     {
-        pp.ditherStrength  = 1.0f;   pp.paletteSize     = 16;
-        pp.vignetteRadius  = 0.9f;   pp.vignetteFeather = 0.575f;
-        pp.scanlines       = true;   pp.scanlineAlpha   = 0.09f;
-        pp.contrast        = 1.1f;   pp.brightness      = 0.25f;
+        pp.ditherStrength  = 1.0f;   
+        pp.paletteSize     = 16;
+        pp.vignetteRadius  = 0.9f;   
+        pp.vignetteFeather = 0.575f;
+        pp.scanlines       = true;   
+        pp.scanlineAlpha   = 0.09f;
+        pp.contrast        = 1.1f;   
+        pp.brightness      = 0.25f;
         pp.obraDinnMode    = false;
+        
+        fogDensity = 0.001f;
     }
     if (ImGui::Button("Bright Colored"))
     {
-        pp.ditherStrength  = 1.815f; pp.paletteSize     = 32;
-        pp.vignetteRadius  = 1.025f; pp.vignetteFeather = 0.25f;
-        pp.scanlines       = true;   pp.scanlineAlpha   = 0.12f;
-        pp.contrast        = 2.155f; pp.brightness      = 0.5f;
+        pp.ditherStrength  = 1.815f; 
+        pp.paletteSize     = 32;
+        pp.vignetteRadius  = 1.025f; 
+        pp.vignetteFeather = 0.25f;
+        pp.scanlines       = true;   
+        pp.scanlineAlpha   = 0.12f;
+        pp.contrast        = 2.155f; 
+        pp.brightness      = 0.5f;
         pp.obraDinnMode    = false;
+        
+        fogDensity = 0.004f;
     }
     ImGui::SameLine();
     if (ImGui::Button("Dark Colored"))
     {
-        pp.ditherStrength  = 0.275f; pp.paletteSize     = 24;
-        pp.vignetteRadius  = 1.025f; pp.vignetteFeather = 0.25f;
-        pp.scanlines       = true;   pp.scanlineAlpha   = 0.12f;
-        pp.contrast        = 2.13f;  pp.brightness      = 0.45f;
+        pp.ditherStrength  = 0.275f;
+        pp.paletteSize     = 24;
+        pp.vignetteRadius  = 1.025f;
+        pp.vignetteFeather = 0.25f;
+        pp.scanlines       = true;
+        pp.scanlineAlpha   = 0.12f;
+        pp.contrast        = 2.13f;
+        pp.brightness      = 0.45f;
         pp.obraDinnMode    = false;
+        
+        fogDensity = 0.004f;
     }
     if (ImGui::Button("Reset"))
+    {
         pp = PostProcessSettings{};
+        fogDensity = 0.005f;
+        /*
+        fogCol[0] = 0.06f;
+        fogCol[1] = 0.06f;
+        fogCol[2] = 0.16f;
+        */
+    }
 
     ImGui::SeparatorText("Fog");
     Renderer& rend = engine.GetRenderer();
-    static float fogDensity = 0.f;
-    static float fogCol[3]  = {0.04f, 0.04f, 0.06f};
+    //static float fogDensity = 0.f;
+    //static float fogCol[3]  = {0.04f, 0.04f, 0.06f};
     if (ImGui::SliderFloat("Density", &fogDensity, 0.f, 0.15f))
         rend.SetFogDensity(fogDensity);
     if (ImGui::ColorEdit3("Fog colour", fogCol))
