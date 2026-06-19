@@ -36,7 +36,7 @@ static TeeBuf *s_coutTee=nullptr, *s_cerrTee=nullptr;
 Engine& Engine::Get(){ static Engine e; return e; }
 
 void Engine::InitLogFile(){
-    m_logFile.open("log.txt", std::ios::out|std::ios::trunc);
+    m_logFile.open("../log.txt", std::ios::out|std::ios::trunc);
     if(m_logFile.is_open()){
         s_coutTee = new TeeBuf(std::cout.rdbuf(), m_logFile.rdbuf());
         s_cerrTee = new TeeBuf(std::cerr.rdbuf(), m_logFile.rdbuf());
@@ -123,11 +123,15 @@ void Engine::StartGame()
     // LoadLevel calls ClearLevel internally; no need to call it explicitly here.
     {
         LevelEditor tmpLoader;
-        if (!tmpLoader.LoadLevel(*m_world, "Levels/alpha_demo.lvl"))
+        if (!tmpLoader.LoadLevel(*m_world, "Levels/levelBase.lvl"))
         {
-            std::cout << "[Engine] alpha_demo.lvl not found, using built-in level.\n";
-            m_world->ClearLevel();
-            m_world->LoadDefaultLevel();
+            std::cout << "[Engine] levelBase.lvl not found, trying alpha_demo.lvl.\n";
+            if (!tmpLoader.LoadLevel(*m_world, "Levels/alpha_demo.lvl"))
+            {
+                std::cout << "[Engine] alpha_demo.lvl not found, using built-in level.\n";
+                m_world->ClearLevel();
+                m_world->LoadDefaultLevel();
+            }
         }
     }
     m_player->Init();
@@ -135,6 +139,23 @@ void Engine::StartGame()
     m_player->RespawnAtSpawn();
     m_inventory->Clear();
     m_world->ResetLevelComplete();
+    // Load SFX and music. Failures are logged and silently skipped.
+    {
+        auto& audio = *m_audio;
+        audio.LoadSound("sfx_door_open",      "assets/sounds/effects/door_open.wav");
+        audio.LoadSound("sfx_door_close",     "assets/sounds/effects/door_close.wav");
+        audio.LoadSound("sfx_container_open", "assets/sounds/effects/container_open.wav");
+        audio.LoadSound("sfx_pickup",         "assets/sounds/effects/pickup.wav");
+        audio.LoadSound("sfx_switch",         "assets/sounds/effects/switch.wav");
+        audio.LoadSound("sfx_alarm",          "assets/sounds/effects/alarm.mp3");
+        audio.LoadSound("sfx_defuse",         "assets/sounds/effects/defuse.wav");
+        audio.LoadSound("sfx_death",          "assets/sounds/effects/death.mp3");
+        audio.LoadSound("sfx_complete",       "assets/sounds/effects/level_complete.mp3");
+        audio.LoadSound("music_menu",         "assets/sounds/music/menu.mp3");
+        audio.LoadSound("music_ambient",      "assets/sounds/music/ambience.mp3");
+        audio.PlayAmbience("music_ambient");
+    }
+
     m_state = EngineState::Running;
     m_window->SetCursorLocked(true);
 }
@@ -199,16 +220,17 @@ void Engine::ProcessInput(){
         m_editorUI->ToggleEditorPanel();
 
     if(m_input->IsKeyJustPressed(Key::I) &&
-       (m_state==EngineState::Running||m_state==EngineState::Paused) &&
+       m_state==EngineState::Running &&
        !m_world->HasOpenContainer()){
         if(m_inventory->IsOpen()){
             m_inventory->Toggle();
             m_window->SetCursorLocked(true);
-            if(m_state==EngineState::Paused) m_state=EngineState::Running;
         } else if(m_state==EngineState::Running){
             m_inventory->Toggle();
             m_window->SetCursorLocked(false);
-            m_state=EngineState::Paused;
+            // Do NOT set state=Paused — that triggers the pause overlay.
+            // Physics stops automatically: Update() only runs when Running,
+            // but we keep Running so the overlay doesn't appear.
         }
     }
 
@@ -217,7 +239,6 @@ void Engine::ProcessInput(){
         else if(m_inventory->IsOpen()){
             m_inventory->Toggle();
             m_window->SetCursorLocked(true);
-            m_state=EngineState::Running;
         }
         else if(m_state==EngineState::Running){
             m_state=EngineState::Paused;
@@ -235,7 +256,10 @@ void Engine::ProcessInput(){
 
 void Engine::Update(float dt){
     m_world->Update(dt);
-    m_player->Update(dt, *m_input, *m_world);
+    // Skip player update while inventory is open so the player can't move,
+    // but keep state=Running so the pause overlay doesn't appear.
+    if (!m_inventory->IsOpen())
+        m_player->Update(dt, *m_input, *m_world);
     if(m_player->IsDead())           NotifyPlayerDied();
     if(m_world->IsLevelComplete())   NotifyLevelComplete();
 }

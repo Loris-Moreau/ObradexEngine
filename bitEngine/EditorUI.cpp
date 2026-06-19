@@ -767,11 +767,11 @@ void EditorUI::DrawStateOverlay(Engine& engine)
         ImGui::SetWindowFontScale(1.f);
         ImGui::PopStyleColor();
         ImGui::Spacing();
-        char timeStr[48];
+        /*char timeStr[48];
         std::snprintf(timeStr, sizeof(timeStr), "Time: %.1f s",
                       engine.GetTimer().GetTotalTime());
         ImGui::SetCursorPosX((340.f - ImGui::CalcTextSize(timeStr).x)*0.5f);
-        ImGui::TextDisabled("%s", timeStr);
+        ImGui::TextDisabled("%s", timeStr);*/
         ImGui::Spacing(); ImGui::Separator(); ImGui::Spacing();
 
         ImGui::SetCursorPosX((340.f - BW) * 0.5f);
