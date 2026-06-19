@@ -101,9 +101,9 @@ ENTITY
 END
 
 ENTITY
-  TYPE cube
+  TYPE exit
   NAME ExitZone
-  POS 0 1 -15
-  SCALE 1 1 1
+  POS 0.0 0.5 -15.0
+  SCALE 1.0 1.0 1.0
 END
 

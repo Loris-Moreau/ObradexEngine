@@ -216,6 +216,39 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
         {
             Interaction::SpawnPoint(world, cur.pos);
         }
+        else if (cur.type == "exit")
+        {
+            // Exit trigger: any entity with TYPE exit creates a trigger volume
+            // that calls Engine::NotifyLevelComplete when the player enters.
+            EntityID e = world.CreateEntity(cur.name.empty() ? "ExitZone" : cur.name);
+            auto* t = world.AddTransform(e);
+            t->position = cur.pos;
+
+            // Visual marker so the exit is visible in the editor
+            auto* m = world.AddMesh(e);
+            m->mesh         = world.GetCubeMesh();
+            m->albedoColour = {0.9f, 0.6f, 0.1f};
+            m->specular     = 0.7f;
+            m->roughness    = 0.2f;
+            t->scale        = cur.scale.x > 0.01f ? cur.scale
+                                                   : glm::vec3{0.8f, 1.0f, 0.8f};
+
+            auto* col = world.AddCollision(e);
+            col->halfExtents = {0.4f, 0.5f, 0.4f};
+            col->solid       = false;  // walk-through; trigger handles the event
+
+            auto* tri = world.AddTrigger(e);
+            tri->halfExtents = {
+                t->scale.x * 0.5f + 0.5f,
+                t->scale.y * 0.5f + 0.5f,
+                t->scale.z * 0.5f + 0.5f
+            };
+            tri->onEnter = []()
+            {
+                std::cout << "[World] Player reached exit zone.\n";
+                Engine::Get().NotifyLevelComplete();
+            };
+        }
         else
         {
             EntityID e = world.CreateEntity(cur.name);
