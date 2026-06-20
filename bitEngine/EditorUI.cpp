@@ -693,7 +693,7 @@ void EditorUI::DrawStateOverlay(Engine& engine)
 
         ImGui::End();
     }
-    else if (state == EngineState::Paused)
+    else if (state == EngineState::Paused && !engine.GetInventory().IsOpen())
     {
         DrawOverlayBg(140.f);
         CentreNextWindow(280.f, 230.f);

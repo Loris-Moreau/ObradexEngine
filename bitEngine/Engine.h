@@ -88,6 +88,7 @@ private:
     ~Engine() = default;
 
     void ProcessInput();
+    void LoadPreviewLevel();  // Load levelBase.lvl as main-menu background
     void Update(float dt);
     void Render();
     void Shutdown();

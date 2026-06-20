@@ -36,7 +36,7 @@ static TeeBuf *s_coutTee=nullptr, *s_cerrTee=nullptr;
 Engine& Engine::Get(){ static Engine e; return e; }
 
 void Engine::InitLogFile(){
-    m_logFile.open("../log.txt", std::ios::out|std::ios::trunc);
+    m_logFile.open("log.txt", std::ios::out|std::ios::trunc);
     if(m_logFile.is_open()){
         s_coutTee = new TeeBuf(std::cout.rdbuf(), m_logFile.rdbuf());
         s_cerrTee = new TeeBuf(std::cerr.rdbuf(), m_logFile.rdbuf());
@@ -67,7 +67,7 @@ bool Engine::Init(const EngineConfig& config){
     m_config = config;
     InitLogFile();
     LoadConfig();
-    std::cout<<"[Engine] Initialising ObradexEngine v0.1.0-alpha\n";
+    std::cout<<"[Engine] Initialising ObradexEngine\n";
     try{
         m_timer = std::make_unique<Timer>();
         std::cout<<"[Engine]  Timer        OK\n";
@@ -112,26 +112,36 @@ bool Engine::Init(const EngineConfig& config){
     catch(const std::exception& e){
         std::cerr<<"[Engine] FATAL: "<<e.what()<<"\n"; return false;
     }
+    LoadPreviewLevel();
     m_state = EngineState::MainMenu;
     m_window->SetCursorLocked(false);
     std::cout<<"[Engine] Ready. Showing main menu.\n";
     return true;
 }
 
+
+void Engine::LoadPreviewLevel()
+{
+    // Loads levelBase.lvl as the background scene shown during the main menu.
+    // The world is visible behind the menu overlay but the player is not active.
+    LevelEditor tmpLoader;
+    if (!tmpLoader.LoadLevel(*m_world, "Levels/levelBase.lvl"))
+    {
+        std::cout << "[Engine] levelBase.lvl not found, world will be empty on main menu.\n";
+        m_world->ClearLevel();
+        m_world->LoadDefaultLevel();
+    }
+}
 void Engine::StartGame()
 {
-    // LoadLevel calls ClearLevel internally; no need to call it explicitly here.
+    // Load the game level. Falls back to built-in test scene if not found.
     {
         LevelEditor tmpLoader;
-        if (!tmpLoader.LoadLevel(*m_world, "Levels/levelBase.lvl"))
+        if (!tmpLoader.LoadLevel(*m_world, "Levels/alpha_demo.lvl"))
         {
-            std::cout << "[Engine] levelBase.lvl not found, trying alpha_demo.lvl.\n";
-            if (!tmpLoader.LoadLevel(*m_world, "Levels/alpha_demo.lvl"))
-            {
-                std::cout << "[Engine] alpha_demo.lvl not found, using built-in level.\n";
-                m_world->ClearLevel();
-                m_world->LoadDefaultLevel();
-            }
+            std::cout << "[Engine] alpha_demo.lvl not found, using built-in level.\n";
+            m_world->ClearLevel();
+            m_world->LoadDefaultLevel();
         }
     }
     m_player->Init();
@@ -162,11 +172,11 @@ void Engine::StartGame()
 
 void Engine::ReturnToMainMenu()
 {
-    // ClearLevel destroys entities and components but keeps the primitive GPU meshes.
-    // Do NOT call Init() here - it rebuilds the test level into the scene.
-    m_world->ClearLevel();
     m_player->Init();
     m_inventory->Clear();
+    m_audio->StopAmbience();
+    m_audio->StopMusic();
+    LoadPreviewLevel();  // Restore main menu background scene
     m_state = EngineState::MainMenu;
     m_window->SetCursorLocked(false);
 }
@@ -220,17 +230,16 @@ void Engine::ProcessInput(){
         m_editorUI->ToggleEditorPanel();
 
     if(m_input->IsKeyJustPressed(Key::I) &&
-       m_state==EngineState::Running &&
+       (m_state==EngineState::Running || m_state==EngineState::Paused) &&
        !m_world->HasOpenContainer()){
         if(m_inventory->IsOpen()){
             m_inventory->Toggle();
             m_window->SetCursorLocked(true);
+            m_state = EngineState::Running;  // Unfreeze on close
         } else if(m_state==EngineState::Running){
             m_inventory->Toggle();
             m_window->SetCursorLocked(false);
-            // Do NOT set state=Paused — that triggers the pause overlay.
-            // Physics stops automatically: Update() only runs when Running,
-            // but we keep Running so the overlay doesn't appear.
+            m_state = EngineState::Paused;   // Freeze physics; DrawStateOverlay skips pause panel when inventory is open
         }
     }
 
@@ -239,6 +248,7 @@ void Engine::ProcessInput(){
         else if(m_inventory->IsOpen()){
             m_inventory->Toggle();
             m_window->SetCursorLocked(true);
+            m_state = EngineState::Running;
         }
         else if(m_state==EngineState::Running){
             m_state=EngineState::Paused;
@@ -256,10 +266,7 @@ void Engine::ProcessInput(){
 
 void Engine::Update(float dt){
     m_world->Update(dt);
-    // Skip player update while inventory is open so the player can't move,
-    // but keep state=Running so the pause overlay doesn't appear.
-    if (!m_inventory->IsOpen())
-        m_player->Update(dt, *m_input, *m_world);
+    m_player->Update(dt, *m_input, *m_world);
     if(m_player->IsDead())           NotifyPlayerDied();
     if(m_world->IsLevelComplete())   NotifyLevelComplete();
 }

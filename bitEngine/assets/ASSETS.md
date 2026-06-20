@@ -1,4 +1,4 @@
-# Asset Manifest - ObradexEngine Alpha v1.5.0
+# Asset Manifest - ObradexEngine 
 
 ## Sounds
 
@@ -35,7 +35,7 @@ Replace any file with a better-suited one. The engine ID is what matters, not th
 | wood_planks.png  | Wood floor   | Procedural  |
 
 ### Billboards  (assets/textures/billboards/)
-Sourced from the provided Drive folder. Use these in billboard entities in the level editor.
+Use these in billboard entities in the level editor.
 
 ### UI  (assets/textures/ui/)
 | File              | Used for     |
