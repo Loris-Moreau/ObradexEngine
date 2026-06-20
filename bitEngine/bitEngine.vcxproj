@@ -112,7 +112,7 @@
     </Link>
     <!-- Copy Shaders/ folder next to the .exe so they're found at runtime -->
     <PostBuildEvent>
-      <Command>xcopy /D /E /Y /I "$(ProjectDir)Shaders" "$(OutDir)Shaders" &amp; xcopy /D /E /Y /I "$(ProjectDir)Levels" "$(OutDir)Levels" &amp; xcopy /D /Y "$(ProjectDir)config.ini" "$(OutDir)" &amp; xcopy /D /Y "$(SolutionDir)CHANGELOG.md" "$(OutDir)"</Command>
+      <Command>xcopy /D /E /Y /I "$(ProjectDir)Shaders" "$(OutDir)Shaders" &amp; xcopy /D /E /Y /I "$(ProjectDir)Levels" "$(OutDir)Levels" &amp; xcopy /D /E /Y /I "$(ProjectDir)assets" "$(OutDir)assets" &amp; xcopy /D /Y "$(ProjectDir)config.ini" "$(OutDir)" &amp; xcopy /D /Y "$(SolutionDir)README.md" "$(OutDir)" &amp; xcopy /D /Y "$(SolutionDir)LICENSE" "$(OutDir)"</Command>
       <Message>Copying necessary files to output directory...</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
