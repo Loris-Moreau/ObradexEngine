@@ -18,6 +18,8 @@
 
 #include "LevelEditor.h"
 #include "Input.h"
+#include "TextureManager.h"
+#include <cstring>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
 #include <cstdio>
@@ -434,9 +436,44 @@ void EditorUI::DrawWorldPanel(Engine& engine)
             }
             if (rec->mesh && ImGui::CollapsingHeader("Mesh", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                ImGui::ColorEdit3 ("Albedo",    &rec->mesh->albedoColour.x);
-                ImGui::SliderFloat("Specular",  &rec->mesh->specular,  0.f, 1.f);
-                ImGui::SliderFloat("Roughness", &rec->mesh->roughness, 0.f, 1.f);
+                auto& mc = *rec->mesh;
+
+                ImGui::Checkbox("Use texture", &mc.useTexture);
+                // Solid-colour tint stays editable in both modes: with a texture
+                // it multiplies the sampled texel (white = unmodified texture);
+                // without one it is the flat surface colour.
+                ImGui::ColorEdit3(mc.useTexture ? "Tint" : "Albedo", &mc.albedoColour.x);
+
+                if (mc.useTexture)
+                {
+                    static char pathBuf[256];
+                    std::strncpy(pathBuf, mc.texturePath.c_str(), sizeof(pathBuf) - 1);
+                    pathBuf[sizeof(pathBuf) - 1] = '\0';
+                    ImGui::PushID("meshtexpath");
+                    if (ImGui::InputText("Path", pathBuf, sizeof(pathBuf)))
+                        mc.texturePath = pathBuf;
+                    ImGui::PopID();
+                    ImGui::TextDisabled("Relative to working directory, e.g. assets/textures/world/brick.png");
+
+                    if (ImGui::Button("Load / Reload"))
+                    {
+                        mc.textureID = TextureManager::Get().Load(mc.texturePath);
+                        if (mc.textureID == 0)
+                            ImGui::OpenPopup("TexLoadFail");
+                    }
+                    ImGui::SameLine();
+                    ImGui::Text(mc.textureID != 0 ? "Loaded (id=%u)" : "Not loaded",
+                                mc.textureID);
+
+                    if (ImGui::BeginPopup("TexLoadFail"))
+                    {
+                        ImGui::Text("Failed to load texture. Check the path and the log.");
+                        ImGui::EndPopup();
+                    }
+                }
+
+                ImGui::SliderFloat("Specular",  &mc.specular,  0.f, 1.f);
+                ImGui::SliderFloat("Roughness", &mc.roughness, 0.f, 1.f);
             }
             if (rec->light && ImGui::CollapsingHeader("Light", ImGuiTreeNodeFlags_DefaultOpen))
             {

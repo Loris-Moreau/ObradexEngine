@@ -6,6 +6,7 @@
 #include "Player.h"
 #include "Interaction.h"
 #include "Input.h"
+#include "TextureManager.h"
 
 #include <imgui.h>
 #include <filesystem>
@@ -105,6 +106,8 @@ bool LevelEditor::SaveLevel(const World& world, const std::string& path)
                 rec.mesh->albedoColour.z);
             Wf1(file, "SPECULAR",  rec.mesh->specular);
             Wf1(file, "ROUGHNESS", rec.mesh->roughness);
+            if (rec.mesh->useTexture && !rec.mesh->texturePath.empty())
+                Ws(file, "TEXTURE", rec.mesh->texturePath);
         }
 
         if (rec.collision)
@@ -175,6 +178,7 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
         float       lightRadius = 10.f, lightIntensity = 1.5f;
         bool        lightFlicker = true;
         std::vector<Item> items;
+        std::string texturePath;
     };
 
     bool inEntity  = false;
@@ -266,6 +270,13 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
                 m->specular     = cur.specular;
                 m->roughness    = cur.roughness;
 
+                if (!cur.texturePath.empty())
+                {
+                    m->texturePath = cur.texturePath;
+                    m->textureID   = TextureManager::Get().Load(cur.texturePath);
+                    m->useTexture  = (m->textureID != 0);
+                }
+
                 if (cur.hasCollision)
                 {
                     auto* col = world.AddCollision(e);
@@ -313,6 +324,7 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
             else if (token == "POS")      ss >> cur.pos.x   >> cur.pos.y   >> cur.pos.z;
             else if (token == "SCALE")    ss >> cur.scale.x >> cur.scale.y >> cur.scale.z;
             else if (token == "ALBEDO")   ss >> cur.albedo.x >> cur.albedo.y >> cur.albedo.z;
+            else if (token == "TEXTURE")  ss >> cur.texturePath;
             else if (token == "SPECULAR") ss >> cur.specular;
             else if (token == "ROUGHNESS")ss >> cur.roughness;
             else if (token == "COLLISION")

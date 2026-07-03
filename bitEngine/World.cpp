@@ -6,6 +6,7 @@
 #include "Interaction.h"
 #include "Engine.h"
 #include "Player.h"
+#include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <cmath>
@@ -180,7 +181,16 @@ void World::Render(Shader& sh) const
         sh.SetVec3("u_AlbedoColour", mc.albedoColour);
         sh.SetFloat("u_Specular",    mc.specular);
         sh.SetFloat("u_Roughness",   mc.roughness);
-        sh.SetInt  ("u_HasTexture",  0);
+
+        bool hasTex = mc.useTexture && mc.textureID != 0;
+        sh.SetInt("u_HasTexture", hasTex ? 1 : 0);
+        if (hasTex)
+        {
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, mc.textureID);
+            sh.SetInt("u_AlbedoTex", 0);
+        }
+
         mc.mesh->Draw();
     }
 }

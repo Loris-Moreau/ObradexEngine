@@ -33,11 +33,16 @@ struct TransformComponent
 
 struct MeshComponent
 {
-    Mesh*     mesh         = nullptr;
-    glm::vec3 albedoColour = {0.8f, 0.8f, 0.8f};
-    float     specular     = 0.2f;
-    float     roughness    = 0.8f;
-    bool      castsShadow  = true;
+    Mesh*        mesh         = nullptr;
+    glm::vec3    albedoColour = {0.8f, 0.8f, 0.8f};
+    float        specular     = 0.2f;
+    float        roughness    = 0.8f;
+    bool         castsShadow  = true;
+    // useTexture=true multiplies the sampled texel by albedoColour in the
+    // shader; leave albedoColour white (1,1,1) to show the texture unmodified.
+    bool         useTexture   = false;
+    unsigned int textureID    = 0;
+    std::string  texturePath;
 };
 
 struct InteractableComponent
