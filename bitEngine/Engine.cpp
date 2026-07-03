@@ -152,6 +152,7 @@ void Engine::StartGame()
     // Load SFX and music. Failures are logged and silently skipped.
     {
         auto& audio = *m_audio;
+        // SFX
         audio.LoadSound("sfx_door_open",      "assets/sounds/effects/door_open.wav");
         audio.LoadSound("sfx_door_close",     "assets/sounds/effects/door_close.wav");
         audio.LoadSound("sfx_container_open", "assets/sounds/effects/container_open.wav");
@@ -161,6 +162,7 @@ void Engine::StartGame()
         audio.LoadSound("sfx_defuse",         "assets/sounds/effects/defuse.wav");
         audio.LoadSound("sfx_death",          "assets/sounds/effects/death.mp3");
         audio.LoadSound("sfx_complete",       "assets/sounds/effects/level_complete.mp3");
+        // Music
         audio.LoadSound("music_menu",         "assets/sounds/music/menu.mp3");
         audio.LoadSound("music_ambient",      "assets/sounds/music/ambience.mp3");
         audio.PlayAmbience("music_ambient");

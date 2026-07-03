@@ -25,6 +25,7 @@ ENTITY
   POS 0.0 2.0 -12.0
   SCALE 24.0 4.0 0.4
   ALBEDO 0.18 0.16 0.14
+  TEXTURE assets/textures/world/concrete.png
   ROUGHNESS 0.9
   COLLISION 0.5 0.5 0.5
 END
@@ -35,6 +36,7 @@ ENTITY
   POS 0.0 2.0 12.0
   SCALE 24.0 4.0 0.4
   ALBEDO 0.18 0.16 0.14
+  TEXTURE assets/textures/world/concrete.png
   ROUGHNESS 0.9
   COLLISION 0.5 0.5 0.5
 END
@@ -45,6 +47,7 @@ ENTITY
   POS 12.0 2.0 0.0
   SCALE 0.4 4.0 24.0
   ALBEDO 0.18 0.16 0.14
+  TEXTURE assets/textures/world/concrete.png
   ROUGHNESS 0.9
   COLLISION 0.5 0.5 0.5
 END
@@ -55,6 +58,7 @@ ENTITY
   POS -12.0 2.0 0.0
   SCALE 0.4 4.0 24.0
   ALBEDO 0.18 0.16 0.14
+  TEXTURE assets/textures/world/concrete.png
   ROUGHNESS 0.9
   COLLISION 0.5 0.5 0.5
 END
@@ -94,6 +98,7 @@ ENTITY
   POS 4.0 0.5 4.0
   SCALE 1.0 1.0 1.0
   ALBEDO 0.65 0.40 0.15
+  TEXTURE assets/textures/world/wood_planks.png
   ROUGHNESS 0.88
   COLLISION 0.5 0.5 0.5
 END
@@ -104,6 +109,7 @@ ENTITY
   POS 5.2 0.5 4.0
   SCALE 1.0 1.0 1.0
   ALBEDO 0.60 0.38 0.14
+  TEXTURE assets/textures/world/wood_planks.png
   ROUGHNESS 0.88
   COLLISION 0.5 0.5 0.5
 END
@@ -114,6 +120,7 @@ ENTITY
   POS 4.6 1.5 4.0
   SCALE 1.0 1.0 1.0
   ALBEDO 0.55 0.36 0.13
+  TEXTURE assets/textures/world/wood_planks.png
   ROUGHNESS 0.88
   COLLISION 0.5 0.5 0.5
 END

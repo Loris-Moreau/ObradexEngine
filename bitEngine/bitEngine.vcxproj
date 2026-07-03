@@ -74,13 +74,13 @@
         4. third_party\stb\       - <stb_image.h>
         5. third_party\glm\       - <glm/glm.hpp>   (populated by setup.sh)
     -->
-    <IncludePath>$(ProjectDir);$(SolutionDir)glad\include;$(SolutionDir)third_party\imgui;$(SolutionDir)third_party\imgui\backends;$(SolutionDir)third_party\imgui\examples\libs\glfw\include;$(SolutionDir)third_party\stb;$(SolutionDir)third_party\glm;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(SolutionDir)glad\include;$(SolutionDir)third_party\imgui;$(SolutionDir)third_party\imgui\backends;$(SolutionDir)third_party\imgui\examples\libs\glfw\include;$(SolutionDir)third_party\stb;$(SolutionDir)third_party\glm;$(SolutionDir)third_party\miniaudio;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)build\bin\Release\</OutDir>
     <IntDir>$(SolutionDir)build\obj\Release\bitEngine\</IntDir>
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>$(ProjectDir);$(SolutionDir)glad\include;$(SolutionDir)third_party\imgui;$(SolutionDir)third_party\imgui\backends;$(SolutionDir)third_party\imgui\examples\libs\glfw\include;$(SolutionDir)third_party\stb;$(SolutionDir)third_party\glm;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
+    <IncludePath>$(ProjectDir);$(SolutionDir)glad\include;$(SolutionDir)third_party\imgui;$(SolutionDir)third_party\imgui\backends;$(SolutionDir)third_party\imgui\examples\libs\glfw\include;$(SolutionDir)third_party\stb;$(SolutionDir)third_party\glm;$(SolutionDir)third_party\miniaudio;$(VC_IncludePath);$(WindowsSDK_IncludePath)</IncludePath>
   </PropertyGroup>
 
   <!-- ── Compiler settings ────────────────────────────────────── -->
@@ -113,7 +113,7 @@
     <!-- Copy Shaders/ folder next to the .exe so they're found at runtime -->
     <PostBuildEvent>
       <Command>xcopy /D /E /Y /I "$(ProjectDir)Shaders" "$(OutDir)Shaders" &amp; xcopy /D /E /Y /I "$(ProjectDir)Levels" "$(OutDir)Levels" &amp; xcopy /D /E /Y /I "$(ProjectDir)assets" "$(OutDir)assets" &amp; xcopy /D /Y "$(ProjectDir)config.ini" "$(OutDir)" &amp; xcopy /D /Y "$(SolutionDir)README.md" "$(OutDir)" &amp; xcopy /D /Y "$(SolutionDir)LICENSE" "$(OutDir)"</Command>
-      <Message>Copying necessary files to output directory...</Message>
+      <Message>Copying assets</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
 
@@ -143,11 +143,7 @@
       <AdditionalOptions>/ignore:4217 /ignore:4286 %(AdditionalOptions)</AdditionalOptions>
     </Link>
     <PostBuildEvent>
-      <Command>
-if not exist "$(OutDir)Shaders" mkdir "$(OutDir)Shaders"
-xcopy /E /Y /I "$(ProjectDir)Shaders" "$(OutDir)Shaders"
-if not exist "$(OutDir)Levels" mkdir "$(OutDir)Levels"
-      </Command>
+      <Command>xcopy /D /E /Y /I "$(ProjectDir)Shaders" "$(OutDir)Shaders" &amp; xcopy /D /E /Y /I "$(ProjectDir)Levels" "$(OutDir)Levels" &amp; xcopy /D /E /Y /I "$(ProjectDir)assets" "$(OutDir)assets" &amp; xcopy /D /Y "$(ProjectDir)config.ini" "$(OutDir)" &amp; xcopy /D /Y "$(SolutionDir)README.md" "$(OutDir)" &amp; xcopy /D /Y "$(SolutionDir)LICENSE" "$(OutDir)"</Command>
       <Message>Copying shaders to output directory...</Message>
     </PostBuildEvent>
   </ItemDefinitionGroup>
