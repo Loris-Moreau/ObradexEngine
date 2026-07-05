@@ -47,13 +47,21 @@ unsigned int TextureManager::Load(const std::string& path)
 
     stbi_image_free(data);
     m_cache[path] = id;
+    m_sizes[path] = {w, h};
     std::cout << "[Texture] " << path << " (" << w << "x" << h << ")\n";
     return id;
+}
+
+TextureManager::Size TextureManager::GetSize(const std::string& path) const
+{
+    auto it = m_sizes.find(path);
+    return it != m_sizes.end() ? it->second : Size{};
 }
 
 void TextureManager::Shutdown()
 {
     for (auto&[p,id]:m_cache) glDeleteTextures(1,&id);
     m_cache.clear();
+    m_sizes.clear();
     if (m_white) { glDeleteTextures(1,&m_white); m_white=0; }
 }

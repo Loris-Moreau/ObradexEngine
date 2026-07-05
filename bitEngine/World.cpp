@@ -6,10 +6,12 @@
 #include "Interaction.h"
 #include "Engine.h"
 #include "Player.h"
+#include "TextureManager.h"
 #include <glad/glad.h>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <cmath>
+#include <algorithm>
 #include <algorithm>
 #include <iostream>
 
@@ -189,6 +191,36 @@ void World::Render(Shader& sh) const
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, mc.textureID);
             sh.SetInt("u_AlbedoTex", 0);
+
+            glm::vec2 uvScale{1.f, 1.f};
+            switch (mc.uvMode)
+            {
+                case UVMode::Stretch:
+                    uvScale = {1.f, 1.f};
+                    break;
+                case UVMode::Tile:
+                    uvScale = mc.uvTiling;
+                    break;
+                case UVMode::Fit:
+                {
+                    auto sz = TextureManager::Get().GetSize(mc.texturePath);
+                    if (sz.w > 0 && sz.h > 0)
+                    {
+                        float texAspect  = static_cast<float>(sz.w) / static_cast<float>(sz.h);
+                        // Surface aspect approximated from the entity's X/Z world
+                        // scale (correct for planes and cube tops/sides sharing
+                        // that footprint; an approximation for spheres).
+                        float faceAspect = rec.transform->scale.x /
+                                          std::max(rec.transform->scale.z, 0.0001f);
+                        // Scale the longer-relative axis up so the texture tiles
+                        // instead of stretching to fill the mismatch.
+                        if (texAspect > faceAspect) uvScale = {texAspect / faceAspect, 1.f};
+                        else                        uvScale = {1.f, faceAspect / texAspect};
+                    }
+                    break;
+                }
+            }
+            sh.SetVec2("u_UVScale", uvScale);
         }
 
         mc.mesh->Draw();

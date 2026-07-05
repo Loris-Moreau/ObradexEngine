@@ -19,6 +19,7 @@
 #include "LevelEditor.h"
 #include "Input.h"
 #include "TextureManager.h"
+#include "FileDialog.h"
 #include <cstring>
 #include <GLFW/glfw3.h>
 #include <glm/glm.hpp>
@@ -450,8 +451,21 @@ void EditorUI::DrawWorldPanel(Engine& engine)
                     std::strncpy(pathBuf, mc.texturePath.c_str(), sizeof(pathBuf) - 1);
                     pathBuf[sizeof(pathBuf) - 1] = '\0';
                     ImGui::PushID("meshtexpath");
+                    ImGui::SetNextItemWidth(180.f);
                     if (ImGui::InputText("Path", pathBuf, sizeof(pathBuf)))
                         mc.texturePath = pathBuf;
+                    ImGui::SameLine();
+                    if (ImGui::Button("Browse"))
+                    {
+                        std::string picked;
+                        if (BrowseForFile("Select Texture", "Image Files",
+                                          "*.png;*.jpg;*.jpeg;*.bmp",
+                                          "assets/textures", picked))
+                        {
+                            mc.texturePath = picked;
+                            mc.textureID   = TextureManager::Get().Load(picked);
+                        }
+                    }
                     ImGui::PopID();
                     ImGui::TextDisabled("Relative to working directory, e.g. assets/textures/world/brick.png");
 
@@ -462,14 +476,26 @@ void EditorUI::DrawWorldPanel(Engine& engine)
                             ImGui::OpenPopup("TexLoadFail");
                     }
                     ImGui::SameLine();
-                    ImGui::Text(mc.textureID != 0 ? "Loaded (id=%u)" : "Not loaded",
-                                mc.textureID);
+                    if (mc.textureID != 0) ImGui::Text("Loaded (id=%u)", mc.textureID);
+                    else                   ImGui::TextUnformatted("Not loaded");
 
                     if (ImGui::BeginPopup("TexLoadFail"))
                     {
                         ImGui::Text("Failed to load texture. Check the path and the log.");
                         ImGui::EndPopup();
                     }
+
+                    const char* uvModeNames[] = { "Stretch", "Tile", "Fit" };
+                    int uvMode = static_cast<int>(mc.uvMode);
+                    if (ImGui::Combo("UV mode", &uvMode, uvModeNames, 3))
+                        mc.uvMode = static_cast<UVMode>(uvMode);
+                    if (ImGui::IsItemHovered())
+                        ImGui::SetTooltip(
+                            "Stretch: texture spans the surface once, ignoring aspect ratio.\n"
+                            "Tile: repeats at the count set below.\n"
+                            "Fit: scales without distortion, tiling the shorter axis.");
+                    if (mc.uvMode == UVMode::Tile)
+                        ImGui::DragFloat2("Repeats", &mc.uvTiling.x, 0.1f, 0.1f, 64.f);
                 }
 
                 ImGui::SliderFloat("Specular",  &mc.specular,  0.f, 1.f);

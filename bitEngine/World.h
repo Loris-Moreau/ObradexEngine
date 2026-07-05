@@ -31,6 +31,14 @@ struct TransformComponent
     glm::mat4 GetMatrix() const;
 };
 
+// How the texture maps onto the surface.
+//   Stretch - texture spans the full 0..1 UV range once, ignoring aspect ratio
+//   Tile    - texture repeats; repeat count scales with the entity's world
+//             size so texel density stays constant as the entity is resized
+//   Fit     - texture is scaled uniformly (no stretch) to match the surface's
+//             aspect ratio; the shorter axis is tiled to avoid distortion
+enum class UVMode { Stretch, Tile, Fit };
+
 struct MeshComponent
 {
     Mesh*        mesh         = nullptr;
@@ -43,6 +51,9 @@ struct MeshComponent
     bool         useTexture   = false;
     unsigned int textureID    = 0;
     std::string  texturePath;
+    UVMode       uvMode       = UVMode::Stretch;
+    // Repeat count used directly in Tile mode; ignored in Stretch and Fit.
+    glm::vec2    uvTiling     = {1.f, 1.f};
 };
 
 struct InteractableComponent

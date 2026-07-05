@@ -182,6 +182,7 @@
     <ClCompile Include="AudioSystem.cpp" />
     <ClCompile Include="miniaudio_impl.cpp" />
     <ClCompile Include="TextureManager.cpp" />
+    <ClCompile Include="FileDialog.cpp" />
     <ClCompile Include="ConfigLoader.cpp" />
 
     <!-- GLAD - C file, needs C compiler not C++ -->
@@ -219,6 +220,7 @@
     <ClInclude Include="AudioSystem.h" />
     <ClInclude Include="Billboard.h" />
     <ClInclude Include="TextureManager.h" />
+    <ClInclude Include="FileDialog.h" />
     <ClInclude Include="ConfigLoader.h" />
   </ItemGroup>
 

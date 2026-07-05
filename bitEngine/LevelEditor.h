@@ -20,6 +20,9 @@
 //     SPECULAR  0.2
 //     ROUGHNESS 0.9
 //     COLLISION 0.5 0.5 0.5
+//     TEXTURE   assets/textures/world/brick.png
+//     UVMODE    tile          (stretch | tile | fit; default stretch)
+//     UVTILING  2.0 2.0       (repeat count; only read in tile mode)
 //   END
 //
 // Supported TYPE values:
@@ -44,6 +47,7 @@ public:
 
 private:
     void SpawnCurrent(Engine& engine);
+    void ApplySpawnTexture(MeshComponent* m);
 
     char  m_filenameBuffer[256] = "level.lvl";
 
@@ -55,6 +59,11 @@ private:
     float m_spawnRoughness = 0.8f;
     bool  m_spawnCollision = true;
     bool  m_spawnSlippery  = false;
+
+    bool  m_spawnUseTexture   = false;
+    char  m_spawnTexturePath[256] = "";
+    int   m_spawnUVMode       = 0;   // 0=Stretch, 1=Tile, 2=Fit (matches UVMode enum order)
+    float m_spawnUVTiling[2]  = {1.f, 1.f};
 
     float m_lightColor[3]  = {1.0f, 0.85f, 0.5f};
     float m_lightRadius    = 10.f;

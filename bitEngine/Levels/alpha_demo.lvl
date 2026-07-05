@@ -17,6 +17,8 @@ ENTITY
   ALBEDO 1.0 1.0 1.0
   ROUGHNESS 0.95
   TEXTURE assets/textures/world/ground_dirt.png
+  UVMODE tile
+  UVTILING 8.0 8.0 0.0
 END
 
 ENTITY
@@ -26,6 +28,7 @@ ENTITY
   SCALE 24.0 4.0 0.4
   ALBEDO 1.0 1.0 1.0
   TEXTURE assets/textures/world/concrete.png
+  UVMODE fit
   ROUGHNESS 0.9
   COLLISION 0.5 0.5 0.5
 END
@@ -37,6 +40,7 @@ ENTITY
   SCALE 24.0 4.0 0.4
   ALBEDO 1.0 1.0 1.0
   TEXTURE assets/textures/world/concrete.png
+  UVMODE fit
   ROUGHNESS 0.9
   COLLISION 0.5 0.5 0.5
 END
@@ -48,6 +52,7 @@ ENTITY
   SCALE 0.4 4.0 24.0
   ALBEDO 1.0 1.0 1.0
   TEXTURE assets/textures/world/concrete.png
+  UVMODE fit
   ROUGHNESS 0.9
   COLLISION 0.5 0.5 0.5
 END
@@ -59,6 +64,7 @@ ENTITY
   SCALE 0.4 4.0 24.0
   ALBEDO 1.0 1.0 1.0
   TEXTURE assets/textures/world/concrete.png
+  UVMODE fit
   ROUGHNESS 0.9
   COLLISION 0.5 0.5 0.5
 END
@@ -99,6 +105,7 @@ ENTITY
   SCALE 1.0 1.0 1.0
   ALBEDO 1.0 1.0 1.0
   TEXTURE assets/textures/world/wood_planks.png
+  UVMODE stretch
   ROUGHNESS 0.88
   COLLISION 0.5 0.5 0.5
 END
@@ -110,6 +117,7 @@ ENTITY
   SCALE 1.0 1.0 1.0
   ALBEDO 1.0 1.0 1.0
   TEXTURE assets/textures/world/wood_planks.png
+  UVMODE stretch
   ROUGHNESS 0.88
   COLLISION 0.5 0.5 0.5
 END
@@ -121,6 +129,7 @@ ENTITY
   SCALE 1.0 1.0 1.0
   ALBEDO 1.0 1.0 1.0
   TEXTURE assets/textures/world/wood_planks.png
+  UVMODE stretch
   ROUGHNESS 0.88
   COLLISION 0.5 0.5 0.5
 END

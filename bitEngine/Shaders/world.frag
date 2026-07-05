@@ -9,6 +9,7 @@ uniform sampler2D u_AlbedoTex;
 uniform vec3  u_AlbedoColour;
 uniform float u_Specular,u_Roughness;
 uniform int   u_HasTexture;
+uniform vec2  u_UVScale;
 uniform vec3  u_CamPos,u_SunDir,u_SunColour,u_Ambient;
 struct PL{vec3 position,colour;float radius,intensity;};
 uniform PL  u_PointLights[8];
@@ -21,7 +22,7 @@ float BP(vec3 N,vec3 L,vec3 V,float rough){
 }
 float Att(float d,float r){float t=clamp(1.0-d/r,0.0,1.0);return t*t;}
 void main(){
-    vec3 alb=(u_HasTexture!=0)?texture(u_AlbedoTex,v_TexCoord).rgb*u_AlbedoColour:u_AlbedoColour;
+    vec3 alb=(u_HasTexture!=0)?texture(u_AlbedoTex,v_TexCoord*u_UVScale).rgb*u_AlbedoColour:u_AlbedoColour;
     vec3 N=normalize(v_Normal),V=normalize(u_CamPos-v_WorldPos);
     vec3 Ls=normalize(-u_SunDir);
     float NdL=max(dot(N,Ls),0.0);

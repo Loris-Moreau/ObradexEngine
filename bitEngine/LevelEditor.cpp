@@ -7,6 +7,7 @@
 #include "Interaction.h"
 #include "Input.h"
 #include "TextureManager.h"
+#include "FileDialog.h"
 
 #include <imgui.h>
 #include <filesystem>
@@ -107,7 +108,15 @@ bool LevelEditor::SaveLevel(const World& world, const std::string& path)
             Wf1(file, "SPECULAR",  rec.mesh->specular);
             Wf1(file, "ROUGHNESS", rec.mesh->roughness);
             if (rec.mesh->useTexture && !rec.mesh->texturePath.empty())
+            {
                 Ws(file, "TEXTURE", rec.mesh->texturePath);
+                const char* modeStr = rec.mesh->uvMode == UVMode::Tile ? "tile"
+                                    : rec.mesh->uvMode == UVMode::Fit  ? "fit"
+                                                                       : "stretch";
+                Ws(file, "UVMODE", modeStr);
+                if (rec.mesh->uvMode == UVMode::Tile)
+                    Wf3(file, "UVTILING", rec.mesh->uvTiling.x, rec.mesh->uvTiling.y, 0.f);
+            }
         }
 
         if (rec.collision)
@@ -179,6 +188,8 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
         bool        lightFlicker = true;
         std::vector<Item> items;
         std::string texturePath;
+        UVMode      uvMode = UVMode::Stretch;
+        glm::vec2   uvTiling{1.f, 1.f};
     };
 
     bool inEntity  = false;
@@ -275,6 +286,8 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
                     m->texturePath = cur.texturePath;
                     m->textureID   = TextureManager::Get().Load(cur.texturePath);
                     m->useTexture  = (m->textureID != 0);
+                    m->uvMode      = cur.uvMode;
+                    m->uvTiling    = cur.uvTiling;
                 }
 
                 if (cur.hasCollision)
@@ -325,6 +338,19 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
             else if (token == "SCALE")    ss >> cur.scale.x >> cur.scale.y >> cur.scale.z;
             else if (token == "ALBEDO")   ss >> cur.albedo.x >> cur.albedo.y >> cur.albedo.z;
             else if (token == "TEXTURE")  ss >> cur.texturePath;
+            else if (token == "UVMODE")
+            {
+                std::string m; ss >> m;
+                cur.uvMode = m == "tile" ? UVMode::Tile
+                           : m == "fit"  ? UVMode::Fit
+                                         : UVMode::Stretch;
+            }
+            else if (token == "UVTILING")
+            {
+                float x, y, z;
+                ss >> x >> y >> z;   // z is unused padding written by Wf3
+                cur.uvTiling = {x, y};
+            }
             else if (token == "SPECULAR") ss >> cur.specular;
             else if (token == "ROUGHNESS")ss >> cur.roughness;
             else if (token == "COLLISION")
@@ -362,6 +388,18 @@ bool LevelEditor::LoadLevel(World& world, const std::string& path)
     return true;
 }
 
+// Applies the current spawn-panel texture settings to a newly created
+// MeshComponent. Shared by Cube, Plane, and Sphere spawn cases.
+void LevelEditor::ApplySpawnTexture(MeshComponent* m)
+{
+    if (!m_spawnUseTexture || m_spawnTexturePath[0] == '\0') return;
+    m->texturePath = m_spawnTexturePath;
+    m->textureID   = TextureManager::Get().Load(m_spawnTexturePath);
+    m->useTexture  = (m->textureID != 0);
+    m->uvMode      = static_cast<UVMode>(m_spawnUVMode);
+    m->uvTiling    = {m_spawnUVTiling[0], m_spawnUVTiling[1]};
+}
+
 void LevelEditor::SpawnCurrent(Engine& engine)
 {
     World& world = engine.GetWorld();
@@ -379,6 +417,7 @@ void LevelEditor::SpawnCurrent(Engine& engine)
             auto* m = world.AddMesh(e);
             m->mesh=world.GetCubeMesh(); m->albedoColour=color;
             m->specular=m_spawnSpecular; m->roughness=m_spawnRoughness;
+            ApplySpawnTexture(m);
             if (m_spawnCollision)
             {
                 auto* col = world.AddCollision(e);
@@ -394,6 +433,7 @@ void LevelEditor::SpawnCurrent(Engine& engine)
             auto* m = world.AddMesh(e);
             m->mesh=world.GetPlaneMesh(); m->albedoColour=color;
             m->roughness=m_spawnRoughness;
+            ApplySpawnTexture(m);
             break;
         }
         case 2: // Sphere
@@ -403,6 +443,7 @@ void LevelEditor::SpawnCurrent(Engine& engine)
             auto* m = world.AddMesh(e);
             m->mesh=world.GetSphereMesh(); m->albedoColour=color;
             m->specular=m_spawnSpecular; m->roughness=m_spawnRoughness;
+            ApplySpawnTexture(m);
             if (m_spawnCollision)
             {
                 auto* col = world.AddCollision(e);
@@ -529,6 +570,40 @@ void LevelEditor::RenderPanel(Engine& engine)
                 if (ImGui::IsItemHovered())
                     ImGui::SetTooltip("Allows the player to slide off on landing (off = floor-like default)");
             }
+        }
+
+        ImGui::SeparatorText("Texture");
+        ImGui::Checkbox("Use texture##sp", &m_spawnUseTexture);
+        if (m_spawnUseTexture)
+        {
+            ImGui::SetNextItemWidth(220.f);
+            ImGui::InputText("Path##sptex", m_spawnTexturePath, sizeof(m_spawnTexturePath));
+            ImGui::SameLine();
+            if (ImGui::Button("Browse##sptex"))
+            {
+                std::string picked;
+                if (BrowseForFile("Select Texture", "Image Files", "*.png;*.jpg;*.jpeg;*.bmp",
+                                  "assets/textures", picked))
+                {
+                    std::strncpy(m_spawnTexturePath, picked.c_str(),
+                                sizeof(m_spawnTexturePath) - 1);
+                    m_spawnTexturePath[sizeof(m_spawnTexturePath) - 1] = '\0';
+                }
+            }
+
+            const char* uvModeNames[] = { "Stretch", "Tile", "Fit" };
+            ImGui::Combo("UV mode##sp", &m_spawnUVMode, uvModeNames, 3);
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip(
+                    "Stretch: texture spans the surface once, ignoring aspect ratio.\n"
+                    "Tile: repeats at the count set below.\n"
+                    "Fit: scales without distortion, tiling the shorter axis.");
+            if (m_spawnUVMode == 1)  // Tile
+                ImGui::DragFloat2("Repeats##sp", m_spawnUVTiling, 0.1f, 0.1f, 64.f);
+
+            // Colour##sp above is reused as the texture tint; white leaves
+            // the texture unmodified.
+            ImGui::TextDisabled("Colour above tints the texture (white = unmodified).");
         }
     }
     if (m_spawnType == 3 || m_spawnType == 8)
