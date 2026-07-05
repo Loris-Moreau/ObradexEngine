@@ -13,7 +13,7 @@
 | Level loading                                      | Runtime `.lvl` save/load via ImGui Level Editor tab (plain-text format, `Levels/` folder)   | Additional entity types; level streaming                                                                                                                                   |
 | Animation                                          | None                                                                                        | Skeletal animation via Assimp                                                                                                                                              |
 | Vaulting                                           | State stub only                                                                             | Auto-climb ledges ≤ 2 m high                                                                                                                                               |
-| Texture system                                     | Stub uniforms in world shader                                                               | Full material system with diffuse + normal maps                                                                                                                            |
+| Texture system                                     | `TextureManager` + per-entity Stretch/Tile/Fit UV modes; Browse dialog for path selection (World inspector, spawn panel) | Normal maps; texture atlas; per-face UV offset                                                                            |
 | Icons for container items                          | None                                                                                        | Pixel-art icons per item type, rendered in the 3×3 container grid                                                                                                          |
 | Inventory                                          | Data structure + Deus Ex Mankind Divided style UI implemented (I key); routes grabbed items | Weapons, ammo, and consumable design; equipment slots; weight system                                                                                                       |
 | Main Menu                                          | Not Implemented                                                                             | Continue, Start, Level Select, Settings, Quit                                                                                                                              |
@@ -507,15 +507,19 @@ Three independent channels: SFX (one-shot), Music (looped, one track at a time),
 
 `TextureManager` is a Meyers singleton. `Load(path)` returns a cached `GLuint`; on first call it uses `stb_image` to load RGBA data and uploads to GL with nearest-mip filtering (preserves pixel-art sharpness). The 1x1 white fallback is always valid after `Init()`.
 
-`MeshComponent` gains `textureID`, `texturePath`, `useTexture`. When `useTexture` is true, `World::Render` binds the texture to unit 0 before the draw call; the fragment shader multiplies it with `albedoColour`. Disabling `useTexture` reverts to flat colour with no shader change required.
+`MeshComponent` gains `textureID`, `texturePath`, `useTexture`, `uvMode`, `uvTiling`. When `useTexture` is true, `World::Render` binds the texture to unit 0 before the draw call; the fragment shader multiplies it with `albedoColour`. Disabling `useTexture` reverts to flat colour with no shader change required.
 
-`.lvl` format: `TEXTURE <path>` line written after `COLLISION` when `useTexture` is true.
+Texture path is set via a native OS file-picker (`FileDialog.h`, `BrowseForFile`) from either the World inspector (existing entities) or the Level Editor spawn panel (new entities), mirroring the level-file Browse workflow. Paths are stored working-directory-relative.
+
+Three UV mapping modes (`UVMode`: `Stretch`, `Tile`, `Fit`) control how the texture maps onto the surface; `Fit` uses `TextureManager::GetSize` to correct for texture aspect ratio against the entity's world scale. Selectable per-entity in both the inspector and spawn panel.
+
+`.lvl` format: `TEXTURE <path>`, `UVMODE <stretch|tile|fit>`, `UVTILING x y 0.0` lines written after `COLLISION` when `useTexture` is true.
 
 **Asset conventions:**
 - `assets/textures/world/` — geometry textures
 - `assets/textures/ui/`    — HUD and inventory icons
 
-**Open issues:** no normal maps; no UV scale/offset per entity; no texture atlas.
+**Open issues:** no normal maps; no texture atlas; `Fit` mode approximates surface aspect from X/Z scale only (incorrect for non-planar UV layouts, e.g. sphere poles).
 
 ---
 

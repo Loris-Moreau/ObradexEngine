@@ -635,7 +635,27 @@ ENTITY
   LIGHT_INTENSITY 1.5
   LIGHT_FLICKER 1
 END
+
+ENTITY
+  TYPE cube
+  NAME TiledFloorSection
+  POS 0.0 0.0 0.0
+  SCALE 10.0 1.0 10.0
+  ALBEDO 1.0 1.0 1.0
+  TEXTURE assets/textures/world/ground_dirt.png
+  UVMODE tile
+  UVTILING 8.0 8.0 0.0
+END
 ```
+
+**Per-entity keywords (mesh types only):**
+
+| Keyword    | Format               | Notes                                                                    |
+|------------|-----------------------|---------------------------------------------------------------------------|
+| `ALBEDO`   | `r g b` (0-1)         | Solid colour, or tint when `TEXTURE` is set (white = unmodified texture). |
+| `TEXTURE`  | `<path>`              | Working-directory-relative, e.g. `assets/textures/world/brick.png`.      |
+| `UVMODE`   | `stretch\|tile\|fit`  | Default `stretch` if omitted. See section 6.17.                          |
+| `UVTILING` | `x y 0.0`             | Repeat count; only read when `UVMODE tile`. Third value is unused padding.|
 
 **Supported TYPE values:**
 
@@ -684,11 +704,7 @@ Item names with spaces are serialised with underscores (`First_Aid_Kit`) and res
 
 ### Adding textures
 
-1. Use `stb_image.h` to load PNG/JPG into a `uint8_t*` buffer.
-2. Create a GL texture and upload with `glTexImage2D`.
-3. Add a `GLuint textureID` field to `MeshComponent`.
-4. Bind to texture unit 2 before `mesh->Draw()` in `World::Render()`.
-5. Set `u_HasTexture = 1` and sample `u_DiffuseMap` in `world.frag` (uniform stub already declared).
+See section 6.17 (TextureManager) for the current, implemented texture pipeline. Textures are loaded via `TextureManager::Get().Load(path)`, applied per-entity through the World inspector or the level editor's spawn panel, and support Stretch/Tile/Fit UV mapping.
 
 ---
 
@@ -728,7 +744,7 @@ bool  vsync  = cfg.GetBool ("window", "vsync",  true);
 
 ### 6.17 TextureManager (`TextureManager.h`)
 
-Meyers singleton. Call `Init()` once after the GL context is created (Engine does this). All subsequent `Load` calls are safe from any thread that owns the GL context.
+Meyers singleton. Call `Init()` once after the GL context is created (Engine does this). All subsequent `Load` calls are safe from any thread that owns the GL context. `GetSize(path)` returns the native pixel dimensions of a loaded texture ({0,0} if not loaded) and is used internally by `UVMode::Fit`.
 
 ```cpp
 unsigned int id = TextureManager::Get().Load("assets/textures/world/brick.png");
@@ -737,6 +753,45 @@ meshComp->useTexture = true;
 ```
 
 Returns `GetWhite()` (a 1x1 opaque white texture) on load failure so rendering never crashes. All loaded textures are released on `Shutdown()`.
+
+**Setting a texture path.** Two entry points, both working-directory-relative:
+
+- **World inspector** (F1 → World tab → select entity → Mesh section): a text field plus a **Browse** button that opens the native OS file picker (`FileDialog.h`), filtered to `*.png;*.jpg;*.jpeg;*.bmp`, starting in `assets/textures/`. Selecting a file fills the path field and loads it immediately.
+- **Level editor spawn panel** (F1 → Level Editor tab → Place Entity): same Browse control, applied to the entity at spawn time via `LevelEditor::ApplySpawnTexture`.
+
+The Browse dialog returns a path relative to the current working directory when the selection is inside it (typical case: anything under `assets/`), or an absolute path otherwise. Paths are normalised to forward slashes for portability in saved `.lvl` files.
+
+**UV mapping modes** (`UVMode` enum in `World.h`):
+
+| Mode      | Behaviour                                                                          |
+|-----------|-------------------------------------------------------------------------------------|
+| `Stretch` | Texture spans the full 0..1 UV range once, ignoring aspect ratio. Default.          |
+| `Tile`    | Texture repeats at the count set in `uvTiling` (x, y), independent of entity scale. |
+| `Fit`     | Texture scales uniformly to preserve its aspect ratio; the axis that would otherwise stretch is tiled instead, using the entity's X/Z world scale to approximate surface aspect. |
+
+Set via the same Mesh inspector / spawn panel controls, or directly:
+
+```cpp
+meshComp->uvMode   = UVMode::Tile;
+meshComp->uvTiling = {4.f, 4.f};   // 4x4 repeats
+```
+
+`.lvl` file keywords: `UVMODE stretch|tile|fit` and `UVTILING x y 0.0` (third value is unused padding, written for consistency with other 3-float fields; only read in Tile mode).
+
+---
+
+### 6.17b FileDialog (`FileDialog.h`)
+
+```cpp
+std::string picked;
+if (BrowseForFile("Select Texture", "Image Files", "*.png;*.jpg;*.jpeg;*.bmp",
+                  "assets/textures", picked))
+{
+    // picked is now working-directory-relative, e.g. "assets/textures/world/brick.png"
+}
+```
+
+Windows: `GetOpenFileNameA`. Linux/macOS: shells out to `zenity --file-selection` if installed; returns `false` silently if not. Used by both the level file Browse button (`LevelEditor.cpp`, constrained to `Levels/`) and the texture Browse buttons (unconstrained, any path under the working directory).
 
 ---
 
